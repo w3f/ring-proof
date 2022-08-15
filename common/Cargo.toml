@@ -1,0 +1,17 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ark-std = { git = "https://github.com/arkworks-rs/std", default-features = false }
+ark-ff = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
+ark-ec = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
+ark-poly = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra", default-features = false, features = ["derive"] }
+fflonk = { git = "https://github.com/w3f/fflonk" }
+merlin = "3.0"
+
+[dev-dependencies]
+# TODO: https://github.com/arkworks-rs/curves/pull/106
+ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/mmagician/curves", branch = "catch-up-ff", default-features = false }
