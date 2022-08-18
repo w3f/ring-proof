@@ -4,9 +4,22 @@ members = [
     "ring",
 ]
 
+#[patch.crates-io]
+#ark-std = { git = "https://github.com/arkworks-rs/std" }
+#ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
+#ark-ec = { git = "https://github.com/arkworks-rs/algebra" }
+#ark-poly = { git = "https://github.com/arkworks-rs/algebra" }
+#ark-serialize = { git = "https://github.com/arkworks-rs/algebra" }
+
 [patch.crates-io]
 ark-std = { git = "https://github.com/arkworks-rs/std" }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra" }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra" }
-ark-poly = { git = "https://github.com/arkworks-rs/algebra" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra" }
+ark-ff = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-ec = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-poly = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-serialize = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+
+[patch.'https://github.com/arkworks-rs/algebra']
+ark-ff = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-ec = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-poly = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
+ark-serialize = { git = "https://github.com/swasilyev/algebra", branch = "mul-by-f-for-eval" }
