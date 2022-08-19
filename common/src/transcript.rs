@@ -14,8 +14,8 @@ pub trait Transcript<F: PrimeField, CS: PCS<F>>: Clone {
         self._add_serializable(b"precommitted_cols", precommitted_cols);
     }
 
-    fn add_public_input(&mut self, public_input: &impl CanonicalSerialize) {
-        self._add_serializable(b"public_input", public_input);
+    fn add_instance(&mut self, instance: &impl CanonicalSerialize) {
+        self._add_serializable(b"instance", instance);
     }
 
     fn add_committed_cols(&mut self, committed_cols: &impl ColumnsCommited<F, CS::C>) {

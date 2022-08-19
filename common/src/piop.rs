@@ -10,7 +10,7 @@ use crate::{ColumnsCommited, ColumnsEvaluated};
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     type Commitments: ColumnsCommited<F, C>;
     type Evaluations: ColumnsEvaluated<F>;
-    type PublicInput: CanonicalSerialize + CanonicalDeserialize;
+    type Instance: CanonicalSerialize + CanonicalDeserialize;
 
     // Commitments to the column polynomials excluding the precommitted columns.
     fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(&self, commit: Fun) -> Self::Commitments;
@@ -32,6 +32,9 @@ pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
 
     // Subgroup over which the columns are defined.
     fn domain(&self) -> GeneralEvaluationDomain<F>;
+
+    // The result of the computation.
+    fn result(&self) -> Self::Instance;
 }
 
 pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {

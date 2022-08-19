@@ -4,6 +4,7 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_serialize::CanonicalSerialize;
 use ark_std::{test_rng, UniformRand};
 use fflonk::pcs::Commitment;
 
@@ -93,7 +94,7 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
 {
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
-    type PublicInput = Affine<Curve>;
+    type Instance = Affine<Curve>;
 
     fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(&self, commit: Fun) -> Self::Commitments {
         let bits = commit(self.bits.as_poly());
@@ -162,5 +163,9 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
 
     fn domain(&self) -> GeneralEvaluationDomain<F> {
         self.inner_prod.domain()
+    }
+
+    fn result(&self) -> Self::Instance {
+        self.cond_add.result
     }
 }

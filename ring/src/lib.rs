@@ -17,6 +17,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
+    use std::ops::Mul;
     use fflonk::pcs::PCS;
 
     use common::test_helpers::*;

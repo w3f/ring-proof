@@ -1,5 +1,6 @@
 use ark_ff::{Field, PrimeField};
 use ark_poly::GeneralEvaluationDomain;
+use ark_serialize::CanonicalSerialize;
 use fflonk::pcs::{Commitment, PCS, PcsParams, RawVerifierKey};
 use ark_std::test_rng;
 use crate::piop::VerifierPiop;
@@ -76,6 +77,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
 
     pub fn restore_challenges<Commitments, Evaluations>(
         &self,
+        instance: &impl CanonicalSerialize,
         proof: &Proof<F, CS, Commitments, Evaluations>,
         n_polys: usize,
         n_constraints: usize,
@@ -85,7 +87,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
             Evaluations: ColumnsEvaluated<F>,
     {
         let mut transcript = self.transcript_prelude.clone();
-        // transcript.append_public_input(public_input);
+        transcript.add_instance(instance);
         transcript.add_committed_cols (&proof.column_commitments);
         // let r = transcript.get_bitmask_aggregation_challenge();
         // transcript.append_2nd_round_register_commitments(&proof.additional_commitments);

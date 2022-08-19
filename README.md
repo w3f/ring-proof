@@ -9,6 +9,9 @@
   - verifier uses Fiat-Shamir rng to batch verify the pairings,
   - remove test_rng from not_test,
 * Verifier evaluates selectors efficiently
+* Find points from the prime-subgroup complements to seed the acc. How should it be encapsulated?
+* Check paddings for the precommitted columns
+* Refactor common/piop.rs to have types shared between prover nad verifier
 * Add zk
 * Batch verification
 * Batch proving

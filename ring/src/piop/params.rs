@@ -4,6 +4,8 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::rand::Rng;
 use ark_std::UniformRand;
+use std::ops::Mul;
+
 
 pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     // Columns' length.
@@ -80,6 +82,7 @@ mod tests {
     use ark_ec::AffineCurve;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchParameters, Fq, Fr};
     use ark_std::{test_rng, UniformRand};
+    use std::ops::Mul;
     use common::test_helpers::cond_sum;
     use crate::piop::params::PiopParams;
 

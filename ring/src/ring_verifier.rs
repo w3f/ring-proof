@@ -40,6 +40,7 @@ impl<F: PrimeField, CS: PCS<F>> RingVerifier<F, CS> {
 
     pub fn verify_ring_proof<Curve: SWCurveConfig<BaseField=F>>(&self, proof: RingProof<F, CS>, result: Affine<Curve>) -> bool {
         let challenges = self.plonk_verifier.restore_challenges(
+            &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
             PiopVerifier::<F, CS::C>::N_COLUMNS + 1,

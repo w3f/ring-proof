@@ -21,5 +21,5 @@ parallel = ["std", "ark-std/parallel", "ark-ff/parallel", "ark-ec/parallel", "ar
 print-trace = ["ark-std/print-trace"]
 
 [dev-dependencies]
-ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves", default-features = false, features = ["curve"] }
+ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves", branch= "update-to-latest-arkworks", default-features = false, features = ["curve"] }
 ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/arkworks-rs/curves", default-features = false }

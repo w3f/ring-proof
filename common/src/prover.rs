@@ -37,7 +37,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
         where P: ProverPiop<F, CS::C>
     {
         let mut transcript = self.transcript_prelude.clone();
-        // transcript.add_public_input(&piop.result());
+        transcript.add_instance(&piop.result());
         // ROUND 1
         // The prover commits to the columns.
         let column_commitments = piop.committed_columns(|p| CS::commit(&self.pcs_ck, p));
