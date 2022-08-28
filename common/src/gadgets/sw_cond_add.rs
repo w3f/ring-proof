@@ -258,8 +258,7 @@ mod tests {
     use ark_poly::EvaluationDomain;
 
 
-    #[test]
-    fn test_sw_cond_add_gadget() {
+    fn _test_sw_cond_add_gadget(hiding: bool) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -284,6 +283,15 @@ mod tests {
         assert_eq!(c1.degree(), 4 * n - 3);
         assert_eq!(c2.degree(), 3 * n - 2);
 
-        test_gadget(gadget);
+        let quotient = domain.divide_by_vanishing_poly(&c1);
+        let quotient = domain.divide_by_vanishing_poly(&c2);
+
+        // test_gadget(gadget);
+    }
+
+    #[test]
+    fn test_sw_cond_add_gadget() {
+        _test_sw_cond_add_gadget(false);
+        _test_sw_cond_add_gadget(true);
     }
 }

@@ -3,7 +3,7 @@ use ark_ff::PrimeField;
 use fflonk::pcs::Commitment;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
-use common::gadgets::inner_prod::InnerProdValues;
+use common::gadgets::inner_prod_pub::InnerProdValues;
 use common::gadgets::sw_cond_add::{CondAdd, CondAddValues};
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
