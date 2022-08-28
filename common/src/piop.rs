@@ -5,6 +5,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use fflonk::pcs::{Commitment};
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
+use crate::domain::Domain;
 
 
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
@@ -31,7 +32,7 @@ pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>>;
 
     // Subgroup over which the columns are defined.
-    fn domain(&self) -> GeneralEvaluationDomain<F>;
+    fn domain(&self) -> &Domain<F>;
 
     // The result of the computation.
     fn result(&self) -> Self::Instance;

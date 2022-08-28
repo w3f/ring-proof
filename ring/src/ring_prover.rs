@@ -50,8 +50,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
 
 
     pub fn prove(&self, t: Curve::ScalarField) -> RingProof<F, CS> {
-        let domain = Domain::new(self.piop_params.domain.size());
-        let piop = PiopProver::init(&domain, &self.piop_params, self.selectors.clone(), self.points.clone(), self.k, t);
+        let piop = PiopProver::init(&self.piop_params, self.selectors.clone(), self.points.clone(), self.k, t);
         self.plonk_prover.prove(piop)
     }
 }

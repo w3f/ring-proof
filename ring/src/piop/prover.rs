@@ -23,6 +23,7 @@ use crate::piop::params::PiopParams;
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
 pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
+    domain: Domain<F>,
     bits: BitColumn<F>,
     points: AffineColumn<F, Affine<Curve>>,
     selectors: SelectorColumns<F>,
@@ -36,19 +37,20 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
-    pub fn init(domain: &Domain<F>,
-                params: &PiopParams<F, Curve>,
+    pub fn init(params: &PiopParams<F, Curve>,
                 selectors: SelectorColumns<F>,
                 points: AffineColumn<F, Affine<Curve>>,
                 prover_index_in_keys: usize,
                 secret: Curve::ScalarField) -> Self {
-        let bits = Self::bits_column(domain, params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), domain);
-        let cond_add = CondAdd::init(bits.clone(), points.clone(), domain);
+        let domain = Domain::new(params.domain.size());
+        let bits = Self::bits_column(&domain, params, prover_index_in_keys, secret);
+        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), &domain);
+        let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);
         let booleanity = Booleanity::init(bits.clone());
-        let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), domain);
-        let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), domain);
+        let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
+        let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), &domain);
         Self {
+            domain,
             bits,
             points,
             selectors,
@@ -162,8 +164,8 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
         ].concat()
     }
 
-    fn domain(&self) -> GeneralEvaluationDomain<F> {
-        self.inner_prod.domain()
+    fn domain(&self) -> &Domain<F> {
+        &self.domain
     }
 
     fn result(&self) -> Self::Instance {

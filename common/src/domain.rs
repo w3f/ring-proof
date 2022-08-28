@@ -78,6 +78,10 @@ impl<F: FftField> Domain<F> {
         evals.resize(self.capacity, F::zero());
         self.domains.column_from_evals(evals, len)
     }
+
+    pub fn omega(&self) -> F {
+        self.domains.x1.group_gen()
+    }
 }
 
 fn l_i<F: FftField>(i: usize, n: usize) -> Vec<F> {
