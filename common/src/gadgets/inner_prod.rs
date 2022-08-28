@@ -25,9 +25,10 @@ pub struct InnerProdValues<F: Field> {
 
 
 impl<F: FftField> InnerProd<F> {
-    pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, l_last: FieldColumn<F>, domain: &Domain<F>) -> Self {
-        assert_eq!(a.size(), b.size());
-        assert_eq!(l_last.evals.evals.len(), a.size());
+    pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, domain: &Domain<F>) -> Self {
+        assert_eq!(a.evals.evals.len(), domain.capacity);
+        assert_eq!(b.evals.evals.len(), domain.capacity);
+        let l_last = domain.l_last.clone();
         let inner_prods = Self::partial_inner_prods(&a.evals.evals, &b.evals.evals);
         let (&inner_prod, partial_prods) = inner_prods.split_last().unwrap();
         // 0, a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-2]b[n-2]
@@ -128,9 +129,8 @@ mod tests {
         let b = random_vec(n, rng);
         let a_col = domain.column(a.clone());
         let b_col = domain.column(b.clone());
-        let l_last = domain.l_last.clone();
 
-        let gadget = InnerProd::<Fq>::init(a_col, b_col, l_last, &domain);
+        let gadget = InnerProd::<Fq>::init(a_col, b_col, &domain);
 
         assert_eq!(gadget.inner_prod, inner_prod(&a, &b));
 

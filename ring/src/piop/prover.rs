@@ -43,11 +43,11 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                 prover_index_in_keys: usize,
                 secret: Curve::ScalarField) -> Self {
         let bits = Self::bits_column(domain, params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), selectors.l_last.clone(), domain);
-        let cond_add = CondAdd::init(bits.clone(), points.clone(), selectors.not_last.clone(), domain);
+        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), domain);
+        let cond_add = CondAdd::init(bits.clone(), points.clone(), domain);
         let booleanity = Booleanity::init(bits.clone());
-        let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), selectors.l_first.clone(), selectors.l_last.clone());
-        let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), selectors.l_first.clone(), selectors.l_last.clone());
+        let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), domain);
+        let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), domain);
         Self {
             bits,
             points,
@@ -70,7 +70,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             &padding,
             &params.powers_of_h,
         ].concat();
-        assert_eq!(points.len(), params.domain.size());
+        assert_eq!(points.len(), params.domain.size() - 1);
         AffineColumn::init(points, domain)
     }
 

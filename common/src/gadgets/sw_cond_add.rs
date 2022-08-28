@@ -65,16 +65,15 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     pub fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, Affine<Curve>>,
-                not_last: FieldColumn<F>,
                 domain: &Domain<F>) -> Self {
         let n = bitmask.size();
-        assert_eq!(points.points.len(), n);
-        assert_eq!(not_last.evals.evals.len(), n);
+        assert_eq!(bitmask.bits.len(), domain.capacity - 1);
+        assert_eq!(points.points.len(), domain.capacity - 1);
+        let not_last = domain.not_last_row.clone();
         let init = Self::point_in_g1_complement();
         assert!(!init.is_zero());
         let acc = bitmask.bits.iter()
             .zip(points.points.iter())
-            .take(n - 1) // last cells are ignored
             .scan(init.clone(), |acc, (&b, point)| {
                 if b {
                     *acc += point;
@@ -267,14 +266,14 @@ mod tests {
         let n = 2usize.pow(log_n);
         let domain = Domain::new(n);
 
-        let bitmask = random_bitvec(n, 0.5, rng);
-        let points = random_vec::<SWAffine, _>(n, rng);
+        let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
+        let points = random_vec::<SWAffine, _>(domain.capacity - 1, rng);
         let init = CondAdd::point_in_g1_complement();
-        let expected_res = init + cond_sum(&bitmask[..n - 1], &points[..n - 1]);
+        let expected_res = init + cond_sum(&bitmask, &points);
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::init(points, &domain);
-        let gadget = CondAdd::init(bitmask_col, points_col, domain.not_last_row.clone(), &domain);
+        let gadget = CondAdd::init(bitmask_col, points_col, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 

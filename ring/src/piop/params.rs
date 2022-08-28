@@ -42,7 +42,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         let keyset_part_size = domain_size - scalar_part_size;
 
         let h = Affine::<Curve>::rand(rng);
-        let powers_of_h = Self::power_of_2_multiples(scalar_part_size, h.into_projective());
+        let powers_of_h = Self::power_of_2_multiples(scalar_bitlen, h.into_projective());
         let powers_of_h = ProjectiveCurve::batch_normalization_into_affine(&powers_of_h);
 
         let init = Affine::<Curve>::rand(rng);
@@ -71,9 +71,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
     pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
-        let mut padded_bits = significant_bits.to_vec();
-        padded_bits.push(false);
-        padded_bits
+        significant_bits.to_vec()
     }
 }
 
