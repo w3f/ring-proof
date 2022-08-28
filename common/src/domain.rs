@@ -113,6 +113,10 @@ impl<F: FftField> Domain<F> {
     pub fn omega(&self) -> F {
         self.domains.x1.group_gen()
     }
+
+    pub fn domain(&self) -> GeneralEvaluationDomain<F> {
+        self.domains.x1
+    }
 }
 
 fn l_i<F: FftField>(i: usize, n: usize) -> Vec<F> {
@@ -121,15 +125,8 @@ fn l_i<F: FftField>(i: usize, n: usize) -> Vec<F> {
     l_i
 }
 
-pub fn not_last<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
-    let x = &DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]);
-    let w_last = domain.group_gen().pow(&[domain.size() as u64 - 1]);
-    let w_last = &DensePolynomial::from_coefficients_slice(&[w_last]);
-    x - w_last
-}
-
 // (x - w^i)
-pub fn vanishes_on_row<F: FftField>(i: usize, domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
+fn vanishes_on_row<F: FftField>(i: usize, domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
     assert!(i < domain.size());
     let w = domain.group_gen();
     let wi = w.pow(&[i as u64]);
@@ -138,9 +135,8 @@ pub fn vanishes_on_row<F: FftField>(i: usize, domain: GeneralEvaluationDomain<F>
     &x - &wi
 }
 
-/// The polynomial
-/// (x - w^{n - 3}) * (x - w^{n - 2}) * (x - w^{n - 1})
-pub fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
+// (x - w^{n - 3}) * (x - w^{n - 2}) * (x - w^{n - 1})
+fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
     let w = domain.group_gen();
     let n3 = (domain.size() - ZK_ROWS) as u64;
     let w3 = w.pow(&[n3]);
@@ -150,4 +146,43 @@ pub fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) 
     let x = DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]); // X
     let c = |a: F| DensePolynomial::from_coefficients_slice(&[a]);
     &(&(&x - &c(w3)) * &(&x - &c(w2))) * &(&x - &c(w1))
+}
+
+fn eval_vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>, x: F) -> F {
+    let w = domain.group_gen();
+    let n3 = (domain.size() - ZK_ROWS) as u64;
+    let w3 = w.pow(&[n3]);
+    let w2 = w3 * w;
+    let w1 = w2 * w;
+    assert_eq!(w1, domain.group_gen_inv());
+    (x - w3) * (x - w2) * (x - w1)
+}
+
+pub struct EvaluatedDomain<F: FftField> {
+    zk_rows_vanishing_poly_at_zeta: F,
+    domain: GeneralEvaluationDomain<F>,
+    zeta: F,
+}
+
+impl<F: FftField> EvaluatedDomain<F> {
+    pub fn new(domain: GeneralEvaluationDomain<F>, zeta: F, hiding: bool) -> Self {
+        let zk_rows_vanishing_poly_at_zeta = if hiding { eval_vanishes_on_last_3_rows(domain, zeta) } else { F::one() };
+        let omega = domain.group_gen();
+        Self {
+            zk_rows_vanishing_poly_at_zeta,
+            domain,
+            zeta,
+        }
+    }
+
+    pub(crate) fn divide_by_vanishing_poly_in_zeta<>(
+        &self,
+        poly_in_zeta: F,
+    ) -> F {
+        poly_in_zeta * self.zk_rows_vanishing_poly_at_zeta / (self.zeta.pow([self.domain.size() as u64]) - F::one())
+    }
+
+    pub fn omega(&self) -> F {
+        self.domain.group_gen()
+    }
 }

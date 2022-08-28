@@ -5,6 +5,7 @@ use fflonk::pcs::{Commitment, PCS, PcsParams, RawVerifierKey};
 use ark_std::test_rng;
 use crate::piop::VerifierPiop;
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
+use crate::domain::EvaluatedDomain;
 use crate::transcript::Transcript;
 
 pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
@@ -50,9 +51,10 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
             Evaluations: ColumnsEvaluated<F>,
     {
         let eval: F = piop.evaluate_constraints_main().iter().zip(challenges.alphas.iter()).map(|(c, alpha)| *alpha * c).sum();
-        let (n, omega) = piop.get_n();
         let zeta = challenges.zeta;
-        let q_zeta = (eval + proof.lin_at_zeta_omega) / (zeta.pow([n as u64]) - F::one());
+        let domain_evaluated = piop.domain_evaluated(zeta);
+
+        let q_zeta = domain_evaluated.divide_by_vanishing_poly_in_zeta(eval + proof.lin_at_zeta_omega);
 
         let mut columns = [
             piop.precommitted_columns(),
@@ -69,7 +71,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
         let lin_pices = piop.constraint_polynomials_linearized_commitments();
         let lin_comm = CS::C::combine(&challenges.alphas[..3], &lin_pices);
 
-        let zeta_omega = zeta * omega;
+        let zeta_omega = zeta * domain_evaluated.omega();
 
         CS::batch_verify(&self.pcs_vk, vec![cl, lin_comm], vec![challenges.zeta, zeta_omega], vec![agg_y, proof.lin_at_zeta_omega], vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof], &mut test_rng())
     }

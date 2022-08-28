@@ -1,6 +1,8 @@
 use ark_ec::AffineCurve;
 use ark_ff::PrimeField;
+use ark_poly::GeneralEvaluationDomain;
 use fflonk::pcs::Commitment;
+use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
 use common::gadgets::inner_prod::InnerProdValues;
@@ -10,6 +12,7 @@ use common::piop::VerifierPiop;
 use crate::piop::{RingCommitments, RingEvaluations, SelectorsValues};
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
+    domain: GeneralEvaluationDomain<F>,
     selectors: SelectorsValues<F>,
     points: [C; 2],
     columns: RingCommitments<F, C>,
@@ -22,14 +25,14 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
 }
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
-    pub fn init(points: &[C; 2],
+    pub fn init(domain: GeneralEvaluationDomain<F>,
+                points: &[C; 2],
                 columns: RingCommitments<F, C>,
                 evals: RingEvaluations<F>,
                 selectors: SelectorsValues<F>,
                 init: (F, F),
                 result: (F, F),
     ) -> Self {
-
         let cond_add = CondAddValues {
             bitmask: evals.bits,
             points: (evals.points[0], evals.points[1]),
@@ -65,6 +68,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
         };
 
         Self {
+            domain,
             selectors,
             points: points.clone(),
             columns,
@@ -121,7 +125,7 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
         ]
     }
 
-    fn get_n(&self) -> (usize, F) {
-        (self.selectors.n, self.selectors.omega)
+    fn domain_evaluated(&self, zeta: F) -> EvaluatedDomain<F> {
+        EvaluatedDomain::new(self.domain, zeta, false)
     }
 }

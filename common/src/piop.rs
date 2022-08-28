@@ -5,7 +5,7 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use fflonk::pcs::{Commitment};
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
-use crate::domain::Domain;
+use crate::domain::{Domain, EvaluatedDomain};
 
 
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
@@ -48,5 +48,5 @@ pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C>;
 
-    fn get_n(&self) -> (usize, F);
+    fn domain_evaluated(&self, zeta: F) -> EvaluatedDomain<F>;
 }

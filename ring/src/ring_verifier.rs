@@ -52,7 +52,7 @@ impl<F: PrimeField, CS: PCS<F>> RingVerifier<F, CS> {
         let selectors_at_zeta = selectors.evaluate(&challenges.zeta);
         let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();
         let init_plus_result = init + result;
-        let piop = PiopVerifier::init(&self.points_comm,
+        let piop = PiopVerifier::init(domain.domain(), &self.points_comm,
                                       proof.column_commitments.clone(),
                                       proof.columns_at_zeta.clone(),
                                       selectors_at_zeta,
