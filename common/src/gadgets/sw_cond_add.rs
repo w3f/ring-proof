@@ -6,6 +6,7 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::{test_rng, UniformRand, Zero};
 use crate::{Column, const_evals, FieldColumn};
+use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 
@@ -20,13 +21,13 @@ pub struct AffineColumn<F: FftField, P: AffineCurve<BaseField=F>> {
 }
 
 impl<F: FftField, P: AffineCurve<BaseField=F>> AffineColumn<F, P> {
-    pub fn init(points: Vec<P>) -> Self {
+    pub fn init(points: Vec<P>, domain: &Domain<F>) -> Self {
         assert!(points.iter().all(|p| !p.is_zero()));
         let (xs, ys) = points.iter()
             .map(|p| p.xy().unwrap())
             .unzip();
-        let xs = FieldColumn::init(xs);
-        let ys = FieldColumn::init(ys);
+        let xs = domain.column(xs);
+        let ys = domain.column(ys);
         Self { points, xs, ys }
     }
 
@@ -64,7 +65,8 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     pub fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, Affine<Curve>>,
-                not_last: FieldColumn<F>) -> Self {
+                not_last: FieldColumn<F>,
+                domain: &Domain<F>) -> Self {
         let n = bitmask.size();
         assert_eq!(points.points.len(), n);
         assert_eq!(not_last.evals.evals.len(), n);
@@ -85,7 +87,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
         let init_plus_result = acc.last().unwrap();
         let result = init_plus_result.into_projective() - init.into_projective();
         let result = result.into_affine();
-        let acc = AffineColumn::init(acc);
+        let acc = AffineColumn::init(acc, domain);
 
         Self { bitmask, points, acc, not_last, result }
     }
@@ -252,7 +254,6 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
     use ark_poly::{GeneralEvaluationDomain, Polynomial};
     use crate::gadgets::tests::test_gadget;
-    use crate::not_last;
     use crate::test_helpers::cond_sum;
     use crate::test_helpers::*;
     use ark_poly::EvaluationDomain;
@@ -264,17 +265,16 @@ mod tests {
 
         let log_n = 10;
         let n = 2usize.pow(log_n);
-        let domain = GeneralEvaluationDomain::<Fq>::new(n).unwrap();
+        let domain = Domain::new(n);
 
         let bitmask = random_bitvec(n, 0.5, rng);
         let points = random_vec::<SWAffine, _>(n, rng);
         let init = CondAdd::point_in_g1_complement();
         let expected_res = init + cond_sum(&bitmask[..n - 1], &points[..n - 1]);
 
-        let bitmask_col = BitColumn::init(bitmask);
-        let points_col = AffineColumn::init(points);
-        let not_last_col = FieldColumn::from_poly(not_last(domain), n);
-        let gadget = CondAdd::init(bitmask_col, points_col, not_last_col);
+        let bitmask_col = BitColumn::init(bitmask, &domain);
+        let points_col = AffineColumn::init(points, &domain);
+        let gadget = CondAdd::init(bitmask_col, points_col, domain.not_last_row.clone(), &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 

@@ -9,6 +9,7 @@ use ark_std::{test_rng, UniformRand};
 use fflonk::pcs::Commitment;
 
 use common::Column;
+use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
 use common::gadgets::fixed_cells::FixedCells;
 use common::gadgets::inner_prod::InnerProd;
@@ -18,7 +19,6 @@ use common::piop::ProverPiop;
 
 use crate::piop::{RingCommitments, RingEvaluations, SelectorColumns};
 use crate::piop::params::PiopParams;
-
 
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
@@ -36,14 +36,15 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
-    pub fn init(params: &PiopParams<F, Curve>,
+    pub fn init(domain: &Domain<F>,
+                params: &PiopParams<F, Curve>,
                 selectors: SelectorColumns<F>,
                 points: AffineColumn<F, Affine<Curve>>,
                 prover_index_in_keys: usize,
                 secret: Curve::ScalarField) -> Self {
-        let bits = Self::bits_column(params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), selectors.l_last.clone());
-        let cond_add = CondAdd::init(bits.clone(), points.clone(), selectors.not_last.clone());
+        let bits = Self::bits_column(domain, params, prover_index_in_keys, secret);
+        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), selectors.l_last.clone(), domain);
+        let cond_add = CondAdd::init(bits.clone(), points.clone(), selectors.not_last.clone(), domain);
         let booleanity = Booleanity::init(bits.clone());
         let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), selectors.l_first.clone(), selectors.l_last.clone());
         let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), selectors.l_first.clone(), selectors.l_last.clone());
@@ -59,7 +60,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         }
     }
 
-    pub fn keyset_column(params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+    pub fn keyset_column(domain: &Domain<F>, params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
         assert!(keys.len() <= params.keyset_part_size);
         let padding_len = params.keyset_part_size - keys.len();
         let padding_point = Affine::<Curve>::rand(&mut test_rng()); //TODO: Ask Al
@@ -70,10 +71,10 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             &params.powers_of_h,
         ].concat();
         assert_eq!(points.len(), params.domain.size());
-        AffineColumn::init(points)
+        AffineColumn::init(points, domain)
     }
 
-    fn bits_column(params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {
+    fn bits_column(domain: &Domain<F>, params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {
         let mut keyset_part = vec![false; params.keyset_part_size];
         keyset_part[index_in_keys] = true;
         let scalar_part = params.scalar_part(secret);
@@ -81,7 +82,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             keyset_part,
             scalar_part
         ].concat();
-        BitColumn::init(bits)
+        BitColumn::init(bits, domain)
     }
 }
 

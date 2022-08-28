@@ -9,9 +9,10 @@ use std::marker::PhantomData;
 use ark_ff::{FftField, Field, PrimeField};
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use fflonk::pcs::Commitment;
-use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn, l_first, l_last, not_last};
+use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
 use ark_serialize::{Read, Write, SerializationError};
+use common::domain::Domain;
 
 #[derive(Clone)]
 pub struct SelectorColumns<F: FftField> {
@@ -22,16 +23,15 @@ pub struct SelectorColumns<F: FftField> {
 }
 
 impl<F: FftField> SelectorColumns<F> {
-    pub fn init(domain_size: usize, keyset_size: usize) -> Self {
+    pub fn init(domain: &Domain<F>, keyset_size: usize) -> Self {
+        let domain_size = domain.capacity;
         let p = domain_size - keyset_size;
         assert!(p > 0); //TODO
-        let domain = GeneralEvaluationDomain::new(domain_size).unwrap();
         let ring_selector = [vec![F::one(); keyset_size], vec![F::zero(); p]].concat();
-        let ring_selector = FieldColumn::init(ring_selector);
-        let l_first = FieldColumn::init(l_first(domain_size));
-        let l_last = FieldColumn::init(l_last(domain_size));
-        // doesn't really require FFTs to compute, but who cares
-        let not_last = FieldColumn::from_poly(not_last(domain), domain_size);
+        let ring_selector = domain.column(ring_selector);
+        let l_first = domain.l_first.clone();
+        let l_last = domain.l_last.clone();
+        let not_last = domain.not_last_row.clone();
         SelectorColumns {
             ring_selector,
             l_first,

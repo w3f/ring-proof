@@ -1,34 +1,36 @@
+use fflonk::pcs::PCS;
+
+use common::Proof;
+
+use crate::piop::{RingCommitments, RingEvaluations};
+
 mod piop;
 pub mod ring_prover;
 pub mod ring_verifier;
-
-use fflonk::pcs::PCS;
-
-
-use common::Proof;
-use crate::piop::{RingCommitments, RingEvaluations};
-
 
 type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Mul;
+
     use ark_ec::{AffineCurve, ProjectiveCurve};
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
+    use ark_poly::EvaluationDomain;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
-    use std::ops::Mul;
     use fflonk::pcs::PCS;
-
-    use common::test_helpers::*;
-    use crate::ring_prover::RingProver;
-    use crate::ring_verifier::RingVerifier;
-    use crate::piop::params::PiopParams;
-    use crate::piop::PiopProver;
     use fflonk::pcs::PcsParams;
     use merlin::Transcript;
-    use common::setup::Setup;
 
+    use common::domain::Domain;
+    use common::setup::Setup;
+    use common::test_helpers::*;
+
+    use crate::piop::params::PiopParams;
+    use crate::piop::PiopProver;
+    use crate::ring_prover::RingProver;
+    use crate::ring_verifier::RingVerifier;
 
     fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
         let rng = &mut test_rng();
@@ -44,7 +46,9 @@ mod tests {
         let k = rng.gen_range(0..keyset_size); // prover's secret index
         let pk = &pks[k];
 
-        let points = PiopProver::keyset_column(&piop_params, &pks);
+        let domain = Domain::new(piop_params.domain.size());
+
+        let points = PiopProver::keyset_column(&domain, &piop_params, &pks);
         let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];
         let vk = &setup.pcs_params.raw_vk();
 
@@ -56,7 +60,6 @@ mod tests {
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
         end_timer!(t_prove);
-
 
 
         let ring_verifier = RingVerifier::init(vk, points_comm, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));

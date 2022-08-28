@@ -3,6 +3,7 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use fflonk::pcs::{PCS, PcsParams};
+use common::domain::Domain;
 
 use common::gadgets::sw_cond_add::CondAdd;
 use common::piop::VerifierPiop;
@@ -46,7 +47,8 @@ impl<F: PrimeField, CS: PCS<F>> RingVerifier<F, CS> {
             PiopVerifier::<F, CS::C>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
         );
-        let selectors = SelectorColumns::init(self.domain_size, self.keyset_size);
+        let domain = Domain::new(self.domain_size);
+        let selectors = SelectorColumns::init(&domain, self.keyset_size);
         let selectors_at_zeta = selectors.evaluate(&challenges.zeta);
         let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();
         let init_plus_result = init + result;

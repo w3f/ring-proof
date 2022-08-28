@@ -3,6 +3,7 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 
 use crate::{Column, const_evals, FieldColumn};
+use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 
 
@@ -24,7 +25,7 @@ pub struct InnerProdValues<F: Field> {
 
 
 impl<F: FftField> InnerProd<F> {
-    pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, l_last: FieldColumn<F>) -> Self {
+    pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, l_last: FieldColumn<F>, domain: &Domain<F>) -> Self {
         assert_eq!(a.size(), b.size());
         assert_eq!(l_last.evals.evals.len(), a.size());
         let inner_prods = Self::partial_inner_prods(&a.evals.evals, &b.evals.evals);
@@ -32,7 +33,7 @@ impl<F: FftField> InnerProd<F> {
         // 0, a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-2]b[n-2]
         let mut acc = vec![F::zero()];
         acc.extend(partial_prods);
-        let acc = FieldColumn::init(acc);
+        let acc = domain.column(acc);
         Self { a, b, acc, l_last, inner_prod }
     }
 
@@ -103,7 +104,6 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::Fq;
     use ark_poly::EvaluationDomain;
 
-    use crate::l_last;
     use crate::test_helpers::random_vec;
 
     use ark_ff::{Field, Zero};
@@ -122,15 +122,15 @@ mod tests {
 
         let log_n = 16;
         let n = 2usize.pow(log_n);
-        let domain = GeneralEvaluationDomain::<Fq>::new(n).unwrap();
+        let domain = Domain::new(n);
 
         let a = random_vec(n, rng);
         let b = random_vec(n, rng);
-        let a_col = FieldColumn::init(a.clone());
-        let b_col = FieldColumn::init(b.clone());
-        let l_last = FieldColumn::init(l_last(n));
+        let a_col = domain.column(a.clone());
+        let b_col = domain.column(b.clone());
+        let l_last = domain.l_last.clone();
 
-        let gadget = InnerProd::<Fq>::init(a_col, b_col, l_last);
+        let gadget = InnerProd::<Fq>::init(a_col, b_col, l_last, &domain);
 
         assert_eq!(gadget.inner_prod, inner_prod(&a, &b));
 
@@ -144,8 +144,6 @@ mod tests {
 
         assert_eq!(constraint_poly.degree(), 2 * n - 2);
 
-        let remainder = constraint_poly.divide_by_vanishing_poly(domain).unwrap().1;
-
-        assert!(remainder.is_zero());
+        let quotient = domain.divide_by_vanishing_poly(&constraint_poly);
     }
 }
