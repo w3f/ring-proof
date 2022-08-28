@@ -46,7 +46,7 @@ mod tests {
         let k = rng.gen_range(0..keyset_size); // prover's secret index
         let pk = &pks[k];
 
-        let domain = Domain::new(piop_params.domain.size());
+        let domain = Domain::new(piop_params.domain.size(), false);
 
         let points = PiopProver::keyset_column(&domain, &piop_params, &pks);
         let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];

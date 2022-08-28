@@ -123,7 +123,7 @@ mod tests {
 
         let log_n = 16;
         let n = 2usize.pow(log_n);
-        let domain = Domain::new(n);
+        let domain = Domain::new(n, false);
 
         let a = random_vec(n, rng);
         let b = random_vec(n, rng);

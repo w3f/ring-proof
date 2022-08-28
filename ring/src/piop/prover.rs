@@ -42,7 +42,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                 points: AffineColumn<F, Affine<Curve>>,
                 prover_index_in_keys: usize,
                 secret: Curve::ScalarField) -> Self {
-        let domain = Domain::new(params.domain.size());
+        let domain = Domain::new(params.domain.size(), false);
         let bits = Self::bits_column(&domain, params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);

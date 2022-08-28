@@ -32,7 +32,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
                 k: usize,
                 empty_transcript: merlin::Transcript,
     ) -> Self {
-        let domain = Domain::new(piop_params.domain.size());
+        let domain = Domain::new(piop_params.domain.size(), false);
         let selectors = SelectorColumns::init(&domain, piop_params.keyset_part_size);
         let points = PiopProver::keyset_column(&domain, &piop_params, &keys);
         let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];

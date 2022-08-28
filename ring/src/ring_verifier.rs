@@ -47,7 +47,7 @@ impl<F: PrimeField, CS: PCS<F>> RingVerifier<F, CS> {
             PiopVerifier::<F, CS::C>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
         );
-        let domain = Domain::new(self.domain_size);
+        let domain = Domain::new(self.domain_size, false);
         let selectors = SelectorColumns::init(&domain, self.keyset_size);
         let selectors_at_zeta = selectors.evaluate(&challenges.zeta);
         let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();

@@ -1,7 +1,10 @@
 use ark_ff::{FftField, Zero};
 use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
+use ark_std::test_rng;
 use crate::FieldColumn;
+
+const ZK_ROWS: usize = 3;
 
 // Domains for performing calculations with constraint polynomials of degree up to 4.
 struct Domains<F: FftField> {
@@ -40,26 +43,38 @@ impl<F: FftField> Domains<F> {
 
 pub struct Domain<F: FftField> {
     domains: Domains<F>,
+    hiding: bool,
     pub capacity: usize,
     pub not_last_row: FieldColumn<F>,
     pub l_first: FieldColumn<F>,
     pub l_last: FieldColumn<F>,
+    zk_rows_vanishing_poly: Option<DensePolynomial<F>>,
 }
 
 impl<F: FftField> Domain<F> {
-    pub fn new(n: usize) -> Self {
+    pub fn new(n: usize, hiding: bool) -> Self {
         let domains = Domains::new(n);
-        let capacity = domains.x1.size();
-        let not_last_row = not_last(domains.x1);
+        let size = domains.x1.size();
+        let capacity = if hiding { size - ZK_ROWS } else { size };
+        let last_row_index = capacity - 1;
+
+        let l_first = l_i(0, size);
+        let l_first = domains.column_from_evals(l_first, capacity);
+        let l_last = l_i(last_row_index, size);
+        let l_last = domains.column_from_evals(l_last, capacity);
+        let not_last_row = vanishes_on_row(last_row_index, domains.x1);
         let not_last_row = domains.column_from_poly(not_last_row, capacity);
-        let l_first = domains.column_from_evals(l_i(0, capacity), capacity);
-        let l_last = domains.column_from_evals(l_i(capacity - 1, capacity), capacity);
+
+        let zk_rows_vanishing_poly = hiding.then(|| vanishes_on_last_3_rows(domains.x1));
+
         Self {
             domains,
+            hiding,
             capacity,
             not_last_row,
             l_first,
             l_last,
+            zk_rows_vanishing_poly
         }
     }
 
@@ -67,7 +82,12 @@ impl<F: FftField> Domain<F> {
         &self,
         poly: &DensePolynomial<F>,
     ) -> DensePolynomial<F> {
-        let (quotient, remainder) = poly.divide_by_vanishing_poly(self.domains.x1).unwrap(); //TODO error-handling
+        let (quotient, remainder) = if self.hiding {
+            let exclude_zk_rows = poly * self.zk_rows_vanishing_poly.as_ref().unwrap();
+            exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+        } else {
+            poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+        };
         assert!(remainder.is_zero()); //TODO error-handling
         quotient
     }
@@ -76,6 +96,17 @@ impl<F: FftField> Domain<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
         evals.resize(self.capacity, F::zero());
+        if self.hiding {
+            evals.resize_with(self.domains.x1.size(), || F::rand(&mut test_rng())); //TODO
+        }
+        self.domains.column_from_evals(evals, len)
+    }
+
+    // public column
+    pub fn selector(&self, mut evals: Vec<F>) -> FieldColumn<F> {
+        let len = evals.len();
+        assert!(len <= self.capacity);
+        evals.resize(self.domains.x1.size(), F::zero());
         self.domains.column_from_evals(evals, len)
     }
 
@@ -95,4 +126,28 @@ pub fn not_last<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynom
     let w_last = domain.group_gen().pow(&[domain.size() as u64 - 1]);
     let w_last = &DensePolynomial::from_coefficients_slice(&[w_last]);
     x - w_last
+}
+
+// (x - w^i)
+pub fn vanishes_on_row<F: FftField>(i: usize, domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
+    assert!(i < domain.size());
+    let w = domain.group_gen();
+    let wi = w.pow(&[i as u64]);
+    let wi = DensePolynomial::from_coefficients_slice(&[wi]);
+    let x = DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]);
+    &x - &wi
+}
+
+/// The polynomial
+/// (x - w^{n - 3}) * (x - w^{n - 2}) * (x - w^{n - 1})
+pub fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
+    let w = domain.group_gen();
+    let n3 = (domain.size() - ZK_ROWS) as u64;
+    let w3 = w.pow(&[n3]);
+    let w2 = w3 * w;
+    let w1 = w2 * w;
+    assert_eq!(w1, domain.group_gen_inv());
+    let x = DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]); // X
+    let c = |a: F| DensePolynomial::from_coefficients_slice(&[a]);
+    &(&(&x - &c(w3)) * &(&x - &c(w2))) * &(&x - &c(w1))
 }
