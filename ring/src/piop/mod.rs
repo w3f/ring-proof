@@ -24,11 +24,10 @@ pub struct SelectorColumns<F: FftField> {
 
 impl<F: FftField> SelectorColumns<F> {
     pub fn init(domain: &Domain<F>, keyset_size: usize) -> Self {
-        let domain_size = domain.capacity;
-        let p = domain_size - keyset_size;
+        let p = domain.capacity - keyset_size;
         assert!(p > 0); //TODO
-        let ring_selector = [vec![F::one(); keyset_size], vec![F::zero(); p]].concat();
-        let ring_selector = domain.column(ring_selector);
+        let ring_selector = [vec![F::one(); keyset_size], vec![F::zero(); p-1]].concat();
+        let ring_selector = domain.selector(ring_selector);
         let l_first = domain.l_first.clone();
         let l_last = domain.l_last.clone();
         let not_last = domain.not_last_row.clone();

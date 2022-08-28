@@ -74,7 +74,7 @@ impl<F: FftField> Domain<F> {
             not_last_row,
             l_first,
             l_last,
-            zk_rows_vanishing_poly
+            zk_rows_vanishing_poly,
         }
     }
 

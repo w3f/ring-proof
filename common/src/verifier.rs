@@ -1,5 +1,5 @@
-use ark_ff::{Field, PrimeField};
-use ark_poly::GeneralEvaluationDomain;
+use ark_ff::{FftField, Field, PrimeField};
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_serialize::CanonicalSerialize;
 use fflonk::pcs::{Commitment, PCS, PcsParams, RawVerifierKey};
 use ark_std::test_rng;
@@ -24,7 +24,6 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
                 domain: GeneralEvaluationDomain<F>,
                 precommitted_cols: [CS::C; 2],
                 empty_transcript: T) -> Self {
-
         let pcs_vk = pcs_raw_vk.prepare();
 
         let mut transcript_prelude = empty_transcript;
@@ -35,7 +34,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
             pcs_vk,
             domain,
             precommitted_cols,
-            transcript_prelude
+            transcript_prelude,
         }
     }
 
@@ -88,7 +87,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
     {
         let mut transcript = self.transcript_prelude.clone();
         transcript.add_instance(instance);
-        transcript.add_committed_cols (&proof.column_commitments);
+        transcript.add_committed_cols(&proof.column_commitments);
         // let r = transcript.get_bitmask_aggregation_challenge();
         // transcript.append_2nd_round_register_commitments(&proof.additional_commitments);
         let alphas = transcript.get_constraints_aggregation_coeffs(n_constraints);
@@ -110,6 +109,4 @@ pub struct Challenges<F: Field> {
     pub zeta: F,
     pub nus: Vec<F>,
 }
-
-
 

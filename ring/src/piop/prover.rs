@@ -12,7 +12,7 @@ use common::Column;
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
 use common::gadgets::fixed_cells::FixedCells;
-use common::gadgets::inner_prod_pub::InnerProd;
+use common::gadgets::inner_prod::InnerProd;
 use common::gadgets::ProverGadget;
 use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;

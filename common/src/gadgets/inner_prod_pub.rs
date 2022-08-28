@@ -3,34 +3,39 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 
 use crate::{Column, const_evals, FieldColumn};
-use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::domain::Domain;
+use crate::gadgets::{ProverGadget, VerifierGadget};
 
 
 pub struct InnerProd<F: FftField> {
     a: FieldColumn<F>,
     b: FieldColumn<F>,
-    not_last: FieldColumn<F>,
+    l_last: FieldColumn<F>,
     pub acc: FieldColumn<F>,
+    pub inner_prod: F,
 }
 
 pub struct InnerProdValues<F: Field> {
     pub a: F,
     pub b: F,
-    pub not_last: F,
+    pub l_last: F,
     pub acc: F,
+    pub inner_prod: F,
 }
 
 
 impl<F: FftField> InnerProd<F> {
     pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, domain: &Domain<F>) -> Self {
-        assert_eq!(a.len, domain.capacity - 1); // last element is not constrained
-        assert_eq!(b.len, domain.capacity - 1); // last element is not constrained
-        let inner_prods = Self::partial_inner_prods(a.vals(), b.vals());
+        assert_eq!(a.evals.evals.len(), domain.capacity);
+        assert_eq!(b.evals.evals.len(), domain.capacity);
+        let l_last = domain.l_last.clone();
+        let inner_prods = Self::partial_inner_prods(&a.evals.evals, &b.evals.evals);
+        let (&inner_prod, partial_prods) = inner_prods.split_last().unwrap();
+        // 0, a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-2]b[n-2]
         let mut acc = vec![F::zero()];
-        acc.extend(inner_prods);
+        acc.extend(partial_prods);
         let acc = domain.column(acc);
-        Self { a, b, not_last: domain.not_last_row.clone(), acc }
+        Self { a, b, acc, l_last, inner_prod }
     }
 
     /// Returns a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-1]b[n-1]
@@ -49,10 +54,12 @@ impl<F: FftField> InnerProd<F> {
         InnerProdValues {
             a: self.a.evaluate(zeta),
             b: self.b.evaluate(zeta),
-            not_last: self.not_last.evaluate(zeta), //TODO: can be done in O(1)
+            l_last: self.l_last.evaluate(zeta), //TODO: can be done in O(1)
             acc: self.acc.evaluate(zeta),
+            inner_prod: self.inner_prod,
         }
     }
+
 }
 
 impl<F: FftField> ProverGadget<F> for InnerProd<F> {
@@ -61,29 +68,31 @@ impl<F: FftField> ProverGadget<F> for InnerProd<F> {
     }
 
     fn constraints(&self) -> Vec<Evaluations<F>> {
+        let domain = self.l_last.domain_4x();
+        let inner_prod = &const_evals(self.inner_prod, domain);
+        let l_last = &self.l_last.evals_4x;
         let a = &self.a.evals_4x;
         let b = &self.b.evals_4x;
         let acc = &self.acc.evals_4x;
         let acc_shifted = &self.acc.shifted_4x();
-        let not_last = &self.not_last.evals_4x;
-        let c = &(&(acc_shifted - acc) - &(a * b)) * not_last;
+        let c = &(&(acc_shifted - acc) - &(a * b)) + &(inner_prod * l_last);
         vec![c]
     }
 
     fn constraints_linearized(&self, _z: &F) -> Vec<DensePolynomial<F>> {
-        let c = &self.acc.poly * self.not_last.evaluate(_z);
-        vec![c]
+        let c = self.acc.as_poly();
+        vec![c.clone()]
     }
 
     fn domain(&self) -> GeneralEvaluationDomain<F> {
-        self.a.evals.domain()
+        self.a.domain()
     }
 }
 
 
 impl<F: Field> VerifierGadget<F> for InnerProdValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
-        let c = (-self.acc - self.a * self.b) * self.not_last;
+        let c = self.inner_prod * self.l_last - self.a * self.b - self.acc;
         vec![c]
     }
 }
@@ -100,7 +109,6 @@ mod tests {
 
     use ark_ff::{Field, Zero};
     use ark_poly::{GeneralEvaluationDomain, Polynomial};
-    use crate::domain::Domain;
 
     fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
         assert_eq!(a.len(), b.len());
@@ -109,35 +117,33 @@ mod tests {
             .sum()
     }
 
-    fn _test_inner_prod_gadget(hiding: bool) {
+    #[test]
+    fn test_inner_prod_gadget() {
         let rng = &mut test_rng();
 
-        let log_n = 10;
+        let log_n = 16;
         let n = 2usize.pow(log_n);
-        let domain = Domain::new(n, hiding);
+        let domain = Domain::new(n, false);
 
-        let a = random_vec(domain.capacity - 1, rng);
-        let b = random_vec(domain.capacity - 1, rng);
-        let ab = inner_prod(&a, &b);
-        let a = domain.column(a);
-        let b = domain.column(b);
+        let a = random_vec(n, rng);
+        let b = random_vec(n, rng);
+        let a_col = domain.column(a.clone());
+        let b_col = domain.column(b.clone());
 
-        let gadget = InnerProd::<Fq>::init(a, b, &domain);
+        let gadget = InnerProd::<Fq>::init(a_col, b_col, &domain);
+
+        assert_eq!(gadget.inner_prod, inner_prod(&a, &b));
 
         let acc = &gadget.acc.evals.evals;
         assert!(acc[0].is_zero());
-        assert_eq!(acc[domain.capacity - 1], ab);
+        for i in 0..n - 1 {
+            assert_eq!(acc[i + 1], acc[i] + a[i] * b[i])
+        }
 
         let constraint_poly = gadget.constraints()[0].interpolate_by_ref();
 
-        assert_eq!(constraint_poly.degree(), 2 * n - 1);
+        assert_eq!(constraint_poly.degree(), 2 * n - 2);
 
-        domain.divide_by_vanishing_poly(&constraint_poly);
-    }
-
-    #[test]
-    fn test_inner_prod_gadget() {
-        _test_inner_prod_gadget(false);
-        _test_inner_prod_gadget(true);
+        let quotient = domain.divide_by_vanishing_poly(&constraint_poly);
     }
 }

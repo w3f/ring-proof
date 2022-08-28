@@ -42,6 +42,10 @@ impl<F: FftField> FieldColumn<F> {
         evals_4x.rotate_left(4);
         Evaluations::from_vec_and_domain(evals_4x, self.domain_4x())
     }
+
+    pub fn vals(&self) -> &[F] {
+        &self.evals.evals[..self.len]
+    }
 }
 
 impl<F: FftField> Column<F> for FieldColumn<F> {

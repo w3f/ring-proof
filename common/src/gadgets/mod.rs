@@ -3,9 +3,10 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 
 pub mod booleanity;
-pub mod inner_prod_pub;
+// pub mod inner_prod_pub;
 pub mod sw_cond_add;
 pub mod fixed_cells;
+pub mod inner_prod;
 
 pub trait ProverGadget<F: FftField> {
     // Columns populated by the gadget.
