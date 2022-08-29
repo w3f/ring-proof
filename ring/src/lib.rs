@@ -72,6 +72,6 @@ mod tests {
     #[test]
     fn test_ring_proof() {
         // _test_ring_proof::<fflonk::pcs::kzg::KZG<ark_bls12_381::Bls12_381>>(2usize.pow(12));
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10), false);
+        _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10), true);
     }
 }

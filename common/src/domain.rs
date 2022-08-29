@@ -4,7 +4,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_std::test_rng;
 use crate::FieldColumn;
 
-const ZK_ROWS: usize = 0;
+const ZK_ROWS: usize = 3;
 
 // Domains for performing calculations with constraint polynomials of degree up to 4.
 #[derive(Clone)]
@@ -170,19 +170,19 @@ pub struct EvaluatedDomain<F: FftField> {
 }
 
 impl<F: FftField> EvaluatedDomain<F> {
-    pub fn new(domain: GeneralEvaluationDomain<F>, z: F) -> Self {
-        let hiding = false;
+    pub fn new(domain: GeneralEvaluationDomain<F>, z: F, hiding: bool) -> Self {
+        let k = if hiding { ZK_ROWS } else { 0 };
         let mut z_n = z; // z^n, n=2^d - domain size, so squarings only
         for _ in 0..domain.log_size_of_group() {
             z_n.square_in_place();
         }
-        let z_n_minus_one = z_n - F::one(); // vanishing polynomial
+        let z_n_minus_one = z_n - F::one(); // vanishing polynomial of the full domain
 
-        // w^{n-k}
+        // w^{n-1}
         let mut wi = domain.group_gen_inv();
-        // prod = w^{n-1}...w^{n-k}
+        // Vanishing polynomial of zk rows: prod = (z - w^{n-1})...(z - w^{n-k})
         let mut prod = F::one();
-        for _ in 0..ZK_ROWS {
+        for _ in 0..k {
             prod *= z - wi;
             wi *= domain.group_gen_inv();
         }
@@ -190,8 +190,8 @@ impl<F: FftField> EvaluatedDomain<F> {
         let not_last_row = z - wi;
 
         // w^{k+1}
-        let wi = domain.group_gen().pow([(ZK_ROWS + 1) as u64]);
-        let mut inv = [z_n_minus_one, z - F::one(), wi * z - F::one()];
+        let wj = domain.group_gen().pow([(k + 1) as u64]);
+        let mut inv = [z_n_minus_one, z - F::one(), wj * z - F::one()];
         batch_inversion(&mut inv);
         let vanishing_polynomial_inv = prod * inv[0];
         let z_n_minus_one_div_n = z_n_minus_one * domain.size_inv();
@@ -221,5 +221,32 @@ impl<F: FftField> EvaluatedDomain<F> {
 
     pub fn omega(&self) -> F {
         self.domain.group_gen()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ark_ed_on_bls12_381_bandersnatch::Fq;
+    use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial};
+    use ark_std::{test_rng, UniformRand};
+    use crate::domain::{Domain, EvaluatedDomain};
+
+    fn _test_evaluated_domain(hiding: bool) {
+        let rng = &mut test_rng();
+
+        // let domain = GeneralEvaluationDomain::new(1024);
+        let n = 1024;
+        let domain = Domain::new(n, hiding);
+        let z = Fq::rand(rng);
+        let domain_eval = EvaluatedDomain::new(domain.domain(), z, hiding);
+        assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
+        assert_eq!(domain.l_last.poly.evaluate(&z), domain_eval.l_last);
+        assert_eq!(domain.not_last_row.poly.evaluate(&z), domain_eval.not_last_row);
+    }
+
+    #[test]
+    fn test_evaluated_domain() {
+        _test_evaluated_domain(false);
+        _test_evaluated_domain(true);
     }
 }
