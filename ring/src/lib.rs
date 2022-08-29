@@ -16,7 +16,6 @@ mod tests {
 
     use ark_ec::{AffineCurve, ProjectiveCurve};
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
-    use ark_poly::EvaluationDomain;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
     use fflonk::pcs::PCS;
@@ -32,13 +31,13 @@ mod tests {
     use crate::ring_prover::RingProver;
     use crate::ring_verifier::RingVerifier;
 
-    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
+    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize, hiding: bool) {
         let rng = &mut test_rng();
 
         // SETUP per curve and domain
+        let domain = Domain::new(domain_size, hiding);
+        let piop_params = PiopParams::setup(domain, rng);
         let setup = Setup::<Fq, CS>::generate(domain_size, rng);
-        let piop_params = PiopParams::setup(domain_size, rng);
-
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
@@ -46,9 +45,7 @@ mod tests {
         let k = rng.gen_range(0..keyset_size); // prover's secret index
         let pk = &pks[k];
 
-        let domain = Domain::new(piop_params.domain.size(), false);
-
-        let points = PiopProver::keyset_column(&domain, &piop_params, &pks);
+        let points = PiopProver::keyset_column( &piop_params, &pks);
         let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];
         let vk = &setup.pcs_params.raw_vk();
 
@@ -73,6 +70,6 @@ mod tests {
     #[test]
     fn test_ring_proof() {
         // _test_ring_proof::<fflonk::pcs::kzg::KZG<ark_bls12_381::Bls12_381>>(2usize.pow(12));
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10));
+        _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10), false);
     }
 }

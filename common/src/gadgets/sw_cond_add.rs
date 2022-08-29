@@ -4,7 +4,7 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
-use ark_std::{test_rng, UniformRand, Zero};
+use ark_std::Zero;
 use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
@@ -66,7 +66,6 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
     pub fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, Affine<Curve>>,
                 domain: &Domain<F>) -> Self {
-        let n = bitmask.size();
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
         assert_eq!(points.points.len(), domain.capacity - 1);
         let not_last = domain.not_last_row.clone();
@@ -249,13 +248,11 @@ impl<F: Field> CondAddValues<F> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ark_std::{test_rng, UniformRand};
-    use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
-    use ark_poly::{GeneralEvaluationDomain, Polynomial};
-    use crate::gadgets::tests::test_gadget;
+    use ark_std::test_rng;
+    use ark_ed_on_bls12_381_bandersnatch::SWAffine;
+    use ark_poly::Polynomial;
     use crate::test_helpers::cond_sum;
     use crate::test_helpers::*;
-    use ark_poly::EvaluationDomain;
 
 
     fn _test_sw_cond_add_gadget(hiding: bool) {
@@ -263,7 +260,7 @@ mod tests {
 
         let log_n = 10;
         let n = 2usize.pow(log_n);
-        let domain = Domain::new(n, false);
+        let domain = Domain::new(n, hiding);
 
         let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
         let points = random_vec::<SWAffine, _>(domain.capacity - 1, rng);
@@ -283,8 +280,8 @@ mod tests {
         assert_eq!(c1.degree(), 4 * n - 3);
         assert_eq!(c2.degree(), 3 * n - 2);
 
-        let quotient = domain.divide_by_vanishing_poly(&c1);
-        let quotient = domain.divide_by_vanishing_poly(&c2);
+        domain.divide_by_vanishing_poly(&c1);
+        domain.divide_by_vanishing_poly(&c2);
 
         // test_gadget(gadget);
     }

@@ -1,5 +1,5 @@
-use ark_ff::{PrimeField, Zero};
-use ark_poly::{EvaluationDomain, Evaluations, Polynomial};
+use ark_ff::PrimeField;
+use ark_poly::{Evaluations, Polynomial};
 use fflonk::aggregation::single::aggregate_polys;
 use fflonk::pcs::{PCS, PcsParams};
 use crate::piop::{ProverPiop};

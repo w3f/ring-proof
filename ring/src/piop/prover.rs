@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain};
+use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 use ark_serialize::CanonicalSerialize;
 use ark_std::{test_rng, UniformRand};
@@ -26,7 +26,6 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     domain: Domain<F>,
     bits: BitColumn<F>,
     points: AffineColumn<F, Affine<Curve>>,
-    selectors: SelectorColumns<F>,
     inner_prod: InnerProd<F>,
     cond_add: CondAdd<F, Affine<Curve>>,
     booleanity: Booleanity<F>,
@@ -37,14 +36,19 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
-    pub fn init(params: &PiopParams<F, Curve>,
-                selectors: SelectorColumns<F>,
-                points: AffineColumn<F, Affine<Curve>>,
-                prover_index_in_keys: usize,
-                secret: Curve::ScalarField) -> Self {
-        let domain = Domain::new(params.domain.size(), false);
-        let bits = Self::bits_column(&domain, params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(selectors.ring_selector.clone(), bits.col.clone(), &domain);
+    pub fn build(params: &PiopParams<F, Curve>,
+                 points: AffineColumn<F, Affine<Curve>>,
+                 prover_index_in_keys: usize,
+                 secret: Curve::ScalarField) -> Self {
+        let domain = params.domain.clone();
+        let keyset_part_selector = [
+            vec![F::one(); params.keyset_part_size],
+            vec![F::zero(); params.scalar_bitlen]
+        ].concat();
+        assert_eq!(keyset_part_selector.len(), domain.capacity - 1);
+        let keyset_part_selector = domain.selector(keyset_part_selector);
+        let bits = Self::bits_column(&params, prover_index_in_keys, secret);
+        let inner_prod = InnerProd::init(keyset_part_selector, bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);
         let booleanity = Booleanity::init(bits.clone());
         let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
@@ -53,7 +57,6 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             domain,
             bits,
             points,
-            selectors,
             inner_prod,
             cond_add,
             booleanity,
@@ -62,7 +65,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         }
     }
 
-    pub fn keyset_column(domain: &Domain<F>, params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+    pub fn keyset_column(params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
         assert!(keys.len() <= params.keyset_part_size);
         let padding_len = params.keyset_part_size - keys.len();
         let padding_point = Affine::<Curve>::rand(&mut test_rng()); //TODO: Ask Al
@@ -72,11 +75,11 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             &padding,
             &params.powers_of_h,
         ].concat();
-        assert_eq!(points.len(), params.domain.size() - 1);
-        AffineColumn::init(points, domain)
+        assert_eq!(points.len(), params.domain.capacity - 1);
+        AffineColumn::init(points, &params.domain)
     }
 
-    fn bits_column(domain: &Domain<F>, params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {
+    fn bits_column(params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {
         let mut keyset_part = vec![false; params.keyset_part_size];
         keyset_part[index_in_keys] = true;
         let scalar_part = params.scalar_part(secret);
@@ -84,7 +87,8 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             keyset_part,
             scalar_part
         ].concat();
-        BitColumn::init(bits, domain)
+        assert_eq!(bits.len(), params.domain.capacity - 1);
+        BitColumn::init(bits, &params.domain)
     }
 }
 

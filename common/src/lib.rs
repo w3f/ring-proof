@@ -1,5 +1,5 @@
-use ark_ff::{FftField, Field, PrimeField};
-use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
+use ark_ff::{FftField, PrimeField};
+use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
 use fflonk::pcs::{Commitment, PCS};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};

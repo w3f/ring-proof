@@ -2,7 +2,7 @@ use ark_ff::{FftField, Field, Zero};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 
-use crate::{Column, const_evals, domain, FieldColumn};
+use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
 

@@ -2,7 +2,7 @@ use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 
-use crate::{Column, const_evals, FieldColumn};
+use crate::{Column, FieldColumn};
 use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::domain::Domain;
 
@@ -94,12 +94,11 @@ mod tests {
     use super::*;
     use ark_std::test_rng;
     use ark_ed_on_bls12_381_bandersnatch::Fq;
-    use ark_poly::EvaluationDomain;
 
     use crate::test_helpers::random_vec;
 
     use ark_ff::{Field, Zero};
-    use ark_poly::{GeneralEvaluationDomain, Polynomial};
+    use ark_poly::Polynomial;
     use crate::domain::Domain;
 
     fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {

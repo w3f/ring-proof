@@ -7,6 +7,7 @@ use crate::FieldColumn;
 const ZK_ROWS: usize = 3;
 
 // Domains for performing calculations with constraint polynomials of degree up to 4.
+#[derive(Clone)]
 struct Domains<F: FftField> {
     x1: GeneralEvaluationDomain<F>,
     x4: GeneralEvaluationDomain<F>,
@@ -41,6 +42,7 @@ impl<F: FftField> Domains<F> {
     }
 }
 
+#[derive(Clone)]
 pub struct Domain<F: FftField> {
     domains: Domains<F>,
     hiding: bool,
@@ -167,7 +169,6 @@ pub struct EvaluatedDomain<F: FftField> {
 impl<F: FftField> EvaluatedDomain<F> {
     pub fn new(domain: GeneralEvaluationDomain<F>, zeta: F, hiding: bool) -> Self {
         let zk_rows_vanishing_poly_at_zeta = if hiding { eval_vanishes_on_last_3_rows(domain, zeta) } else { F::one() };
-        let omega = domain.group_gen();
         Self {
             zk_rows_vanishing_poly_at_zeta,
             domain,
