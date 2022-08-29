@@ -19,10 +19,6 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
     // The blinding base, a point from jubjub.
     pub h: Affine<Curve>,
-
-    // A vec of `self.scalar_part` jubjub points of the form
-    // H, 2H, 4H, ..., 2^(self.scalar_bitlen-1)H
-    pub(crate) powers_of_h: Vec<Affine<Curve>>,
 }
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
@@ -32,26 +28,26 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
 
         let h = Affine::<Curve>::rand(rng);
-        let powers_of_h = Self::power_of_2_multiples(scalar_bitlen, h.into_projective());
-        let powers_of_h = ProjectiveCurve::batch_normalization_into_affine(&powers_of_h);
+        // let powers_of_h = Self::power_of_2_multiples(scalar_bitlen, h.into_projective());
+        // let powers_of_h = ProjectiveCurve::batch_normalization_into_affine(&powers_of_h);
 
         Self {
             domain,
             scalar_bitlen,
             keyset_part_size,
             h,
-            powers_of_h,
         }
     }
 
-    fn power_of_2_multiples(scalar_bitlen: usize, mut h: Projective::<Curve>) -> Vec<Projective::<Curve>> {
-        let mut multiples = Vec::with_capacity(scalar_bitlen);
+    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
+        let mut h = self.h.into_projective();
+        let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
-        for _ in 1..scalar_bitlen {
+        for _ in 1..self.scalar_bitlen {
             h.double_in_place();
             multiples.push(h);
         }
-        multiples
+        ProjectiveCurve::batch_normalization_into_affine(&multiples)
     }
 
     pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
@@ -85,7 +81,7 @@ mod tests {
         let params = PiopParams::<Fq, BandersnatchParameters>::setup(domain, rng);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
-        let th = cond_sum(&t_bits, &params.powers_of_h);
+        let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
         assert_eq!(th, params.h.mul(t));
     }
 }

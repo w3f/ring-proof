@@ -72,7 +72,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         let points = [
             keys,
             &padding,
-            &params.powers_of_h,
+            &params.power_of_2_multiples_of_h(),
         ].concat();
         assert_eq!(points.len(), params.domain.capacity - 1);
         AffineColumn::init(points, &params.domain)
