@@ -52,7 +52,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
         );
         let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();
         let init_plus_result = init + result;
-        let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, true);
+        let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(
             &self.piop_params,

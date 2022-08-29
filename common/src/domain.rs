@@ -45,7 +45,7 @@ impl<F: FftField> Domains<F> {
 #[derive(Clone)]
 pub struct Domain<F: FftField> {
     domains: Domains<F>,
-    hiding: bool,
+    pub hiding: bool,
     pub capacity: usize,
     pub not_last_row: FieldColumn<F>,
     pub l_first: FieldColumn<F>,
@@ -161,12 +161,12 @@ fn eval_vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>,
 }
 
 pub struct EvaluatedDomain<F: FftField> {
-    zk_rows_vanishing_poly_at_zeta: F,
     pub domain: GeneralEvaluationDomain<F>,
     zeta: F,
     pub not_last_row: F,
     pub l_first: F,
     pub l_last: F,
+    pub vanishing_polynomial_inv: F,
 }
 
 impl<F: FftField> EvaluatedDomain<F> {
@@ -191,24 +191,22 @@ impl<F: FftField> EvaluatedDomain<F> {
 
         // w^{k+1}
         let wj = domain.group_gen().pow([(k + 1) as u64]);
+
         let mut inv = [z_n_minus_one, z - F::one(), wj * z - F::one()];
         batch_inversion(&mut inv);
+
         let vanishing_polynomial_inv = prod * inv[0];
         let z_n_minus_one_div_n = z_n_minus_one * domain.size_inv();
         let l_first = z_n_minus_one_div_n * inv[1];
         let l_last = z_n_minus_one_div_n * inv[2];
 
-        let zk_rows_vanishing_poly_at_zeta = if hiding {
-            eval_vanishes_on_last_3_rows(domain, z)
-        } else { F::one() };
-
         Self {
-            zk_rows_vanishing_poly_at_zeta,
             domain,
             zeta: z,
             not_last_row,
             l_first,
             l_last,
+            vanishing_polynomial_inv,
         }
     }
 
@@ -216,7 +214,7 @@ impl<F: FftField> EvaluatedDomain<F> {
         &self,
         poly_in_zeta: F,
     ) -> F {
-        poly_in_zeta * self.zk_rows_vanishing_poly_at_zeta / (self.zeta.pow([self.domain.size() as u64]) - F::one())
+        poly_in_zeta * self.vanishing_polynomial_inv
     }
 
     pub fn omega(&self) -> F {
