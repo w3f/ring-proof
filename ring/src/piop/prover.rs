@@ -29,8 +29,9 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     inner_prod: InnerProd<F>,
     cond_add: CondAdd<F, Affine<Curve>>,
     booleanity: Booleanity<F>,
-    fixed_cells_acc_x: FixedCells<F>,
-    fixed_cells_acc_y: FixedCells<F>,
+    cond_add_acc_x: FixedCells<F>,
+    cond_add_acc_y: FixedCells<F>,
+    inner_prod_acc: FixedCells<F>,
 }
 
 
@@ -42,14 +43,14 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
         let keyset_part_selector = params.keyset_part_selector();
-        assert_eq!(keyset_part_selector.len(), domain.capacity - 1);
         let keyset_part_selector = domain.selector(keyset_part_selector);
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(keyset_part_selector, bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);
         let booleanity = Booleanity::init(bits.clone());
-        let fixed_cells_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
-        let fixed_cells_acc_y = FixedCells::init(cond_add.acc.ys.clone(), &domain);
+        let cond_add_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
+        let cond_add_acc_y = FixedCells::init(cond_add.acc.ys.clone(), &domain);
+        let inner_prod_acc = FixedCells::init(inner_prod.acc.clone(), &domain);
         Self {
             domain,
             bits,
@@ -57,8 +58,9 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             inner_prod,
             cond_add,
             booleanity,
-            fixed_cells_acc_x,
-            fixed_cells_acc_y,
+            cond_add_acc_x,
+            cond_add_acc_y,
+            inner_prod_acc,
         }
     }
 
@@ -150,8 +152,9 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
             self.inner_prod.constraints(),
             self.cond_add.constraints(),
             self.booleanity.constraints(),
-            self.fixed_cells_acc_x.constraints(),
-            self.fixed_cells_acc_y.constraints(),
+            self.cond_add_acc_x.constraints(),
+            self.cond_add_acc_y.constraints(),
+            self.inner_prod_acc.constraints(),
         ].concat()
     }
 
@@ -160,8 +163,9 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
             self.inner_prod.constraints_linearized(zeta),
             self.cond_add.constraints_linearized(zeta),
             self.booleanity.constraints_linearized(zeta),
-            self.fixed_cells_acc_x.constraints_linearized(zeta),
-            self.fixed_cells_acc_y.constraints_linearized(zeta),
+            self.cond_add_acc_x.constraints_linearized(zeta),
+            self.cond_add_acc_y.constraints_linearized(zeta),
+            self.inner_prod_acc.constraints_linearized(zeta),
         ].concat()
     }
 

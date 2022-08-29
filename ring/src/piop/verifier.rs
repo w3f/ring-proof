@@ -21,8 +21,9 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     inner_prod: InnerProdValues<F>,
     cond_add: CondAddValues<F>,
     booleanity: BooleanityValues<F>,
-    fixed_cells_acc_x: FixedCellsValues<F>,
-    fixed_cells_acc_y: FixedCellsValues<F>,
+    cond_add_acc_x: FixedCellsValues<F>,
+    cond_add_acc_y: FixedCellsValues<F>,
+    inner_prod_acc: FixedCellsValues<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
@@ -58,7 +59,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
             bits: evals.bits,
         };
 
-        let fixed_cells_acc_x = FixedCellsValues {
+        let cond_add_acc_x = FixedCellsValues {
             col: evals.cond_add_acc[0],
             col_first: init.0,
             col_last: result.0,
@@ -66,10 +67,18 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
             l_last: domain_evals.l_last,
         };
 
-        let fixed_cells_acc_y = FixedCellsValues {
+        let cond_add_acc_y = FixedCellsValues {
             col: evals.cond_add_acc[1],
             col_first: init.1,
             col_last: result.1,
+            l_first: domain_evals.l_first,
+            l_last: domain_evals.l_last,
+        };
+
+        let inner_prod_acc = FixedCellsValues {
+            col: evals.inn_prod_acc,
+            col_first: F::zero(),
+            col_last: F::one(),
             l_first: domain_evals.l_first,
             l_last: domain_evals.l_last,
         };
@@ -82,14 +91,15 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
             inner_prod,
             cond_add,
             booleanity,
-            fixed_cells_acc_x,
-            fixed_cells_acc_y,
+            cond_add_acc_x,
+            cond_add_acc_y,
+            inner_prod_acc,
         }
     }
 }
 
 impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> {
-    const N_CONSTRAINTS: usize = 6;
+    const N_CONSTRAINTS: usize = 7;
     const N_COLUMNS: usize = 6;
 
     fn precommitted_columns(&self) -> Vec<C> {
@@ -101,8 +111,9 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
             self.inner_prod.evaluate_constraints_main(),
             self.cond_add.evaluate_constraints_main(),
             self.booleanity.evaluate_constraints_main(),
-            self.fixed_cells_acc_x.evaluate_constraints_main(),
-            self.fixed_cells_acc_y.evaluate_constraints_main(),
+            self.cond_add_acc_x.evaluate_constraints_main(),
+            self.cond_add_acc_y.evaluate_constraints_main(),
+            self.inner_prod_acc.evaluate_constraints_main(),
         ].concat()
     }
 
