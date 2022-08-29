@@ -10,7 +10,6 @@ use common::verifier::PlonkVerifier;
 use crate::piop::params::PiopParams;
 
 use crate::piop::PiopVerifier;
-use crate::piop::SelectorColumns;
 use crate::RingProof;
 
 pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {

@@ -1,65 +1,19 @@
-mod prover;
-mod verifier;
-pub mod params;
+use std::marker::PhantomData;
 
+use ark_ff::{FftField, Field, PrimeField};
+use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_serialize::{Read, SerializationError, Write};
+use fflonk::pcs::Commitment;
+
+use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
+use common::domain::Domain;
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 
-use std::marker::PhantomData;
-use ark_ff::{FftField, Field, PrimeField};
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
-use fflonk::pcs::Commitment;
-use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
-use ark_serialize::{CanonicalSerialize, CanonicalDeserialize};
-use ark_serialize::{Read, Write, SerializationError};
-use common::domain::Domain;
-
-#[derive(Clone)]
-pub struct SelectorColumns<F: FftField> {
-    ring_selector: FieldColumn<F>,
-    l_first: FieldColumn<F>,
-    l_last: FieldColumn<F>,
-    not_last: FieldColumn<F>,
-}
-
-impl<F: FftField> SelectorColumns<F> {
-    pub fn init(domain: &Domain<F>, keyset_size: usize) -> Self {
-        let p = domain.capacity - keyset_size;
-        assert!(p > 0); //TODO
-        let ring_selector = [vec![F::one(); keyset_size], vec![F::zero(); p-1]].concat();
-        let ring_selector = domain.selector(ring_selector);
-        let l_first = domain.l_first.clone();
-        let l_last = domain.l_last.clone();
-        let not_last = domain.not_last_row.clone();
-        SelectorColumns {
-            ring_selector,
-            l_first,
-            l_last,
-            not_last,
-        }
-    }
-
-    pub fn evaluate(&self, zeta: &F) -> SelectorsValues<F> {
-        SelectorsValues {
-            ring_selector: self.ring_selector.evaluate(zeta),
-            l_first: self.l_first.evaluate(zeta),
-            l_last: self.l_last.evaluate(zeta),
-            not_last: self.not_last.evaluate(zeta),
-            n: self.l_last.domain().size(),
-            omega: self.l_last.domain().group_gen(),
-        }
-    }
-}
-
-
-pub struct SelectorsValues<F: Field> {
-    ring_selector: F,
-    l_first: F,
-    l_last: F,
-    not_last: F,
-    n: usize,
-    omega: F,
-}
+mod prover;
+mod verifier;
+pub mod params;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {

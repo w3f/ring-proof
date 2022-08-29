@@ -10,7 +10,7 @@ use common::gadgets::inner_prod::InnerProdValues;
 use common::gadgets::sw_cond_add::{CondAdd, CondAddValues};
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
-use crate::piop::{RingCommitments, RingEvaluations, SelectorsValues};
+use crate::piop::{RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {

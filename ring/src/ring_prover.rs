@@ -11,7 +11,6 @@ use common::setup::Setup;
 
 use crate::piop::params::PiopParams;
 use crate::piop::PiopProver;
-use crate::piop::SelectorColumns;
 use crate::RingProof;
 
 pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {

@@ -17,7 +17,7 @@ use common::gadgets::ProverGadget;
 use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;
 
-use crate::piop::{RingCommitments, RingEvaluations, SelectorColumns};
+use crate::piop::{RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
 
 // The 'table': columns representing the execution trace of the computation
