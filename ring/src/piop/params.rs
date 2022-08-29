@@ -6,6 +6,7 @@ use ark_std::UniformRand;
 use common::domain::Domain;
 
 
+#[derive(Clone)]
 pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     // Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
@@ -57,6 +58,13 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
         significant_bits.to_vec()
+    }
+
+    pub fn keyset_part_selector(&self) -> Vec<F> {
+        [
+            vec![F::one(); self.keyset_part_size],
+            vec![F::zero(); self.scalar_bitlen]
+        ].concat()
     }
 }
 

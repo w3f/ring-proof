@@ -41,10 +41,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                  prover_index_in_keys: usize,
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
-        let keyset_part_selector = [
-            vec![F::one(); params.keyset_part_size],
-            vec![F::zero(); params.scalar_bitlen]
-        ].concat();
+        let keyset_part_selector = params.keyset_part_selector();
         assert_eq!(keyset_part_selector.len(), domain.capacity - 1);
         let keyset_part_selector = domain.selector(keyset_part_selector);
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);

@@ -48,5 +48,5 @@ pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C>;
 
-    fn domain_evaluated(&self, zeta: F) -> EvaluatedDomain<F>;
+    fn domain_evaluated(&self) -> &EvaluatedDomain<F>;
 }

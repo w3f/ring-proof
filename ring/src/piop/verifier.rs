@@ -1,6 +1,7 @@
 use ark_ec::AffineCurve;
+use ark_ec::short_weierstrass::SWCurveConfig;
 use ark_ff::PrimeField;
-use ark_poly::GeneralEvaluationDomain;
+use ark_poly::{Evaluations, GeneralEvaluationDomain, Polynomial};
 use fflonk::pcs::Commitment;
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
@@ -10,10 +11,10 @@ use common::gadgets::sw_cond_add::{CondAdd, CondAddValues};
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
 use crate::piop::{RingCommitments, RingEvaluations, SelectorsValues};
+use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
-    domain: GeneralEvaluationDomain<F>,
-    selectors: SelectorsValues<F>,
+    domain_evals: EvaluatedDomain<F>,
     points: [C; 2],
     columns: RingCommitments<F, C>,
     evals: RingEvaluations<F>,
@@ -25,25 +26,31 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
 }
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
-    pub fn init(domain: GeneralEvaluationDomain<F>,
-                points: &[C; 2],
-                columns: RingCommitments<F, C>,
-                evals: RingEvaluations<F>,
-                selectors: SelectorsValues<F>,
-                init: (F, F),
-                result: (F, F),
+    pub fn init<Curve: SWCurveConfig<BaseField=F>>(
+        piop_params: &PiopParams<F, Curve>,
+        domain_evals: EvaluatedDomain<F>,
+        points: &[C; 2],
+        columns: RingCommitments<F, C>,
+        evals: RingEvaluations<F>,
+        init: (F, F),
+        result: (F, F),
+        zeta: F,
     ) -> Self {
+        let keyset_part_selector = piop_params.keyset_part_selector();
+        let keyset_part_selector = Evaluations::from_vec_and_domain(keyset_part_selector, domain_evals.domain);
+        let keyset_part_selector_at_zeta = keyset_part_selector.interpolate().evaluate(&zeta);
+
         let cond_add = CondAddValues {
             bitmask: evals.bits,
             points: (evals.points[0], evals.points[1]),
-            not_last: selectors.not_last,
+            not_last: domain_evals.not_last_row,
             acc: (evals.cond_add_acc[0], evals.cond_add_acc[1]),
         };
 
         let inner_prod = InnerProdValues {
-            a: selectors.ring_selector,
+            a: keyset_part_selector_at_zeta,
             b: evals.bits,
-            not_last: selectors.not_last, //TODO: can be done in O(1)
+            not_last: domain_evals.not_last_row,
             acc: evals.inn_prod_acc,
         };
 
@@ -55,21 +62,20 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
             col: evals.cond_add_acc[0],
             col_first: init.0,
             col_last: result.0,
-            l_first: selectors.l_first,
-            l_last: selectors.l_last,
+            l_first: domain_evals.l_first,
+            l_last: domain_evals.l_last,
         };
 
         let fixed_cells_acc_y = FixedCellsValues {
             col: evals.cond_add_acc[1],
             col_first: init.1,
             col_last: result.1,
-            l_first: selectors.l_first,
-            l_last: selectors.l_last,
+            l_first: domain_evals.l_first,
+            l_last: domain_evals.l_last,
         };
 
         Self {
-            domain,
-            selectors,
+            domain_evals,
             points: points.clone(),
             columns,
             evals,
@@ -125,7 +131,7 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
         ]
     }
 
-    fn domain_evaluated(&self, zeta: F) -> EvaluatedDomain<F> {
-        EvaluatedDomain::new(self.domain, zeta, false)
+    fn domain_evaluated(&self) -> &EvaluatedDomain<F> {
+        &self.domain_evals
     }
 }

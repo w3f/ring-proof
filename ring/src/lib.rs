@@ -36,7 +36,9 @@ mod tests {
 
         // SETUP per curve and domain
         let domain = Domain::new(domain_size, hiding);
-        let piop_params = PiopParams::setup(domain, rng);
+        let piop_params = PiopParams::setup(domain.clone(), &mut test_rng());
+        let piop_params2 = PiopParams::setup(domain, &mut test_rng());
+        assert_eq!(piop_params.h, piop_params2.h);
         let setup = Setup::<Fq, CS>::generate(domain_size, rng);
 
         let max_keyset_size = piop_params.keyset_part_size;
@@ -59,7 +61,7 @@ mod tests {
         end_timer!(t_prove);
 
 
-        let ring_verifier = RingVerifier::init(vk, points_comm, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(vk, piop_params2, points_comm, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);

@@ -16,7 +16,6 @@ use crate::RingProof;
 
 pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,
-    selectors: SelectorColumns<F>,
     points: AffineColumn<F, Affine<Curve>>,
     k: usize,
 
@@ -31,7 +30,6 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
                 k: usize,
                 empty_transcript: merlin::Transcript,
     ) -> Self {
-        let selectors = SelectorColumns::init(&piop_params.domain, piop_params.keyset_part_size);
         let points = PiopProver::keyset_column(&piop_params, &keys);
         let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];
 
@@ -39,7 +37,6 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
 
         Self {
             piop_params,
-            selectors,
             points,
             k,
             plonk_prover,

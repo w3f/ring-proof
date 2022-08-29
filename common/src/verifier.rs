@@ -51,7 +51,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
     {
         let eval: F = piop.evaluate_constraints_main().iter().zip(challenges.alphas.iter()).map(|(c, alpha)| *alpha * c).sum();
         let zeta = challenges.zeta;
-        let domain_evaluated = piop.domain_evaluated(zeta);
+        let domain_evaluated = piop.domain_evaluated();
 
         let q_zeta = domain_evaluated.divide_by_vanishing_poly_in_zeta(eval + proof.lin_at_zeta_omega);
 

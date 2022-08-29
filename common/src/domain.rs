@@ -1,10 +1,10 @@
-use ark_ff::{FftField, Zero};
+use ark_ff::{batch_inversion, FftField, Zero};
 use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::test_rng;
 use crate::FieldColumn;
 
-const ZK_ROWS: usize = 3;
+const ZK_ROWS: usize = 0;
 
 // Domains for performing calculations with constraint polynomials of degree up to 4.
 #[derive(Clone)]
@@ -162,17 +162,53 @@ fn eval_vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>,
 
 pub struct EvaluatedDomain<F: FftField> {
     zk_rows_vanishing_poly_at_zeta: F,
-    domain: GeneralEvaluationDomain<F>,
+    pub domain: GeneralEvaluationDomain<F>,
     zeta: F,
+    pub not_last_row: F,
+    pub l_first: F,
+    pub l_last: F,
 }
 
 impl<F: FftField> EvaluatedDomain<F> {
-    pub fn new(domain: GeneralEvaluationDomain<F>, zeta: F, hiding: bool) -> Self {
-        let zk_rows_vanishing_poly_at_zeta = if hiding { eval_vanishes_on_last_3_rows(domain, zeta) } else { F::one() };
+    pub fn new(domain: GeneralEvaluationDomain<F>, z: F) -> Self {
+        let hiding = false;
+        let mut z_n = z; // z^n, n=2^d - domain size, so squarings only
+        for _ in 0..domain.log_size_of_group() {
+            z_n.square_in_place();
+        }
+        let z_n_minus_one = z_n - F::one(); // vanishing polynomial
+
+        // w^{n-k}
+        let mut wi = domain.group_gen_inv();
+        // prod = w^{n-1}...w^{n-k}
+        let mut prod = F::one();
+        for _ in 0..ZK_ROWS {
+            prod *= z - wi;
+            wi *= domain.group_gen_inv();
+        }
+        // z - w^{n-(k+1)}}
+        let not_last_row = z - wi;
+
+        // w^{k+1}
+        let wi = domain.group_gen().pow([(ZK_ROWS + 1) as u64]);
+        let mut inv = [z_n_minus_one, z - F::one(), wi * z - F::one()];
+        batch_inversion(&mut inv);
+        let vanishing_polynomial_inv = prod * inv[0];
+        let z_n_minus_one_div_n = z_n_minus_one * domain.size_inv();
+        let l_first = z_n_minus_one_div_n * inv[1];
+        let l_last = z_n_minus_one_div_n * inv[2];
+
+        let zk_rows_vanishing_poly_at_zeta = if hiding {
+            eval_vanishes_on_last_3_rows(domain, z)
+        } else { F::one() };
+
         Self {
             zk_rows_vanishing_poly_at_zeta,
             domain,
-            zeta,
+            zeta: z,
+            not_last_row,
+            l_first,
+            l_last,
         }
     }
 
