@@ -1,10 +1,11 @@
 use ark_ff::PrimeField;
-use ark_poly::{Evaluations, GeneralEvaluationDomain};
+use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use fflonk::pcs::{Commitment};
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
+use crate::domain::{Domain, EvaluatedDomain};
 
 
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
@@ -31,7 +32,7 @@ pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>>;
 
     // Subgroup over which the columns are defined.
-    fn domain(&self) -> GeneralEvaluationDomain<F>;
+    fn domain(&self) -> &Domain<F>;
 
     // The result of the computation.
     fn result(&self) -> Self::Instance;
@@ -47,5 +48,5 @@ pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C>;
 
-    fn get_n(&self) -> (usize, F);
+    fn domain_evaluated(&self) -> &EvaluatedDomain<F>;
 }

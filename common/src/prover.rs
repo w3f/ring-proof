@@ -1,5 +1,5 @@
-use ark_ff::{PrimeField, Zero};
-use ark_poly::{EvaluationDomain, Evaluations, Polynomial};
+use ark_ff::PrimeField;
+use ark_poly::{Evaluations, Polynomial};
 use fflonk::aggregation::single::aggregate_polys;
 use fflonk::pcs::{PCS, PcsParams};
 use crate::piop::{ProverPiop};
@@ -50,8 +50,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
         let agg_constraint_poly = Self::aggregate_evaluations(&constraint_polys, &alphas);
         // ...and then interpolate (to save some FFTs).
         let agg_constraint_poly = agg_constraint_poly.interpolate();
-        let (quotient_poly, remainder) = agg_constraint_poly.divide_by_vanishing_poly(piop.domain()).unwrap();
-        assert!(remainder.is_zero());
+        let quotient_poly = piop.domain().divide_by_vanishing_poly(&agg_constraint_poly);
         // The prover commits to the quotient polynomial...
         let quotient_commitment = CS::commit(&self.pcs_ck, &quotient_poly);
         transcript.add_quotient_commitment(&quotient_commitment);
@@ -64,7 +63,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
         let columns_at_zeta = piop.columns_evaluated(&zeta);
         let constraint_polys_linearized = piop.constraints_lin(&zeta);
         let lin = aggregate_polys(&constraint_polys_linearized, &alphas);
-        let omega = piop.domain().group_gen();
+        let omega = piop.domain().omega();
         let zeta_omega = zeta * omega;
         let lin_at_zeta_omega = lin.evaluate(&zeta_omega);
         transcript.add_evaluations(&columns_at_zeta, &lin_at_zeta_omega);

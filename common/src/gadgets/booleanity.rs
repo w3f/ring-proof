@@ -1,7 +1,9 @@
 use ark_ff::{FftField, Field, Zero};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+
 use crate::{Column, const_evals, FieldColumn};
+use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
 
 #[derive(Clone)]
@@ -12,11 +14,11 @@ pub struct BitColumn<F: FftField> {
 
 
 impl<F: FftField> BitColumn<F> {
-    pub fn init(bits: Vec<bool>) -> Self {
+    pub fn init(bits: Vec<bool>, domain: &Domain<F>) -> Self {
         let bits_as_field_elements = bits.iter()
             .map(|&b| if b { F::one() } else { F::zero() })
             .collect();
-        let col = FieldColumn::init(bits_as_field_elements);
+        let col = domain.column(bits_as_field_elements);
         Self { bits, col }
     }
 }

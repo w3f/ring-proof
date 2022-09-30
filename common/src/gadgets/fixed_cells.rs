@@ -3,10 +3,13 @@ use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 
 use crate::{Column, const_evals, FieldColumn};
+use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
 
 pub struct FixedCells<F: FftField> {
     col: FieldColumn<F>,
+    col_first: F,
+    col_last: F,
     l_first: FieldColumn<F>,
     l_last: FieldColumn<F>,
 }
@@ -22,18 +25,20 @@ pub struct FixedCellsValues<F: Field> {
 
 
 impl<F: FftField> FixedCells<F> {
-    pub fn init(col: FieldColumn<F>, l_first: FieldColumn<F>, l_last: FieldColumn<F>) -> Self {
-        let n = col.size();
-        assert_eq!(l_first.size(), n);
-        assert_eq!(l_last.size(), n);
-        Self { col, l_first, l_last }
+    pub fn init(col: FieldColumn<F>, domain: &Domain<F>) -> Self {
+        assert_eq!(col.len, domain.capacity);
+        let col_first = col.evals.evals[0];
+        let col_last = col.evals.evals[domain.capacity - 1];
+        let l_first = domain.l_first.clone();
+        let l_last = domain.l_last.clone();
+        Self { col, col_first, col_last, l_first, l_last }
     }
 
     pub fn constraints(&self) -> Vec<Evaluations<F>> {
         let col = &self.col;
         let domain = col.domain_4x();
-        let first = &const_evals(col.evals.evals[0], domain);
-        let last = &const_evals(col.evals.evals[col.size() - 1], domain);
+        let first = &const_evals(self.col_first, domain);
+        let last = &const_evals(self.col_last, domain);
         let col = &self.col.evals_4x;
         let l_first = &self.l_first.evals_4x;
         let l_last = &self.l_last.evals_4x;
