@@ -1,5 +1,5 @@
 use ark_ec::{AffineRepr, CurveGroup, Group};
-use ark_ec::short_weierstrass::{Affine, Projective, SWCurveConfig};
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::rand::Rng;
 use ark_std::UniformRand;
@@ -66,7 +66,6 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchParameters, Fq, Fr};
     use ark_std::{test_rng, UniformRand};
     use std::ops::Mul;

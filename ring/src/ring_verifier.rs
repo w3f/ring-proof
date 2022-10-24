@@ -1,9 +1,8 @@
 use ark_ec::CurveGroup;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use fflonk::pcs::{PCS, PcsParams};
-use common::domain::{Domain, EvaluatedDomain};
+use common::domain::EvaluatedDomain;
 
 use common::gadgets::sw_cond_add::CondAdd;
 use common::piop::VerifierPiop;

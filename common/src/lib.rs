@@ -3,7 +3,6 @@ use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomia
 use ark_poly::univariate::DensePolynomial;
 use fflonk::pcs::{Commitment, PCS};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_serialize::{Read, SerializationError, Write};
 
 
 pub mod gadgets;

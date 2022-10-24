@@ -14,7 +14,7 @@ type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, Ring
 mod tests {
     use std::ops::Mul;
 
-    use ark_ec::{AffineRepr, CurveGroup};
+    use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;

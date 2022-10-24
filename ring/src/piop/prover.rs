@@ -4,7 +4,6 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
-use ark_serialize::CanonicalSerialize;
 use ark_std::{test_rng, UniformRand};
 use fflonk::pcs::Commitment;
 

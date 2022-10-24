@@ -1,11 +1,8 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use ark_std::test_rng;
 use fflonk::pcs::PCS;
-use common::domain::Domain;
 
 use common::gadgets::sw_cond_add::AffineColumn;
-use common::piop::ProverPiop;
 use common::prover::PlonkProver;
 use common::setup::Setup;
 

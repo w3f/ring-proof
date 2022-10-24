@@ -225,7 +225,7 @@ impl<F: FftField> EvaluatedDomain<F> {
 #[cfg(test)]
 mod tests {
     use ark_ed_on_bls12_381_bandersnatch::Fq;
-    use ark_poly::{EvaluationDomain, GeneralEvaluationDomain, Polynomial};
+    use ark_poly::Polynomial;
     use ark_std::{test_rng, UniformRand};
     use crate::domain::{Domain, EvaluatedDomain};
 

@@ -1,6 +1,6 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
-use ark_serialize::{CanonicalSerialize, Compress};
+use ark_serialize::CanonicalSerialize;
 use fflonk::pcs::{PCS, PcsParams};
 use crate::{ColumnsCommited, ColumnsEvaluated};
 

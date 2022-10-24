@@ -1,13 +1,10 @@
 use std::marker::PhantomData;
 
-use ark_ff::{FftField, Field, PrimeField};
-use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
+use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_serialize::{Read, SerializationError, Write};
 use fflonk::pcs::Commitment;
 
-use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
-use common::domain::Domain;
+use common::{ColumnsCommited, ColumnsEvaluated};
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 

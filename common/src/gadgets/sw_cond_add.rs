@@ -4,7 +4,6 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
-use ark_std::Zero;
 use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;

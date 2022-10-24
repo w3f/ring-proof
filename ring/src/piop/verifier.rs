@@ -1,13 +1,12 @@
-use ark_ec::AffineRepr;
 use ark_ec::short_weierstrass::SWCurveConfig;
 use ark_ff::PrimeField;
-use ark_poly::{Evaluations, GeneralEvaluationDomain, Polynomial};
+use ark_poly::{Evaluations, Polynomial};
 use fflonk::pcs::Commitment;
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
 use common::gadgets::inner_prod::InnerProdValues;
-use common::gadgets::sw_cond_add::{CondAdd, CondAddValues};
+use common::gadgets::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
 use crate::piop::{RingCommitments, RingEvaluations};
