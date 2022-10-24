@@ -1,3 +1,4 @@
+use ark_ec::CurveGroup;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
@@ -50,7 +51,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
             PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
         );
         let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();
-        let init_plus_result = init + result;
+        let init_plus_result = (init + result).into_affine();
         let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(

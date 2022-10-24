@@ -1,5 +1,5 @@
 use std::iter;
-use ark_ec::{AffineCurve, ProjectiveCurve};
+use ark_ec::{AffineRepr, CurveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
@@ -14,13 +14,13 @@ use crate::gadgets::{ProverGadget, VerifierGadget};
 // A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
 // and its convenience representation as columns of coordinates over the curve's base field.
 #[derive(Clone)]
-pub struct AffineColumn<F: FftField, P: AffineCurve<BaseField=F>> {
+pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField=F>> {
     points: Vec<P>,
     pub xs: FieldColumn<F>,
     pub ys: FieldColumn<F>,
 }
 
-impl<F: FftField, P: AffineCurve<BaseField=F>> AffineColumn<F, P> {
+impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
     pub fn init(points: Vec<P>, domain: &Domain<F>) -> Self {
         assert!(points.iter().all(|p| !p.is_zero()));
         let (xs, ys) = points.iter()
@@ -40,7 +40,7 @@ impl<F: FftField, P: AffineCurve<BaseField=F>> AffineColumn<F, P> {
 // Conditional affine addition:
 // if the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
-pub struct CondAdd<F: FftField, P: AffineCurve<BaseField=F>> {
+pub struct CondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     bitmask: BitColumn<F>,
     points: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
@@ -75,7 +75,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
             .zip(points.points.iter())
             .scan(init.clone(), |acc, (&b, point)| {
                 if b {
-                    *acc += point;
+                    *acc = (*acc + point).into_affine();
                 }
                 Some(*acc)
             });
@@ -83,7 +83,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
             .chain(acc)
             .collect();
         let init_plus_result = acc.last().unwrap();
-        let result = init_plus_result.into_projective() - init.into_projective();
+        let result = init_plus_result.into_group() - init.into_group();
         let result = result.into_affine();
         let acc = AffineColumn::init(acc, domain);
 
@@ -101,7 +101,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
 
     //TODO: find
     pub fn point_in_g1_complement() -> Affine<Curve> {
-        Affine::<Curve>::prime_subgroup_generator()
+        Affine::<Curve>::generator()
     }
 }
 

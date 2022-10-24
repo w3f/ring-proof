@@ -14,7 +14,7 @@ type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, Ring
 mod tests {
     use std::ops::Mul;
 
-    use ark_ec::{AffineCurve, ProjectiveCurve};
+    use ark_ec::{AffineRepr, CurveGroup};
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
@@ -53,7 +53,7 @@ mod tests {
 
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
-        let result = piop_params.h.mul(secret).add_mixed(pk);
+        let result = piop_params.h.mul(secret) + pk;
         let ring_prover = RingProver::init(setup, piop_params, pks, k, Transcript::new(b"ring-vrf-test"));
 
         let t_prove = start_timer!(|| "Prove");

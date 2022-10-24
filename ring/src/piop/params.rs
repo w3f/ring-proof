@@ -1,4 +1,4 @@
-use ark_ec::{AffineCurve, ProjectiveCurve};
+use ark_ec::{AffineRepr, CurveGroup, Group};
 use ark_ec::short_weierstrass::{Affine, Projective, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::rand::Rng;
@@ -29,7 +29,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
         let h = Affine::<Curve>::rand(rng);
         // let powers_of_h = Self::power_of_2_multiples(scalar_bitlen, h.into_projective());
-        // let powers_of_h = ProjectiveCurve::batch_normalization_into_affine(&powers_of_h);
+        // let powers_of_h = CurveGroup::batch_normalization_into_affine(&powers_of_h);
 
         Self {
             domain,
@@ -40,14 +40,14 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
     }
 
     pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
-        let mut h = self.h.into_projective();
+        let mut h = self.h.into_group();
         let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
         for _ in 1..self.scalar_bitlen {
             h.double_in_place();
             multiples.push(h);
         }
-        ProjectiveCurve::batch_normalization_into_affine(&multiples)
+        CurveGroup::normalize_batch(&multiples)
     }
 
     pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
@@ -66,7 +66,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ec::AffineCurve;
+    use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchParameters, Fq, Fr};
     use ark_std::{test_rng, UniformRand};
     use std::ops::Mul;

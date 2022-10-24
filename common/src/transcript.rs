@@ -1,6 +1,6 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalSerialize, Compress};
 use fflonk::pcs::{PCS, PcsParams};
 use crate::{ColumnsCommited, ColumnsEvaluated};
 
@@ -69,8 +69,8 @@ impl<F: PrimeField, CS: PCS<F>> Transcript<F, CS> for merlin::Transcript {
     }
 
     fn _add_serializable(&mut self, label: &'static [u8], message: &impl CanonicalSerialize) {
-        let mut buf = vec![0; message.serialized_size()];
-        message.serialize(&mut buf).unwrap();
+        let mut buf = vec![0; message.uncompressed_size()];
+        message.serialize_uncompressed(&mut buf).unwrap();
         self.append_message(label, &buf);
     }
 }

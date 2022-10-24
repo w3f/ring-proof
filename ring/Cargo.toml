@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 ark-std = { git = "https://github.com/arkworks-rs/std", default-features = false }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
-ark-poly = { git = "https://github.com/arkworks-rs/algebra", default-features = false }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra", default-features = false, features = ["derive"] }
+ark-ff = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
+ark-ec = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
+ark-poly = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
+ark-serialize = { git = "https://github.com/arkworks-rs/algebra", default-features = false, features = ["derive"], rev = "402e7f9" }
 fflonk = { git = "https://github.com/w3f/fflonk" }
 common = { path = "../common" }
 rayon = { version = "1", optional = true }
@@ -21,5 +21,5 @@ parallel = ["std", "ark-std/parallel", "ark-ff/parallel", "ark-ec/parallel", "ar
 print-trace = ["ark-std/print-trace"]
 
 [dev-dependencies]
-ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves", branch= "update-to-latest-arkworks", default-features = false, features = ["curve"] }
+ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves", default-features = false, features = ["curve"] }
 ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/arkworks-rs/curves", default-features = false }

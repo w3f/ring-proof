@@ -1,4 +1,4 @@
-use ark_ec::AffineCurve;
+use ark_ec::AffineRepr;
 use ark_ec::short_weierstrass::SWCurveConfig;
 use ark_ff::PrimeField;
 use ark_poly::{Evaluations, GeneralEvaluationDomain, Polynomial};
