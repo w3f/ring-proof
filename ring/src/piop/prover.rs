@@ -7,7 +7,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_std::{test_rng, UniformRand};
 use fflonk::pcs::Commitment;
 
-use common::Column;
+use common::{Column, FieldColumn};
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
 use common::gadgets::fixed_cells::FixedCells;
@@ -16,7 +16,7 @@ use common::gadgets::ProverGadget;
 use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;
 
-use crate::piop::{RingCommitments, RingEvaluations};
+use crate::piop::{FixedColumns, RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
 
 // The 'table': columns representing the execution trace of the computation
@@ -25,6 +25,7 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     domain: Domain<F>,
     bits: BitColumn<F>,
     points: AffineColumn<F, Affine<Curve>>,
+    selector: FieldColumn<F>,
     inner_prod: InnerProd<F>,
     cond_add: CondAdd<F, Affine<Curve>>,
     booleanity: Booleanity<F>,
@@ -37,15 +38,13 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
     pub fn build(params: &PiopParams<F, Curve>,
-                 points: AffineColumn<F, Affine<Curve>>,
+                 fixed_columns: &FixedColumns<F, Curve>,
                  prover_index_in_keys: usize,
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
-        let keyset_part_selector = params.keyset_part_selector();
-        let keyset_part_selector = domain.selector(keyset_part_selector);
-        let bits = Self::bits_column(&params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(keyset_part_selector, bits.col.clone(), &domain);
-        let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);
+        let bits = params.bits_column(prover_index_in_keys, secret);
+        let inner_prod = InnerProd::init(fixed_columns.selector.clone(), bits.col.clone(), &domain);
+        let cond_add = CondAdd::init(bits.clone(), fixed_columns.points.clone(), &domain);
         let booleanity = Booleanity::init(bits.clone());
         let cond_add_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
         let cond_add_acc_y = FixedCells::init(cond_add.acc.ys.clone(), &domain);
@@ -53,7 +52,8 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         Self {
             domain,
             bits,
-            points,
+            points: fixed_columns.points.clone(),
+            selector: fixed_columns.selector.clone(),
             inner_prod,
             cond_add,
             booleanity,
@@ -63,31 +63,9 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         }
     }
 
-    pub fn keyset_column(params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
-        assert!(keys.len() <= params.keyset_part_size);
-        let padding_len = params.keyset_part_size - keys.len();
-        let padding_point = Affine::<Curve>::rand(&mut test_rng()); //TODO: Ask Al
-        let padding = vec![padding_point; padding_len];
-        let points = [
-            keys,
-            &padding,
-            &params.power_of_2_multiples_of_h(),
-        ].concat();
-        assert_eq!(points.len(), params.domain.capacity - 1);
-        AffineColumn::init(points, &params.domain)
-    }
 
-    fn bits_column(params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {
-        let mut keyset_part = vec![false; params.keyset_part_size];
-        keyset_part[index_in_keys] = true;
-        let scalar_part = params.scalar_part(secret);
-        let bits = [
-            keyset_part,
-            scalar_part
-        ].concat();
-        assert_eq!(bits.len(), params.domain.capacity - 1);
-        BitColumn::init(bits, &params.domain)
-    }
+
+
 }
 
 impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
@@ -118,6 +96,7 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
 
     fn columns(&self) -> Vec<DensePolynomial<F>> {
         vec![
+            self.selector.as_poly().clone(),
             self.points.xs.as_poly().clone(),
             self.points.ys.as_poly().clone(),
             self.bits.as_poly().clone(),
@@ -138,7 +117,9 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
             self.points.xs.evaluate(zeta),
             self.points.ys.evaluate(zeta),
         ];
+        let selector = self.selector.evaluate(zeta);
         Self::Evaluations {
+            selector,
             bits,
             cond_add_acc,
             inn_prod_acc,

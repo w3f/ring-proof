@@ -2,6 +2,7 @@ use ark_ec::short_weierstrass::SWCurveConfig;
 use ark_ff::PrimeField;
 use ark_poly::{Evaluations, Polynomial};
 use fflonk::pcs::Commitment;
+use common::ColumnsCommited;
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
@@ -9,12 +10,12 @@ use common::gadgets::inner_prod::InnerProdValues;
 use common::gadgets::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
-use crate::piop::{RingCommitments, RingEvaluations};
+use crate::piop::{FixedColumnsCommitted, RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,
-    points: [C; 2],
+    fixed_cols: FixedColumnsCommitted<F, C>,
     columns: RingCommitments<F, C>,
     evals: RingEvaluations<F>,
     inner_prod: InnerProdValues<F>,
@@ -27,19 +28,13 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
     pub fn init<Curve: SWCurveConfig<BaseField=F>>(
-        piop_params: &PiopParams<F, Curve>,
         domain_evals: EvaluatedDomain<F>,
-        points: &[C; 2],
+        fixed_cols: &FixedColumnsCommitted<F, C>,
         columns: RingCommitments<F, C>,
         evals: RingEvaluations<F>,
         init: (F, F),
         result: (F, F),
-        zeta: F,
     ) -> Self {
-        let keyset_part_selector = piop_params.keyset_part_selector();
-        let keyset_part_selector = Evaluations::from_vec_and_domain(keyset_part_selector, domain_evals.domain);
-        let keyset_part_selector_at_zeta = keyset_part_selector.interpolate().evaluate(&zeta);
-
         let cond_add = CondAddValues {
             bitmask: evals.bits,
             points: (evals.points[0], evals.points[1]),
@@ -48,7 +43,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
         };
 
         let inner_prod = InnerProdValues {
-            a: keyset_part_selector_at_zeta,
+            a: evals.selector,
             b: evals.bits,
             not_last: domain_evals.not_last_row,
             acc: evals.inn_prod_acc,
@@ -84,7 +79,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
 
         Self {
             domain_evals,
-            points: points.clone(),
+            fixed_cols: fixed_cols.clone(),
             columns,
             evals,
             inner_prod,
@@ -99,10 +94,10 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
 
 impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> {
     const N_CONSTRAINTS: usize = 7;
-    const N_COLUMNS: usize = 6;
+    const N_COLUMNS: usize = 7;
 
     fn precommitted_columns(&self) -> Vec<C> {
-        self.points.to_vec()
+        self.fixed_cols.clone().to_vec()
     }
 
     fn evaluate_constraints_main(&self) -> Vec<F> {
