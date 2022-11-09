@@ -4,14 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ark-std = { git = "https://github.com/arkworks-rs/std", default-features = false }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-poly = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra", default-features = false, features = ["derive"], rev = "402e7f9" }
-fflonk = { git = "https://github.com/w3f/fflonk" }
-merlin = "3.0"
-rayon = { version = "1", optional = true }
+ark-std.workspace = true
+ark-ff.workspace = true
+ark-ec.workspace = true
+ark-poly.workspace = true
+ark-serialize.workspace = true
+fflonk.workspace = true
+merlin.workspace = true
+rayon = { workspace = true, optional = true }
 
 [dev-dependencies]
 ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/arkworks-rs/curves", default-features = false }
