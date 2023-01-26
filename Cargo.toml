@@ -5,18 +5,11 @@ members = [
 ]
 
 [workspace.dependencies]
-ark-std = { git = "https://github.com/arkworks-rs/std", default-features = false }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-poly = { git = "https://github.com/arkworks-rs/algebra", default-features = false, rev = "402e7f9" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra", default-features = false, features = ["derive"], rev = "402e7f9" }
+ark-std = { version = "0.4.0-alpha", default-features = false }
+ark-ff = { version = "0.4.0-alpha", default-features = false }
+ark-ec = { version = "0.4.0-alpha", default-features = false }
+ark-poly = { version = "0.4.0-alpha", default-features = false }
+ark-serialize = { version = "0.4.0-alpha", default-features = false, features = ["derive"] }
 fflonk = { git = "https://github.com/w3f/fflonk" }
 rayon = "1"
 merlin = "3.0"
-
-[patch.crates-io]
-ark-std = { git = "https://github.com/arkworks-rs/std" }
-ark-ff = { git = "https://github.com/arkworks-rs/algebra", rev = "402e7f9" }
-ark-ec = { git = "https://github.com/arkworks-rs/algebra", rev = "402e7f9" }
-ark-poly = { git = "https://github.com/arkworks-rs/algebra", rev = "402e7f9" }
-ark-serialize = { git = "https://github.com/arkworks-rs/algebra", rev = "402e7f9" }

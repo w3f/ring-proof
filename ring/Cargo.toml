@@ -15,8 +15,8 @@ rayon = { workspace = true, optional = true }
 common = { path = "../common" }
 
 [dev-dependencies]
-ark-bls12-381 = { git = "https://github.com/arkworks-rs/curves", default-features = false, features = ["curve"] }
-ark-ed-on-bls12-381-bandersnatch = { git = "https://github.com/arkworks-rs/curves", default-features = false }
+ark-bls12-381 = { version = "0.4.0-alpha.2", default-features = false, features = ["curve"] }
+ark-ed-on-bls12-381-bandersnatch = { version = "0.4.0-alpha.2", default-features = false }
 
 [features]
 default = []

@@ -66,7 +66,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchParameters, Fq, Fr};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr};
     use ark_std::{test_rng, UniformRand};
     use std::ops::Mul;
     use common::domain::Domain;
@@ -77,7 +77,7 @@ mod tests {
     fn test_powers_of_h() {
         let rng = &mut test_rng();
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, BandersnatchParameters>::setup(domain, rng);
+        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, rng);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
