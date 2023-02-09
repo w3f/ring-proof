@@ -7,6 +7,7 @@ use crate::piop::{RingCommitments, RingEvaluations};
 mod piop;
 pub mod ring_prover;
 pub mod ring_verifier;
+mod vrf;
 
 type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
