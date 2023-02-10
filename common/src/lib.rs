@@ -11,7 +11,6 @@ pub mod piop;
 pub mod prover;
 pub mod verifier;
 pub mod transcript;
-pub mod setup;
 pub mod domain;
 
 pub trait Column<F: FftField> {

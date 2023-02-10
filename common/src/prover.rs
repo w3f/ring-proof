@@ -6,7 +6,6 @@ use fflonk::pcs::{PCS, PcsParams};
 use crate::piop::{ProverPiop};
 use crate::Proof;
 use crate::transcript::Transcript;
-use crate::setup::Setup;
 
 
 pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {

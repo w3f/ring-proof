@@ -4,7 +4,6 @@ use fflonk::pcs::PCS;
 
 use common::gadgets::sw_cond_add::AffineColumn;
 use common::prover::PlonkProver;
-use common::setup::Setup;
 
 use crate::piop::params::PiopParams;
 use crate::piop::PiopProver;
