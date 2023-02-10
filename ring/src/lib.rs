@@ -75,7 +75,7 @@ pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
     let fixed_columns_committed = fixed_columns.commit::<CS>(&pcs_ck);
     let verifier_key = VerifierKey {
         pcs_raw_vk: pcs_raw_vk.clone(),
-        fixed_columns_committed: fixed_columns_committed.clone()
+        fixed_columns_committed: fixed_columns_committed.clone(),
     };
     let prover_key = ProverKey { pcs_ck, fixed_columns, verifier_key };
     let verifier_key = VerifierKey { pcs_raw_vk, fixed_columns_committed };
@@ -95,7 +95,6 @@ mod tests {
     use merlin::Transcript;
 
     use common::domain::Domain;
-    use common::setup::Setup;
     use common::test_helpers::*;
 
     use crate::piop::params::PiopParams;
@@ -111,29 +110,29 @@ mod tests {
         let piop_params = PiopParams::setup(domain.clone(), &mut test_rng());
         let piop_params2 = PiopParams::setup(domain, &mut test_rng());
         assert_eq!(piop_params.h, piop_params2.h);
-        let setup = Setup::<Fq, CS>::generate(domain_size, rng);
+
+        let setup_degree = 3 * domain_size - 3;
+        let pcs_params = CS::setup(setup_degree, rng);
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
         let pks = random_vec::<SWAffine, _>(keyset_size, rng);
         let k = rng.gen_range(0..keyset_size); // prover's secret index
-        let pk = &pks[k];
+        let pk = pks[k].clone();
 
-        let points = PiopProver::keyset_column( &piop_params, &pks);
-        let points_comm = [setup.commit_to_column(&points.xs), setup.commit_to_column(&points.ys)];
-        let vk = &setup.pcs_params.raw_vk();
+        let (prover_key, verifier_key) = crate::index::<_, CS, _>(pcs_params, &piop_params, pks);
 
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
         let result = piop_params.h.mul(secret) + pk;
-        let ring_prover = RingProver::init(setup, piop_params, pks, k, Transcript::new(b"ring-vrf-test"));
+        let ring_prover = RingProver::init(prover_key, piop_params, k, Transcript::new(b"ring-vrf-test"));
 
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
         end_timer!(t_prove);
 
 
-        let ring_verifier = RingVerifier::init(vk, piop_params2, points_comm, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(verifier_key, piop_params2, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);
