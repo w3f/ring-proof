@@ -15,6 +15,7 @@ use common::gadgets::inner_prod::InnerProd;
 use common::gadgets::ProverGadget;
 use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;
+use crate::FixedColumns;
 
 use crate::piop::{RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
@@ -37,12 +38,12 @@ pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
     pub fn build(params: &PiopParams<F, Curve>,
-                 points: AffineColumn<F, Affine<Curve>>,
+                 fixed_columns: FixedColumns<F, Affine<Curve>>,
                  prover_index_in_keys: usize,
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
-        let keyset_part_selector = params.keyset_part_selector();
-        let keyset_part_selector = domain.selector(keyset_part_selector);
+        let points = fixed_columns.points;
+        let keyset_part_selector = fixed_columns.ring_selector;
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(keyset_part_selector, bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);

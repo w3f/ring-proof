@@ -7,11 +7,11 @@ use common::prover::PlonkProver;
 
 use crate::piop::params::PiopParams;
 use crate::piop::PiopProver;
-use crate::{ProverKey, RingProof};
+use crate::{FixedColumns, ProverKey, RingProof};
 
 pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,
-    points: AffineColumn<F, Affine<Curve>>,
+    fixed_columns: FixedColumns<F, Affine<Curve>>,
     k: usize,
 
     plonk_prover: PlonkProver<F, CS, merlin::Transcript>,
@@ -30,7 +30,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
 
         Self {
             piop_params,
-            points: fixed_columns.points,
+            fixed_columns,
             k,
             plonk_prover,
         }
@@ -38,7 +38,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
 
 
     pub fn prove(&self, t: Curve::ScalarField) -> RingProof<F, CS> {
-        let piop = PiopProver::build(&self.piop_params, self.points.clone(), self.k, t);
+        let piop = PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, t);
         self.plonk_prover.prove(piop)
     }
 }

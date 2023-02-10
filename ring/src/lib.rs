@@ -19,6 +19,7 @@ pub mod ring_verifier;
 type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 // Columns commitment to which the verifier knows (or trusts).
+#[derive(Clone)]
 pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField=F>> {
     // Public keys of the ring participants in order,
     // followed by the powers-of-2 multiples of the second Pedersen base.
