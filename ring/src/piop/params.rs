@@ -4,6 +4,8 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::rand::Rng;
 use ark_std::UniformRand;
 use common::domain::Domain;
+use common::gadgets::sw_cond_add::AffineColumn;
+use crate::FixedColumns;
 
 
 #[derive(Clone)]
@@ -37,6 +39,27 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             keyset_part_size,
             h,
         }
+    }
+
+    pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
+        let ring_selector = self.keyset_part_selector();
+        let ring_selector = self.domain.selector(ring_selector);
+        let points = self.points_column(&keys);
+        FixedColumns { points, ring_selector }
+    }
+
+    pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+        assert!(keys.len() <= self.keyset_part_size);
+        let padding_len = self.keyset_part_size - keys.len();
+        let padding_point = Affine::<Curve>::generator(); //TODO!!!
+        let padding = vec![padding_point; padding_len];
+        let points = [
+            keys,
+            &padding,
+            &self.power_of_2_multiples_of_h(),
+        ].concat();
+        assert_eq!(points.len(), self.domain.capacity - 1);
+        AffineColumn::init(points, &self.domain)
     }
 
     pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
