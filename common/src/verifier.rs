@@ -20,15 +20,13 @@ pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
 }
 
 impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
-    pub fn init(pcs_raw_vk: &<CS::Params as PcsParams>::RVK,
+    pub fn init(pcs_vk: <CS::Params as PcsParams>::VK,
+                verifier_key: &impl CanonicalSerialize,
                 domain: GeneralEvaluationDomain<F>,
                 precommitted_cols: [CS::C; 2],
                 empty_transcript: T) -> Self {
-        let pcs_vk = pcs_raw_vk.prepare();
-
         let mut transcript_prelude = empty_transcript;
-        transcript_prelude.add_protocol_params(&domain, pcs_raw_vk);
-        transcript_prelude.add_precommitted_cols(&precommitted_cols);
+        transcript_prelude._add_serializable(b"vk", verifier_key);
 
         Self {
             pcs_vk,
