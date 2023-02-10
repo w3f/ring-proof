@@ -61,6 +61,7 @@ pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
 pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
     pcs_raw_vk: <CS::Params as PcsParams>::RVK,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
+    //TODO: domain
 }
 
 pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
