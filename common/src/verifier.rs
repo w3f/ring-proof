@@ -1,7 +1,7 @@
 use ark_ff::{Field, PrimeField};
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
-use fflonk::pcs::{Commitment, PCS, PcsParams, RawVerifierKey};
+use fflonk::pcs::{Commitment, PCS, PcsParams};
 use ark_std::test_rng;
 use crate::piop::VerifierPiop;
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
@@ -10,10 +10,6 @@ use crate::transcript::Transcript;
 pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
     // Polynomial commitment scheme verifier's key.
     pcs_vk: CS::VK,
-    // Domain over which the computation is being proved.
-    domain: GeneralEvaluationDomain<F>,
-    // Commitments to the columns publicly known in advance (like a list of public keys).
-    precommitted_cols: [CS::C; 2],
     // Transcript,
     // initialized with the public parameters and the commitments to the precommitted columns.
     transcript_prelude: T,
@@ -22,16 +18,12 @@ pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
 impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
     pub fn init(pcs_vk: <CS::Params as PcsParams>::VK,
                 verifier_key: &impl CanonicalSerialize,
-                domain: GeneralEvaluationDomain<F>,
-                precommitted_cols: [CS::C; 2],
                 empty_transcript: T) -> Self {
         let mut transcript_prelude = empty_transcript;
         transcript_prelude._add_serializable(b"vk", verifier_key);
 
         Self {
             pcs_vk,
-            domain,
-            precommitted_cols,
             transcript_prelude,
         }
     }

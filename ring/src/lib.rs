@@ -133,7 +133,7 @@ mod tests {
         end_timer!(t_prove);
 
 
-        let ring_verifier = RingVerifier::init(verifier_key, piop_params2, domain_size, max_keyset_size, Transcript::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(verifier_key, piop_params2, Transcript::new(b"ring-vrf-test"));
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);
@@ -143,7 +143,8 @@ mod tests {
 
     #[test]
     fn test_ring_proof() {
-        // _test_ring_proof::<fflonk::pcs::kzg::KZG<ark_bls12_381::Bls12_381>>(2usize.pow(12));
+        // _test_ring_proof::<fflonk::pcs::kzg::KZG<ark_bls12_381::Bls12_381>>(2usize.pow(8), false);
+        // _test_ring_proof::<fflonk::pcs::kzg::KZG<ark_bls12_381::Bls12_381>>(2usize.pow(8), true);
         _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10), false);
         _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10), true);
     }

@@ -9,14 +9,14 @@ use common::gadgets::inner_prod::InnerProdValues;
 use common::gadgets::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
-use crate::piop::{RingCommitments, RingEvaluations};
+use crate::{FixedColumnsCommitted, RingEvaluations};
+use crate::piop::RingCommitments;
 use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,
     points: [C; 2],
     columns: RingCommitments<F, C>,
-    evals: RingEvaluations<F>,
     inner_prod: InnerProdValues<F>,
     cond_add: CondAddValues<F>,
     booleanity: BooleanityValues<F>,
@@ -29,13 +29,14 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
     pub fn init<Curve: SWCurveConfig<BaseField=F>>(
         piop_params: &PiopParams<F, Curve>,
         domain_evals: EvaluatedDomain<F>,
-        points: &[C; 2],
+        fixed_columns_committed: FixedColumnsCommitted<F, C>,
         columns: RingCommitments<F, C>,
         evals: RingEvaluations<F>,
         init: (F, F),
         result: (F, F),
         zeta: F,
     ) -> Self {
+        let points = fixed_columns_committed.points;
         let keyset_part_selector = piop_params.keyset_part_selector();
         let keyset_part_selector = Evaluations::from_vec_and_domain(keyset_part_selector, domain_evals.domain);
         let keyset_part_selector_at_zeta = keyset_part_selector.interpolate().evaluate(&zeta);
@@ -84,9 +85,8 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
 
         Self {
             domain_evals,
-            points: points.clone(),
+            points,
             columns,
-            evals,
             inner_prod,
             cond_add,
             booleanity,
