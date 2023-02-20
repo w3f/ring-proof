@@ -6,7 +6,7 @@ use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 use fflonk::pcs::Commitment;
 
-use common::Column;
+use common::{Column, FieldColumn};
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
 use common::gadgets::fixed_cells::FixedCells;
@@ -23,16 +23,19 @@ use crate::piop::params::PiopParams;
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
 pub struct PiopProver<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     domain: Domain<F>,
-    bits: BitColumn<F>,
+    // Fixed (public input) columns:
     points: AffineColumn<F, Affine<Curve>>,
-    inner_prod: InnerProd<F>,
-    cond_add: CondAdd<F, Affine<Curve>>,
+    ring_selector: FieldColumn<F>,
+    // Private input column.
+    bits: BitColumn<F>,
+    // Gadgets:
     booleanity: Booleanity<F>,
+    inner_prod: InnerProd<F>,
+    inner_prod_acc: FixedCells<F>,
+    cond_add: CondAdd<F, Affine<Curve>>,
     cond_add_acc_x: FixedCells<F>,
     cond_add_acc_y: FixedCells<F>,
-    inner_prod_acc: FixedCells<F>,
 }
-
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
 {
@@ -41,10 +44,9 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                  prover_index_in_keys: usize,
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
-        let points = fixed_columns.points;
-        let keyset_part_selector = fixed_columns.ring_selector;
+        let FixedColumns{ points, ring_selector } = fixed_columns;
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(keyset_part_selector, bits.col.clone(), &domain);
+        let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);
         let booleanity = Booleanity::init(bits.clone());
         let cond_add_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
@@ -52,14 +54,15 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
         let inner_prod_acc = FixedCells::init(inner_prod.acc.clone(), &domain);
         Self {
             domain,
-            bits,
             points,
-            inner_prod,
-            cond_add,
-            booleanity,
+            ring_selector,
+            bits,
+            inner_prod_acc,
             cond_add_acc_x,
             cond_add_acc_y,
-            inner_prod_acc,
+            booleanity,
+            inner_prod,
+            cond_add,
         }
     }
 
@@ -102,33 +105,38 @@ impl<F, C, Curve> ProverPiop<F, C> for PiopProver<F, Curve>
         }
     }
 
+    // Should return polynomials in the consistent with
+    // Self::Evaluations::to_vec() and Self::Commitments::to_vec().
     fn columns(&self) -> Vec<DensePolynomial<F>> {
         vec![
             self.points.xs.as_poly().clone(),
             self.points.ys.as_poly().clone(),
+            self.ring_selector.as_poly().clone(),
             self.bits.as_poly().clone(),
+            self.inner_prod.acc.as_poly().clone(),
             self.cond_add.acc.xs.as_poly().clone(),
             self.cond_add.acc.ys.as_poly().clone(),
-            self.inner_prod.acc.as_poly().clone(),
         ]
     }
 
     fn columns_evaluated(&self, zeta: &F) -> Self::Evaluations {
-        let bits = self.bits.evaluate(zeta);
-        let cond_add_acc = [
-            self.cond_add.acc.xs.evaluate(zeta),
-            self.cond_add.acc.ys.evaluate(zeta),
-        ];
-        let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
         let points = [
             self.points.xs.evaluate(zeta),
             self.points.ys.evaluate(zeta),
         ];
+        let ring_selector = self.ring_selector.evaluate(zeta);
+        let bits = self.bits.evaluate(zeta);
+        let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
+        let cond_add_acc = [
+            self.cond_add.acc.xs.evaluate(zeta),
+            self.cond_add.acc.ys.evaluate(zeta),
+        ];
         Self::Evaluations {
-            bits,
-            cond_add_acc,
-            inn_prod_acc,
             points,
+            ring_selector,
+            bits,
+            inn_prod_acc,
+            cond_add_acc,
         }
     }
 

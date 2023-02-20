@@ -40,6 +40,16 @@ pub struct FixedColumnsCommitted<F: PrimeField, C: Commitment<F>> {
     phantom: PhantomData<F>,
 }
 
+impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
+    fn as_vec(&self) -> Vec<C> {
+        vec![
+            self.points[0].clone(),
+            self.points[1].clone(),
+            self.ring_selector.clone(),
+        ]
+    }
+}
+
 impl<F: PrimeField, G: AffineRepr<BaseField=F>> FixedColumns<F, G> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [

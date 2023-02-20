@@ -15,14 +15,15 @@ use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,
-    points: [C; 2],
-    columns: RingCommitments<F, C>,
-    inner_prod: InnerProdValues<F>,
-    cond_add: CondAddValues<F>,
+    fixed_columns_committed: FixedColumnsCommitted<F, C>,
+    witness_columns_committed: RingCommitments<F, C>,
+    // Gadget verifiers:
     booleanity: BooleanityValues<F>,
+    inner_prod: InnerProdValues<F>,
+    inner_prod_acc: FixedCellsValues<F>,
+    cond_add: CondAddValues<F>,
     cond_add_acc_x: FixedCellsValues<F>,
     cond_add_acc_y: FixedCellsValues<F>,
-    inner_prod_acc: FixedCellsValues<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
@@ -30,37 +31,32 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
         piop_params: &PiopParams<F, Curve>,
         domain_evals: EvaluatedDomain<F>,
         fixed_columns_committed: FixedColumnsCommitted<F, C>,
-        columns: RingCommitments<F, C>,
-        evals: RingEvaluations<F>,
+        witness_columns_committed: RingCommitments<F, C>,
+        all_columns_evaluated: RingEvaluations<F>,
         init: (F, F),
         result: (F, F),
         zeta: F,
     ) -> Self {
-        let points = fixed_columns_committed.points;
-        let keyset_part_selector = piop_params.keyset_part_selector();
-        let keyset_part_selector = Evaluations::from_vec_and_domain(keyset_part_selector, domain_evals.domain);
-        let keyset_part_selector_at_zeta = keyset_part_selector.interpolate().evaluate(&zeta);
-
         let cond_add = CondAddValues {
-            bitmask: evals.bits,
-            points: (evals.points[0], evals.points[1]),
+            bitmask: all_columns_evaluated.bits,
+            points: (all_columns_evaluated.points[0], all_columns_evaluated.points[1]),
             not_last: domain_evals.not_last_row,
-            acc: (evals.cond_add_acc[0], evals.cond_add_acc[1]),
+            acc: (all_columns_evaluated.cond_add_acc[0], all_columns_evaluated.cond_add_acc[1]),
         };
 
         let inner_prod = InnerProdValues {
-            a: keyset_part_selector_at_zeta,
-            b: evals.bits,
+            a: all_columns_evaluated.ring_selector,
+            b: all_columns_evaluated.bits,
             not_last: domain_evals.not_last_row,
-            acc: evals.inn_prod_acc,
+            acc: all_columns_evaluated.inn_prod_acc,
         };
 
         let booleanity = BooleanityValues {
-            bits: evals.bits,
+            bits: all_columns_evaluated.bits,
         };
 
         let cond_add_acc_x = FixedCellsValues {
-            col: evals.cond_add_acc[0],
+            col: all_columns_evaluated.cond_add_acc[0],
             col_first: init.0,
             col_last: result.0,
             l_first: domain_evals.l_first,
@@ -68,7 +64,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
         };
 
         let cond_add_acc_y = FixedCellsValues {
-            col: evals.cond_add_acc[1],
+            col: all_columns_evaluated.cond_add_acc[1],
             col_first: init.1,
             col_last: result.1,
             l_first: domain_evals.l_first,
@@ -76,7 +72,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
         };
 
         let inner_prod_acc = FixedCellsValues {
-            col: evals.inn_prod_acc,
+            col: all_columns_evaluated.inn_prod_acc,
             col_first: F::zero(),
             col_last: F::one(),
             l_first: domain_evals.l_first,
@@ -85,8 +81,8 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
 
         Self {
             domain_evals,
-            points,
-            columns,
+            fixed_columns_committed,
+            witness_columns_committed,
             inner_prod,
             cond_add,
             booleanity,
@@ -99,10 +95,10 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
 
 impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> {
     const N_CONSTRAINTS: usize = 7;
-    const N_COLUMNS: usize = 6;
+    const N_COLUMNS: usize = 7;
 
     fn precommitted_columns(&self) -> Vec<C> {
-        self.points.to_vec()
+        self.fixed_columns_committed.as_vec()
     }
 
     fn evaluate_constraints_main(&self) -> Vec<F> {
@@ -117,9 +113,9 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
     }
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
-        let inner_prod_acc = self.columns.inn_prod_acc.mul(self.inner_prod.not_last);
-        let acc_x = &self.columns.cond_add_acc[0];
-        let acc_y = &self.columns.cond_add_acc[1];
+        let inner_prod_acc = self.witness_columns_committed.inn_prod_acc.mul(self.inner_prod.not_last);
+        let acc_x = &self.witness_columns_committed.cond_add_acc[0];
+        let acc_y = &self.witness_columns_committed.cond_add_acc[1];
         // let (c_acc_x_1, c_acc_y_1) = self.cond_add.acc_coeffs_1();
         // let (c_acc_x_2, c_acc_y_2) = self.cond_add.acc_coeffs_2();
         // vec![
