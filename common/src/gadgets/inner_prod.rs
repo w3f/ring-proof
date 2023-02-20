@@ -44,15 +44,6 @@ impl<F: FftField> InnerProd<F> {
             })
             .collect()
     }
-
-    fn evaluate_assignment(&self, zeta: &F) -> InnerProdValues<F> {
-        InnerProdValues {
-            a: self.a.evaluate(zeta),
-            b: self.b.evaluate(zeta),
-            not_last: self.not_last.evaluate(zeta), //TODO: can be done in O(1)
-            acc: self.acc.evaluate(zeta),
-        }
-    }
 }
 
 impl<F: FftField> ProverGadget<F> for InnerProd<F> {

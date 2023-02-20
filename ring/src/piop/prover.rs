@@ -4,7 +4,6 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
-use ark_std::{test_rng, UniformRand};
 use fflonk::pcs::Commitment;
 
 use common::Column;
@@ -62,20 +61,6 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
             cond_add_acc_y,
             inner_prod_acc,
         }
-    }
-
-    pub fn keyset_column(params: &PiopParams<F, Curve>, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
-        assert!(keys.len() <= params.keyset_part_size);
-        let padding_len = params.keyset_part_size - keys.len();
-        let padding_point = Affine::<Curve>::rand(&mut test_rng()); //TODO: Ask Al
-        let padding = vec![padding_point; padding_len];
-        let points = [
-            keys,
-            &padding,
-            &params.power_of_2_multiples_of_h(),
-        ].concat();
-        assert_eq!(points.len(), params.domain.capacity - 1);
-        AffineColumn::init(points, &params.domain)
     }
 
     fn bits_column(params: &PiopParams<F, Curve>, index_in_keys: usize, secret: Curve::ScalarField) -> BitColumn<F> {

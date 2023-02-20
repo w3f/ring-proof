@@ -2,7 +2,6 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use fflonk::pcs::PCS;
 
-use common::gadgets::sw_cond_add::AffineColumn;
 use common::prover::PlonkProver;
 
 use crate::piop::params::PiopParams;
@@ -35,7 +34,6 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
             plonk_prover,
         }
     }
-
 
     pub fn prove(&self, t: Curve::ScalarField) -> RingProof<F, CS> {
         let piop = PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, t);

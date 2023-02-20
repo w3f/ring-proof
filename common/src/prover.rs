@@ -2,8 +2,8 @@ use ark_ff::PrimeField;
 use ark_poly::{Evaluations, Polynomial};
 use ark_serialize::CanonicalSerialize;
 use fflonk::aggregation::single::aggregate_polys;
-use fflonk::pcs::{PCS, PcsParams};
-use crate::piop::{ProverPiop};
+use fflonk::pcs::PCS;
+use crate::piop::ProverPiop;
 use crate::Proof;
 use crate::transcript::Transcript;
 

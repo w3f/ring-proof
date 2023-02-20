@@ -1,5 +1,4 @@
 use ark_ff::{Field, PrimeField};
-use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
 use ark_std::test_rng;

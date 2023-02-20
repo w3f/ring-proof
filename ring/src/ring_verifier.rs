@@ -1,7 +1,7 @@
 use ark_ec::CurveGroup;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use fflonk::pcs::{PCS, PcsParams, RawVerifierKey};
+use fflonk::pcs::{PCS, RawVerifierKey};
 use common::domain::EvaluatedDomain;
 
 use common::gadgets::sw_cond_add::CondAdd;
@@ -54,6 +54,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
             (init_plus_result.x, init_plus_result.y),
             challenges.zeta,
         );
+
         self.plonk_verifier.verify(piop, proof, challenges)
     }
 }
