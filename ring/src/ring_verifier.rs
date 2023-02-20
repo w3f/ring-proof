@@ -45,14 +45,12 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
         let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(
-            &self.piop_params,
             domain_eval,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
             (init.x, init.y),
             (init_plus_result.x, init_plus_result.y),
-            challenges.zeta,
         );
 
         self.plonk_verifier.verify(piop, proof, challenges)

@@ -1,6 +1,4 @@
-use ark_ec::short_weierstrass::SWCurveConfig;
 use ark_ff::PrimeField;
-use ark_poly::{Evaluations, Polynomial};
 use fflonk::pcs::Commitment;
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
@@ -11,7 +9,6 @@ use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
 use crate::{FixedColumnsCommitted, RingEvaluations};
 use crate::piop::RingCommitments;
-use crate::piop::params::PiopParams;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,
@@ -27,15 +24,13 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
 }
 
 impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
-    pub fn init<Curve: SWCurveConfig<BaseField=F>>(
-        piop_params: &PiopParams<F, Curve>,
+    pub fn init(
         domain_evals: EvaluatedDomain<F>,
         fixed_columns_committed: FixedColumnsCommitted<F, C>,
         witness_columns_committed: RingCommitments<F, C>,
         all_columns_evaluated: RingEvaluations<F>,
         init: (F, F),
         result: (F, F),
-        zeta: F,
     ) -> Self {
         let cond_add = CondAddValues {
             bitmask: all_columns_evaluated.bits,
@@ -116,13 +111,6 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
         let inner_prod_acc = self.witness_columns_committed.inn_prod_acc.mul(self.inner_prod.not_last);
         let acc_x = &self.witness_columns_committed.cond_add_acc[0];
         let acc_y = &self.witness_columns_committed.cond_add_acc[1];
-        // let (c_acc_x_1, c_acc_y_1) = self.cond_add.acc_coeffs_1();
-        // let (c_acc_x_2, c_acc_y_2) = self.cond_add.acc_coeffs_2();
-        // vec![
-        //     vec![(inner_prod_acc, F::one())],
-        //     vec![(cond_add_acc_x.clone(), c_acc_x_1), (cond_add_acc_y.clone(), c_acc_y_1)],
-        //     vec![(cond_add_acc_x, c_acc_x_2), (cond_add_acc_y, c_acc_y_2)],
-        // ]
 
         let (c_acc_x, c_acc_y) = self.cond_add.acc_coeffs_1();
         let c1_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
