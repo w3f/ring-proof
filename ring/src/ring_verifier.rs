@@ -9,8 +9,8 @@ use common::piop::VerifierPiop;
 use common::verifier::PlonkVerifier;
 use crate::piop::params::PiopParams;
 
-use crate::piop::PiopVerifier;
-use crate::{FixedColumnsCommitted, RingProof, VerifierKey};
+use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
+use crate::RingProof;
 
 pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,

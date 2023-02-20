@@ -5,8 +5,8 @@ use fflonk::pcs::PCS;
 use common::prover::PlonkProver;
 
 use crate::piop::params::PiopParams;
-use crate::piop::PiopProver;
-use crate::{FixedColumns, ProverKey, RingProof};
+use crate::piop::{FixedColumns, PiopProver, ProverKey};
+use crate::RingProof;
 
 pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,

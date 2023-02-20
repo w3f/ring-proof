@@ -7,8 +7,8 @@ use common::gadgets::inner_prod::InnerProdValues;
 use common::gadgets::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
-use crate::{FixedColumnsCommitted, RingEvaluations};
-use crate::piop::RingCommitments;
+use crate::RingEvaluations;
+use crate::piop::{FixedColumnsCommitted, RingCommitments};
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,

@@ -5,7 +5,7 @@ use ark_std::rand::Rng;
 use ark_std::UniformRand;
 use common::domain::Domain;
 use common::gadgets::sw_cond_add::AffineColumn;
-use crate::FixedColumns;
+use crate::piop::FixedColumns;
 
 
 #[derive(Clone)]
