@@ -1,7 +1,7 @@
 use ark_ec::CurveGroup;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use fflonk::pcs::{PCS, PcsParams};
+use fflonk::pcs::{PCS, RawVerifierKey};
 use common::domain::EvaluatedDomain;
 
 use common::gadgets::sw_cond_add::CondAdd;
@@ -9,34 +9,25 @@ use common::piop::VerifierPiop;
 use common::verifier::PlonkVerifier;
 use crate::piop::params::PiopParams;
 
-use crate::piop::PiopVerifier;
+use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::RingProof;
 
 pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,
-    points_comm: [CS::C; 2],
-    domain_size: usize,
-    keyset_size: usize,
-
+    fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
     plonk_verifier: PlonkVerifier<F, CS, merlin::Transcript>,
 }
 
 impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<F, CS, Curve> {
-    pub fn init(raw_vk: &<CS::Params as PcsParams>::RVK,
+    pub fn init(verifier_key: VerifierKey<F, CS>,
                 piop_params: PiopParams<F, Curve>,
-                points_comm: [CS::C; 2],
-                domain_size: usize,
-                keyset_size: usize,
                 empty_transcript: merlin::Transcript,
     ) -> Self {
-        let domain = piop_params.domain.domain();
-        let plonk_verifier = PlonkVerifier::init(raw_vk, domain, points_comm.clone(), empty_transcript);
-
+        let pcs_vk = verifier_key.pcs_raw_vk.prepare();
+        let plonk_verifier = PlonkVerifier::init(pcs_vk, &verifier_key, empty_transcript);
         Self {
             piop_params,
-            points_comm,
-            domain_size,
-            keyset_size,
+            fixed_columns_committed: verifier_key.fixed_columns_committed,
             plonk_verifier,
         }
     }
@@ -54,15 +45,14 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
         let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(
-            &self.piop_params,
             domain_eval,
-            &self.points_comm,
+            self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
             (init.x, init.y),
             (init_plus_result.x, init_plus_result.y),
-            challenges.zeta,
         );
+
         self.plonk_verifier.verify(piop, proof, challenges)
     }
 }

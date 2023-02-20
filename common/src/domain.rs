@@ -150,19 +150,8 @@ fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> D
     &(&(&x - &c(w3)) * &(&x - &c(w2))) * &(&x - &c(w1))
 }
 
-fn eval_vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>, x: F) -> F {
-    let w = domain.group_gen();
-    let n3 = (domain.size() - ZK_ROWS) as u64;
-    let w3 = w.pow(&[n3]);
-    let w2 = w3 * w;
-    let w1 = w2 * w;
-    assert_eq!(w1, domain.group_gen_inv());
-    (x - w3) * (x - w2) * (x - w1)
-}
-
 pub struct EvaluatedDomain<F: FftField> {
     pub domain: GeneralEvaluationDomain<F>,
-    zeta: F,
     pub not_last_row: F,
     pub l_first: F,
     pub l_last: F,
@@ -202,7 +191,6 @@ impl<F: FftField> EvaluatedDomain<F> {
 
         Self {
             domain,
-            zeta: z,
             not_last_row,
             l_first,
             l_last,

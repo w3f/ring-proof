@@ -25,38 +25,3 @@ pub trait ProverGadget<F: FftField> {
 pub trait VerifierGadget<F: Field> {
     fn evaluate_constraints_main(&self) -> Vec<F>;
 }
-
-#[cfg(test)]
-mod tests {
-    use ark_ff::Zero;
-    use ark_poly::EvaluationDomain;
-    use ark_std::test_rng;
-
-    use super::*;
-
-    pub fn test_gadget<F: FftField, G: ProverGadget<F>>(gadget: G) {
-        let domain = gadget.domain();
-        let cs_polys: Vec<DensePolynomial<F>> = gadget.constraints().into_iter()
-            .map(|c| c.interpolate())
-            .collect();
-
-        let mut rs = cs_polys.iter()
-            .map(|c| c.divide_by_vanishing_poly(domain).unwrap().1);
-        assert!(rs.all(|r| r.is_zero()));
-
-        let _zeta = F::rand(&mut test_rng());
-        let _omega = domain.group_gen();
-
-        // let evaluated = gadget.evaluate_assignment(&zeta);
-        // let cs_evaluated_main = evaluated.evaluate_constraints_main();
-        // assert_eq!(cs_evaluated_main.len(), cs_polys.len());
-        // let constraints_linearized = gadget.constraints_linearized(&evaluated);
-        // assert_eq!(constraints_linearized.len(), cs_polys.len());
-        //
-        // for ((c_full, c_ev_main), c_lin) in cs_polys.iter()
-        //     .zip(cs_evaluated_main)
-        //     .zip(constraints_linearized) {
-        //     assert_eq!(c_full.evaluate(&zeta), c_ev_main + c_lin.evaluate(&(zeta * omega)));
-        // }
-    }
-}

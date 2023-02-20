@@ -1,11 +1,11 @@
 use ark_ff::PrimeField;
 use ark_poly::{Evaluations, Polynomial};
+use ark_serialize::CanonicalSerialize;
 use fflonk::aggregation::single::aggregate_polys;
-use fflonk::pcs::{PCS, PcsParams};
-use crate::piop::{ProverPiop};
+use fflonk::pcs::PCS;
+use crate::piop::ProverPiop;
 use crate::Proof;
 use crate::transcript::Transcript;
-use crate::setup::Setup;
 
 
 pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
@@ -17,16 +17,12 @@ pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
 }
 
 impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
-    pub fn init(setup: Setup<F, CS>,
-                precommitted_cols: &[CS::C; 2],
+    pub fn init(pcs_ck: CS::CK,
+                verifier_key: impl CanonicalSerialize, //TODO: a type,
                 empty_transcript: T) -> Self {
-        
-        let pcs_ck = setup.pcs_params.ck();
-        
         let mut transcript_prelude = empty_transcript;
-        transcript_prelude.add_protocol_params(&setup.domain, &setup.pcs_params.raw_vk());
-        transcript_prelude.add_precommitted_cols(precommitted_cols);
-        
+        transcript_prelude._add_serializable(b"vk", &verifier_key);
+
         Self {
             pcs_ck,
             transcript_prelude
