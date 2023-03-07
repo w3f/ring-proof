@@ -58,7 +58,6 @@ impl<F: FftField> InnerProd<F> {
             inner_prod: self.inner_prod,
         }
     }
-
 }
 
 impl<F: FftField> ProverGadget<F> for InnerProd<F> {

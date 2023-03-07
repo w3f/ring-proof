@@ -25,7 +25,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
 
         Self {
             pcs_ck,
-            transcript_prelude
+            transcript_prelude,
         }
     }
 

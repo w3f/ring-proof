@@ -44,7 +44,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopProver<F, Curve>
                  prover_index_in_keys: usize,
                  secret: Curve::ScalarField) -> Self {
         let domain = params.domain.clone();
-        let FixedColumns{ points, ring_selector } = fixed_columns;
+        let FixedColumns { points, ring_selector } = fixed_columns;
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), &domain);

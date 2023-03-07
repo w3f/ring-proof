@@ -62,7 +62,6 @@ pub trait Transcript<F: PrimeField, CS: PCS<F>>: Clone {
 }
 
 impl<F: PrimeField, CS: PCS<F>> Transcript<F, CS> for merlin::Transcript {
-
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         let mut buf = [0u8; 16];
         self.challenge_bytes(label, &mut buf);

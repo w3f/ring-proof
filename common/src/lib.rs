@@ -64,7 +64,6 @@ pub fn const_evals<F: FftField>(c: F, domain: GeneralEvaluationDomain<F>) -> Eva
 }
 
 
-
 pub trait ColumnsEvaluated<F: PrimeField>: CanonicalSerialize + CanonicalDeserialize {
     fn to_vec(self) -> Vec<F>;
 }
