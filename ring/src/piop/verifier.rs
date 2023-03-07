@@ -1,5 +1,6 @@
 use ark_ff::PrimeField;
 use fflonk::pcs::Commitment;
+
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
@@ -7,8 +8,9 @@ use common::gadgets::inner_prod::InnerProdValues;
 use common::gadgets::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
-use crate::RingEvaluations;
+
 use crate::piop::{FixedColumnsCommitted, RingCommitments};
+use crate::RingEvaluations;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     domain_evals: EvaluatedDomain<F>,

@@ -1,9 +1,10 @@
 use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
-use fflonk::pcs::{Commitment, PCS, PcsParams};
 use ark_std::test_rng;
-use crate::piop::VerifierPiop;
+use fflonk::pcs::{Commitment, PCS, PcsParams};
+
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
+use crate::piop::VerifierPiop;
 use crate::transcript::Transcript;
 
 pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {

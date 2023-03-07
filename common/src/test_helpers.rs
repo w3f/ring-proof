@@ -1,6 +1,6 @@
+use ark_ec::{AffineRepr, CurveGroup};
 use ark_std::rand::Rng;
 use ark_std::UniformRand;
-use ark_ec::{AffineRepr, CurveGroup};
 
 pub fn random_bitvec<R: Rng>(n: usize, density: f64, rng: &mut R) -> Vec<bool> {
     (0..n)

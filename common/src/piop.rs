@@ -2,11 +2,10 @@ use ark_ff::PrimeField;
 use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use fflonk::pcs::{Commitment};
+use fflonk::pcs::Commitment;
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
 use crate::domain::{Domain, EvaluatedDomain};
-
 
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     type Commitments: ColumnsCommited<F, C>;

@@ -2,6 +2,7 @@ use ark_ff::{batch_inversion, FftField, Zero};
 use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::test_rng;
+
 use crate::FieldColumn;
 
 const ZK_ROWS: usize = 3;
@@ -215,6 +216,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::Fq;
     use ark_poly::Polynomial;
     use ark_std::{test_rng, UniformRand};
+
     use crate::domain::{Domain, EvaluatedDomain};
 
     fn _test_evaluated_domain(hiding: bool) {

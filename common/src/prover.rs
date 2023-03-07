@@ -3,10 +3,10 @@ use ark_poly::{Evaluations, Polynomial};
 use ark_serialize::CanonicalSerialize;
 use fflonk::aggregation::single::aggregate_polys;
 use fflonk::pcs::PCS;
+
 use crate::piop::ProverPiop;
 use crate::Proof;
 use crate::transcript::Transcript;
-
 
 pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
     // Polynomial commitment scheme committer's key.

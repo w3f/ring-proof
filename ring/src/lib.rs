@@ -1,12 +1,12 @@
 use fflonk::pcs::PCS;
 
 use common::Proof;
+pub use piop::index;
 
 use crate::piop::{RingCommitments, RingEvaluations};
 use crate::piop::params::PiopParams;
 
 mod piop;
-pub use piop::index;
 pub mod ring_prover;
 pub mod ring_verifier;
 

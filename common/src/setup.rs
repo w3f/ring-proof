@@ -2,6 +2,7 @@ use ark_ff::PrimeField;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::rand::Rng;
 use fflonk::pcs::{PCS, PcsParams};
+
 use crate::{Column, FieldColumn};
 
 // Contains the polynomial commitment setup (the URS), and the selected subgroup (domain)

@@ -6,7 +6,6 @@ use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 
-
 pub struct InnerProd<F: FftField> {
     a: FieldColumn<F>,
     b: FieldColumn<F>,
@@ -100,15 +99,15 @@ impl<F: Field> VerifierGadget<F> for InnerProdValues<F> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ark_std::test_rng;
     use ark_ed_on_bls12_381_bandersnatch::Fq;
+    use ark_ff::{Field, Zero};
+    use ark_poly::{GeneralEvaluationDomain, Polynomial};
     use ark_poly::EvaluationDomain;
+    use ark_std::test_rng;
 
     use crate::test_helpers::random_vec;
 
-    use ark_ff::{Field, Zero};
-    use ark_poly::{GeneralEvaluationDomain, Polynomial};
+    use super::*;
 
     fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
         assert_eq!(a.len(), b.len());

@@ -14,9 +14,9 @@ use common::gadgets::inner_prod::InnerProd;
 use common::gadgets::ProverGadget;
 use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;
-use crate::piop::FixedColumns;
 
 use crate::piop::{RingCommitments, RingEvaluations};
+use crate::piop::FixedColumns;
 use crate::piop::params::PiopParams;
 
 // The 'table': columns representing the execution trace of the computation

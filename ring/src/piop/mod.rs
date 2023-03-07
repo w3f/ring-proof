@@ -1,15 +1,16 @@
 use std::marker::PhantomData;
 
+use ark_ec::AffineRepr;
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use fflonk::pcs::{Commitment, PCS, PcsParams};
-use ark_ec::AffineRepr;
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 use common::gadgets::sw_cond_add::AffineColumn;
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
+
 use crate::PiopParams;
 
 mod prover;

@@ -1,14 +1,15 @@
 use std::iter;
+
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+
 use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
-use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::{ProverGadget, VerifierGadget};
-
+use crate::gadgets::booleanity::BitColumn;
 
 // A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
 // and its convenience representation as columns of coordinates over the curve's base field.
@@ -246,13 +247,14 @@ impl<F: Field> CondAddValues<F> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use ark_std::test_rng;
     use ark_ed_on_bls12_381_bandersnatch::SWAffine;
     use ark_poly::Polynomial;
-    use crate::test_helpers::cond_sum;
-    use crate::test_helpers::*;
+    use ark_std::test_rng;
 
+    use crate::test_helpers::*;
+    use crate::test_helpers::cond_sum;
+
+    use super::*;
 
     fn _test_sw_cond_add_gadget(hiding: bool) {
         let rng = &mut test_rng();
