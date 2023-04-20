@@ -12,8 +12,11 @@ ark-serialize.workspace = true
 fflonk.workspace = true
 merlin.workspace = true
 rayon = { workspace = true, optional = true }
+num-bigint = "0.4"
+num-integer = "0.1"
 
 [dev-dependencies]
+ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]

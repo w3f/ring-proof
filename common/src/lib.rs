@@ -11,6 +11,7 @@ pub mod prover;
 pub mod verifier;
 pub mod transcript;
 pub mod domain;
+mod fft;
 
 pub trait Column<F: FftField> {
     fn domain(&self) -> GeneralEvaluationDomain<F>;
