@@ -49,16 +49,16 @@ impl<F: Field> FftDomain<F> for NaiveDomain<F> {
     }
 }
 
-struct CooleyTukeyDomain<F: Field, D: FftDomain<F>> {
+struct CooleyTukeyDomain<F: Field, D1: FftDomain<F>, D2: FftDomain<F>> {
     n: usize,
     w: F,
-    d1: D,
-    d2: D,
+    d1: D1,
+    d2: D2,
     twiddles: Vec<Vec<F>>,
 }
 
-impl<F: Field, D: FftDomain<F>> CooleyTukeyDomain<F, D> {
-    fn new(w: F, d1: D, d2: D) -> Self {
+impl<F: Field, D1: FftDomain<F>, D2: FftDomain<F>> CooleyTukeyDomain<F, D1, D2> {
+    fn new(w: F, d1: D1, d2: D2) -> Self {
         let n = d1.n() * d2.n();
         assert!(w.pow([n as u64]).is_one());
         let mut twiddles = vec![vec![F::zero(); d1.n()]; d2.n()];
@@ -80,7 +80,7 @@ impl<F: Field, D: FftDomain<F>> CooleyTukeyDomain<F, D> {
     }
 }
 
-impl<F: Field, D: FftDomain<F>> FftDomain<F> for CooleyTukeyDomain<F, D> {
+impl<F: Field, D1: FftDomain<F>, D2: FftDomain<F>> FftDomain<F> for CooleyTukeyDomain<F, D1, D2> {
     fn fft(&self, coeffs: &[F]) -> Vec<F> {
         let n = self.n;
         let n1 = self.d1.n();
@@ -134,11 +134,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_cooley_tukey() {
+    fn test_cooley_tukey_2() {
         use ark_bls12_381::Fq;
         let rng = &mut test_rng();
 
-        let n1 = 23;
+        let n1 = 22;
         let n2 = 47;
         let n = n1 * n2;
 
@@ -147,17 +147,50 @@ mod tests {
         let w2 = w.pow([n1 as u64]);
         let d1 = NaiveDomain::new(w1, n1);
         let d2 = NaiveDomain::new(w2, n2);
-        let ctd = CooleyTukeyDomain::new(w, d1, d2);
-        let nd = NaiveDomain::new(w, n);
+        let fft_domain = CooleyTukeyDomain::new(w, d1, d2);
+        let dft_domain = NaiveDomain::new(w, n);
 
         let coeffs: Vec<_> = (0..n).map(|_| Fq::rand(rng)).collect();
 
-        let t_fft = start_timer!(|| "fft");
-        let fft = ctd.fft(&coeffs);
+        let t_fft = start_timer!(|| format!("{}x{}-fft", n1, n2));
+        let fft = fft_domain.fft(&coeffs);
         end_timer!(t_fft);
 
-        let t_dft = start_timer!(|| "dft");
-        let dft = nd.fft(&coeffs);
+        let t_dft = start_timer!(|| format!("{}-dft", n));
+        let dft = dft_domain.fft(&coeffs);
+        end_timer!(t_dft);
+        assert_eq!(fft, dft);
+    }
+
+    #[test]
+    fn test_cooley_tukey_3() {
+        use ark_bls12_381::Fq;
+        let rng = &mut test_rng();
+
+        let n1 = 2;
+        let n2 = 11;
+        let n3 = 47;
+        let n = n1 * n2 * n3;
+
+        let w = gen::<Fq>(n);
+        let w1 = w.pow([(n2 * n3) as u64]);
+        let w2 = w.pow([(n1 * n3) as u64]);
+        let w3 = w.pow([(n1 * n2) as u64]);
+        let d1 = NaiveDomain::new(w1, n1);
+        let d2 = NaiveDomain::new(w2, n2);
+        let d3 = NaiveDomain::new(w3, n3);
+        let d12 = CooleyTukeyDomain::new(w.pow([n3 as u64]), d1, d2);
+        let fft_domain = CooleyTukeyDomain::new(w, d12, d3);
+        let dft_domain = NaiveDomain::new(w, n);
+
+        let coeffs: Vec<_> = (0..n).map(|_| Fq::rand(rng)).collect();
+
+        let t_fft = start_timer!(|| format!("{}x{}x{}-fft", n1, n2, n3));
+        let fft = fft_domain.fft(&coeffs);
+        end_timer!(t_fft);
+
+        let t_dft = start_timer!(|| format!("{}-dft", n));
+        let dft = dft_domain.fft(&coeffs);
         end_timer!(t_dft);
         assert_eq!(fft, dft);
     }
