@@ -117,6 +117,88 @@ impl<F: Field, D1: FftDomain<F>, D2: FftDomain<F>> FftDomain<F> for CooleyTukeyD
     }
 }
 
+struct RaderDomain<F: Field, D: FftDomain<F>> {
+    // domain size, must be prime
+    p: usize,
+    // p-th root of unity
+    w: F,
+    // prime root modulo p
+    g: usize,
+    // domain of size p-1
+    d: D,
+    // g^i mod p, i=0,...,p-2
+    perm: Vec<usize>,
+    // iFFT of w^g^(-i), i=0,...,p-2
+    b: Vec<F>,
+}
+
+impl<F: Field, D: FftDomain<F>> RaderDomain<F, D> {
+    fn new(w: F, p: usize, g: usize, d: D) -> Self {
+        assert!(w.pow([p as u64]).is_one());
+        let n = p - 1;
+        assert_eq!(d.n(), n);
+
+        let mut perm = vec![1; n];
+        for i in 1..n {
+            perm[i] = (perm[i - 1] * g) % p
+        }
+
+        let mut ws = vec![F::one(); p];
+        for i in 1..p {
+            ws[i] = ws[i - 1] * w;
+        }
+
+        let mut b = vec![w; n];
+        for i in 1..n {
+            b[i] = ws[perm[n - i]];
+        }
+
+        let b = d.fft(&b);
+        let n_inv = F::from(n as u64).inverse().unwrap();
+        let b = b.iter().map(|&b| b * n_inv).collect();
+
+        Self {
+            p,
+            w,
+            g,
+            d,
+            perm,
+            b,
+        }
+    }
+}
+
+impl<F: Field, D: FftDomain<F>> FftDomain<F> for RaderDomain<F, D> {
+    fn fft(&self, coeffs: &[F]) -> Vec<F> {
+        assert_eq!(coeffs.len(), self.p);
+        let n = self.p - 1;
+        let mut a = vec![F::zero(); n];
+        for i in 0..n {
+            a[i] = coeffs[self.perm[i]]
+        }
+
+        let a = self.d.fft(&a);
+        let c: Vec<_> = a.into_iter().zip(self.b.iter()).map(|(a, b)| a * b).collect();
+        let c = self.d.fft(&c);
+
+        let mut res = vec![F::zero(); self.p];
+        res[0] = coeffs.iter().sum();
+        res[1] = coeffs[0] + c[0];
+        for i in 1..n {
+            res[self.perm[n - i]] = coeffs[0] + c[i];
+        }
+        res
+    }
+
+    fn n(&self) -> usize {
+        self.p
+    }
+
+    fn w(&self) -> F {
+        self.w
+    }
+}
+
 fn gen<F: PrimeField>(n: usize) -> F {
     let field_size: BigUint = F::MODULUS.into();
     let multiplicative_group_order = field_size - 1u8;
@@ -192,6 +274,30 @@ mod tests {
         let t_dft = start_timer!(|| format!("{}-dft", n));
         let dft = dft_domain.fft(&coeffs);
         end_timer!(t_dft);
+        assert_eq!(fft, dft);
+    }
+
+    #[test]
+    fn test_rader() {
+        use ark_bls12_381::Fq;
+        let rng = &mut test_rng();
+
+        let p = 3;
+        let g = 2;
+        let d_p_minus_1 = NaiveDomain::new(gen::<Fq>(p - 1), p - 1);
+        let rader_domain = RaderDomain::new(gen::<Fq>(p), p, g, d_p_minus_1);
+        let dft_domain = NaiveDomain::new(gen::<Fq>(p), p);
+
+        let coeffs: Vec<_> = (0..p).map(|_| Fq::rand(rng)).collect();
+
+        let t_fft = start_timer!(|| format!("{}-rader-fft", p));
+        let fft = rader_domain.fft(&coeffs);
+        end_timer!(t_fft);
+
+        let t_dft = start_timer!(|| format!("{}-dft", p));
+        let dft = dft_domain.fft(&coeffs);
+        end_timer!(t_dft);
+
         assert_eq!(fft, dft);
     }
 }
