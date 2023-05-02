@@ -282,30 +282,30 @@ mod tests {
         assert_eq!(fft, dft);
     }
 
-    #[test]
-    fn test_rader() {
+    // p - domain size
+    // g = primitive_root(p)
+    fn test_rader_no_padding(p: usize, g: usize) {
         use ark_bls12_381::Fq;
         let rng = &mut test_rng();
 
-        let p = 3;
-        let g = 2;
         let n = p - 1;
-        let w_conv = gen::<Fq>(n);
-        let conv_domain = NaiveDomain::new(w_conv, n);
-        let conv_domain_inv = NaiveDomain::new(w_conv.inverse().unwrap(), n);
+        let conv_domain_gen = gen::<Fq>(n);
+        let conv_domain = NaiveDomain::new(conv_domain_gen, n);
+        let conv_domain_inv = NaiveDomain::new(conv_domain_gen.inverse().unwrap(), n);
         let rader_domain = RaderDomain::new(gen::<Fq>(p), p, g, conv_domain, conv_domain_inv);
-        let dft_domain = NaiveDomain::new(gen::<Fq>(p), p);
+        let naive_domain = NaiveDomain::new(gen::<Fq>(p), p);
 
         let coeffs: Vec<_> = (0..p).map(|_| Fq::rand(rng)).collect();
+        let rader_fft = rader_domain.fft(&coeffs);
+        let naive_dft = naive_domain.fft(&coeffs);
 
-        let t_fft = start_timer!(|| format!("{}-rader-fft", p));
-        let fft = rader_domain.fft(&coeffs);
-        end_timer!(t_fft);
+        assert_eq!(rader_fft, naive_dft);
+    }
 
-        let t_dft = start_timer!(|| format!("{}-dft", p));
-        let dft = dft_domain.fft(&coeffs);
-        end_timer!(t_dft);
-
-        assert_eq!(fft, dft);
+    #[test]
+    fn test_rader() {
+        test_rader_no_padding(3, 2);
+        test_rader_no_padding(23, 5);
+        test_rader_no_padding(47, 5);
     }
 }
