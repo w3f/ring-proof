@@ -135,12 +135,17 @@ struct RaderDomain<F: Field, D: FftDomain<F>> {
 }
 
 impl<F: Field, D: FftDomain<F>> RaderDomain<F, D> {
+    fn new_wo_padding(w: F, p: usize, g: usize, d: D, d_inv: D) -> Self {
+        assert_eq!(d.n(), p - 1);
+        Self::new(w, p, g, d, d_inv)
+    }
+
     fn new(w: F, p: usize, g: usize, d: D, d_inv: D) -> Self {
         assert!(w.pow([p as u64]).is_one());
-        let n = p - 1;
-        assert_eq!(d.n(), n);
         assert_eq!(d_inv.n(), d.n());
         assert_eq!(d.w().inverse().unwrap(), d_inv.w());
+
+        let n = p - 1;
 
         let mut perm = vec![1; n];
         for i in 1..n {
@@ -292,7 +297,7 @@ mod tests {
         let conv_domain_gen = gen::<Fq>(n);
         let conv_domain = NaiveDomain::new(conv_domain_gen, n);
         let conv_domain_inv = NaiveDomain::new(conv_domain_gen.inverse().unwrap(), n);
-        let rader_domain = RaderDomain::new(gen::<Fq>(p), p, g, conv_domain, conv_domain_inv);
+        let rader_domain = RaderDomain::new_wo_padding(gen::<Fq>(p), p, g, conv_domain, conv_domain_inv);
         let naive_domain = NaiveDomain::new(gen::<Fq>(p), p);
 
         let coeffs: Vec<_> = (0..p).map(|_| Fq::rand(rng)).collect();
