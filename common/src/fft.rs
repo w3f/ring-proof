@@ -238,6 +238,8 @@ mod tests {
 
     use super::*;
 
+    // ark_bls12_381::Fq - 1 = 2 * 3^2 * 11 * 23 * 47 * 10177 * 859267 * ...
+
     #[test]
     fn test_cooley_tukey_2() {
         use ark_bls12_381::Fq;
@@ -267,6 +269,19 @@ mod tests {
         assert_eq!(fft, dft);
     }
 
+    fn composite_domain<F: PrimeField>(w: F, n1: usize, n2: usize, n3: usize) -> impl FftDomain<F> {
+        let n = n1 * n2 * n3;
+        assert!(w.pow([n as u64]).is_one());
+        let w1 = w.pow([(n2 * n3) as u64]);
+        let w2 = w.pow([(n1 * n3) as u64]);
+        let w3 = w.pow([(n1 * n2) as u64]);
+        let d1 = NaiveDomain::new(w1, n1);
+        let d2 = NaiveDomain::new(w2, n2);
+        let d3 = NaiveDomain::new(w3, n3);
+        let d12 = CooleyTukeyDomain::new(w.pow([n3 as u64]), d1, d2);
+        CooleyTukeyDomain::new(w, d12, d3)
+    }
+
     #[test]
     fn test_cooley_tukey_3() {
         use ark_bls12_381::Fq;
@@ -276,16 +291,9 @@ mod tests {
         let n2 = 11;
         let n3 = 47;
         let n = n1 * n2 * n3;
-
         let w = gen::<Fq>(n);
-        let w1 = w.pow([(n2 * n3) as u64]);
-        let w2 = w.pow([(n1 * n3) as u64]);
-        let w3 = w.pow([(n1 * n2) as u64]);
-        let d1 = NaiveDomain::new(w1, n1);
-        let d2 = NaiveDomain::new(w2, n2);
-        let d3 = NaiveDomain::new(w3, n3);
-        let d12 = CooleyTukeyDomain::new(w.pow([n3 as u64]), d1, d2);
-        let fft_domain = CooleyTukeyDomain::new(w, d12, d3);
+
+        let fft_domain = composite_domain(w, n1, n2, n3);
         let dft_domain = NaiveDomain::new(w, n);
 
         let coeffs: Vec<_> = (0..n).map(|_| Fq::rand(rng)).collect();
@@ -345,5 +353,50 @@ mod tests {
         _test_rader_with_padding(3, 2, 3);
         _test_rader_with_padding(23, 5, 47);
         _test_rader_with_padding(47, 5, 3 * 3 * 11);
+    }
+
+    #[test]
+    fn bench_rader() {
+        use ark_bls12_381::Fq;
+        let rng = &mut test_rng();
+
+        let p = 10177;
+        let g = 7;
+        let conv_domain_size = 2 * 11 * 23 * 47; // = 23782 >= 20351 = 2 * 10177 - 3
+
+        let conv_domain_gen = gen::<Fq>(conv_domain_size);
+        let conv_domain = composite_domain(conv_domain_gen, 22, 23, 47);
+        let conv_domain_inv = composite_domain(conv_domain_gen.inverse().unwrap(), 22, 23, 47);
+        let rader_domain = RaderDomain::new(gen::<Fq>(p), p, g, conv_domain, conv_domain_inv);
+        let naive_domain = NaiveDomain::new(gen::<Fq>(p), p);
+
+        let coeffs: Vec<_> = (0..p).map(|_| Fq::rand(rng)).collect();
+
+        let t_fft = start_timer!(|| format!("{}-rader-fft", p));
+        let rader_fft = rader_domain.fft(&coeffs);
+        end_timer!(t_fft);
+
+        let t_dft = start_timer!(|| format!("{}-dft", p));
+        let naive_dft = naive_domain.fft(&coeffs);
+        end_timer!(t_dft);
+
+        assert_eq!(rader_fft, naive_dft);
+    }
+
+    #[test]
+    fn bench_msm() {
+        use ark_bw6_761::{Fr, G1Affine, G1Projective};
+        use ark_ec::VariableBaseMSM;
+
+        let rng = &mut test_rng();
+
+        let n = 10177;
+
+        let bases: Vec<G1Affine> = (0..n).map(|_| G1Affine::rand(rng)).collect();
+        let exps: Vec<Fr> = (0..n).map(|_| Fr::rand(rng)).collect();
+
+        let t_msm = start_timer!(|| "MSM");
+        let g = G1Projective::msm(&bases, &exps);
+        end_timer!(t_msm);
     }
 }
