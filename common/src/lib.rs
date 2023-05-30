@@ -72,7 +72,7 @@ pub trait ColumnsCommited<F: PrimeField, C: Commitment<F>>: CanonicalSerialize +
     fn to_vec(self) -> Vec<C>;
 }
 
-#[derive(CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<F, CS, Commitments, Evaluations>
     where
         F: PrimeField,
