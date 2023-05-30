@@ -4,13 +4,14 @@ use common::Proof;
 pub use piop::index;
 
 use crate::piop::{RingCommitments, RingEvaluations};
-use crate::piop::params::PiopParams;
+pub use crate::piop::params::PiopParams;
+pub use common::domain::Domain;
 
 mod piop;
 pub mod ring_prover;
 pub mod ring_verifier;
 
-type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
+pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 #[cfg(test)]
 mod tests {
