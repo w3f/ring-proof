@@ -4,7 +4,7 @@ use common::Proof;
 pub use piop::index;
 
 use crate::piop::{RingCommitments, RingEvaluations};
-pub use crate::piop::params::PiopParams;
+pub use crate::piop::{ProverKey, VerifierKey, params::PiopParams};
 pub use common::domain::Domain;
 
 mod piop;

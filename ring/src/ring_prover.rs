@@ -39,5 +39,9 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
         let piop = PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, t);
         self.plonk_prover.prove(piop)
     }
+
+    pub fn piop_params(&self) -> &PiopParams<F, Curve> {
+        &self.piop_params
+    }
 }
 
