@@ -55,5 +55,9 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
 
         self.plonk_verifier.verify(piop, proof, challenges)
     }
+
+    pub fn piop_params(&self) -> &PiopParams<F, Curve> {
+        &self.piop_params
+    }
 }
 
