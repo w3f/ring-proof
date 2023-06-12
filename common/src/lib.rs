@@ -1,7 +1,10 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use ark_ff::{FftField, PrimeField};
 use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{Commitment, PCS};
 
 pub mod gadgets;

@@ -1,6 +1,7 @@
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_std::vec::Vec;
 
 pub mod booleanity;
 // pub mod inner_prod_pub;

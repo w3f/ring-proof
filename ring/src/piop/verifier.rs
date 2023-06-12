@@ -1,4 +1,5 @@
 use ark_ff::PrimeField;
+use ark_std::{vec, vec::Vec};
 use fflonk::pcs::Commitment;
 
 use common::domain::EvaluatedDomain;

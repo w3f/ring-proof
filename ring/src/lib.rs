@@ -1,3 +1,5 @@
+#![cfg_attr(not(feature = "std"), no_std)]
+
 use fflonk::pcs::PCS;
 
 use common::Proof;
@@ -15,12 +17,11 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Mul;
-
     use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
+    use ark_std::ops::Mul;
     use fflonk::pcs::PCS;
     use merlin::Transcript;
 
