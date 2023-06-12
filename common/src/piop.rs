@@ -2,6 +2,7 @@ use ark_ff::PrimeField;
 use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::vec::Vec;
 use fflonk::pcs::Commitment;
 
 use crate::{ColumnsCommited, ColumnsEvaluated};

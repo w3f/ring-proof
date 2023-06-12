@@ -1,9 +1,9 @@
-use std::marker::PhantomData;
-
 use ark_ec::AffineRepr;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{vec, vec::Vec};
+use ark_std::marker::PhantomData;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
 
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};

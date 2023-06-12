@@ -18,7 +18,7 @@ ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]
 default = []
-std = ["ark-std/std", "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std"]
+std = ["ark-std/std", "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "fflonk/std", "merlin/std"]
 parallel = ["std", "rayon", "ark-std/parallel", "ark-ff/parallel", "ark-ec/parallel", "ark-poly/parallel"]
 print-trace = ["ark-std/print-trace"]
 

@@ -1,6 +1,7 @@
 use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::test_rng;
+use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{Commitment, PCS, PcsParams};
 
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};

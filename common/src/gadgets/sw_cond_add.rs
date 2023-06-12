@@ -1,10 +1,9 @@
-use std::iter;
-
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_std::{vec, vec::Vec};
 
 use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
@@ -79,7 +78,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
                 }
                 Some(*acc)
             });
-        let acc: Vec<_> = iter::once(init)
+        let acc: Vec<_> = ark_std::iter::once(init)
             .chain(acc)
             .collect();
         let init_plus_result = acc.last().unwrap();

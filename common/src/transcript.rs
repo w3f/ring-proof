@@ -1,6 +1,7 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
+use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{PCS, PcsParams};
 
 use crate::{ColumnsCommited, ColumnsEvaluated};

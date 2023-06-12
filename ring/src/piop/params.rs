@@ -3,6 +3,7 @@ use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::rand::Rng;
 use ark_std::UniformRand;
+use ark_std::{vec, vec::Vec};
 
 use common::domain::Domain;
 use common::gadgets::sw_cond_add::AffineColumn;
@@ -90,10 +91,9 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Mul;
-
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr};
     use ark_std::{test_rng, UniformRand};
+    use ark_std::ops::Mul;
 
     use common::domain::Domain;
     use common::test_helpers::cond_sum;
