@@ -10,6 +10,7 @@ pub use common::domain::Domain;
 mod piop;
 pub mod ring_prover;
 pub mod ring_verifier;
+mod vrf;
 
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
