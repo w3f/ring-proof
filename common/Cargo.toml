@@ -2,6 +2,10 @@
 name = "common"
 version = "0.1.0"
 edition = "2021"
+authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "Infrastructure for creating plonk-like proofs"
+keywords = ["crypto", "cryptography", "plonk"]
 
 [dependencies]
 ark-std.workspace = true
