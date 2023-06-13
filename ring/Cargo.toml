@@ -2,6 +2,10 @@
 name = "ring"
 version = "0.1.0"
 edition = "2021"
+authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "zk-proof of knowledge of the blinding factor for a Pedersen commitment"
+keywords = ["crypto", "cryptography", "zk-proof"]
 
 [dependencies]
 ark-std.workspace = true
