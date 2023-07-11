@@ -36,8 +36,9 @@ mod tests {
         let rng = &mut test_rng();
 
         // SETUP per curve and domain
+        let h = SWAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain.clone(), &mut test_rng());
+        let piop_params = PiopParams::setup(domain.clone(), h);
 
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
@@ -52,7 +53,7 @@ mod tests {
 
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
-        let result = piop_params.h.mul(secret) + pk;
+        let result = h.mul(secret) + pk;
         let ring_prover = RingProver::init(prover_key, piop_params.clone(), k, Transcript::new(b"ring-vrf-test"));
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
