@@ -1,8 +1,6 @@
 use ark_ec::{AffineRepr, CurveGroup, Group};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
-use ark_std::rand::Rng;
-use ark_std::UniformRand;
 use ark_std::{vec, vec::Vec};
 
 use common::domain::Domain;
@@ -26,15 +24,10 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 }
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
-    pub fn setup<R: Rng>(domain: Domain<F>, rng: &mut R) -> Self {
+    pub fn setup(domain: Domain<F>, h: Affine<Curve>) -> Self {
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
-
-        let h = Affine::<Curve>::rand(rng);
-        // let powers_of_h = Self::power_of_2_multiples(scalar_bitlen, h.into_projective());
-        // let powers_of_h = CurveGroup::batch_normalization_into_affine(&powers_of_h);
-
         Self {
             domain,
             scalar_bitlen,
@@ -91,7 +84,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
     use ark_std::{test_rng, UniformRand};
     use ark_std::ops::Mul;
 
@@ -103,8 +96,9 @@ mod tests {
     #[test]
     fn test_powers_of_h() {
         let rng = &mut test_rng();
+        let h = SWAffine::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, rng);
+        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
