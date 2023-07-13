@@ -33,7 +33,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
     }
 
     pub fn verify_ring_proof(&self, proof: RingProof<F, CS>, result: Affine<Curve>) -> bool {
-        let challenges = self.plonk_verifier.restore_challenges(
+        let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
@@ -53,7 +53,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
             (init_plus_result.x, init_plus_result.y),
         );
 
-        self.plonk_verifier.verify(piop, proof, challenges)
+        self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Curve> {

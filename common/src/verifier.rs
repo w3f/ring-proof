@@ -1,8 +1,9 @@
 use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
-use ark_std::test_rng;
 use ark_std::{vec, vec::Vec};
+use ark_std::rand::Rng;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
+use rand_chacha::ChaCha20Rng;
 
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
 use crate::piop::VerifierPiop;
@@ -29,11 +30,12 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
         }
     }
 
-    pub fn verify<Piop, Commitments, Evaluations>(
+    pub fn verify<Piop, Commitments, Evaluations, R: Rng>(
         &self,
         piop: Piop,
         proof: Proof<F, CS, Commitments, Evaluations>,
         challenges: Challenges<F>,
+        rng: &mut R,
     ) -> bool
         where
             Piop: VerifierPiop<F, CS::C>,
@@ -63,7 +65,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
 
         let zeta_omega = zeta * domain_evaluated.omega();
 
-        CS::batch_verify(&self.pcs_vk, vec![cl, lin_comm], vec![challenges.zeta, zeta_omega], vec![agg_y, proof.lin_at_zeta_omega], vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof], &mut test_rng())
+        CS::batch_verify(&self.pcs_vk, vec![cl, lin_comm], vec![challenges.zeta, zeta_omega], vec![agg_y, proof.lin_at_zeta_omega], vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof], rng)
     }
 
     pub fn restore_challenges<Commitments, Evaluations>(
@@ -72,7 +74,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
         proof: &Proof<F, CS, Commitments, Evaluations>,
         n_polys: usize,
         n_constraints: usize,
-    ) -> Challenges<F>//, TranscriptRng)
+    ) -> (Challenges<F>, ChaCha20Rng)
         where
             Commitments: ColumnsCommited<F, CS::C>,
             Evaluations: ColumnsEvaluated<F>,
@@ -92,7 +94,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
             zeta,
             nus,
         };
-        challenges //, fiat_shamir_rng(&mut transcript))
+        (challenges, transcript.to_rng())
     }
 }
 
