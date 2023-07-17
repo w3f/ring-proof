@@ -21,10 +21,14 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
     // The blinding base, a point from jubjub.
     pub h: Affine<Curve>,
+
+    // The point to start the summation from (as zero doesn't have a SW affine representation),
+    // should be from the jubjub prime-order subgroup complement.
+    pub seed: Affine<Curve>,
 }
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
-    pub fn setup(domain: Domain<F>, h: Affine<Curve>) -> Self {
+    pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
@@ -33,6 +37,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             scalar_bitlen,
             keyset_part_size,
             h,
+            seed,
         }
     }
 
@@ -107,8 +112,9 @@ mod tests {
     fn test_powers_of_h() {
         let rng = &mut test_rng();
         let h = SWAffine::rand(rng);
+        let seed = SWAffine::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h);
+        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());

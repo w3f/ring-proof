@@ -1,5 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ff::{One, Zero};
 use fflonk::pcs::PCS;
 
 use common::Proof;
@@ -15,10 +17,23 @@ pub mod ring_verifier;
 
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
+// Calling the method for a prime-order curve results in an infinite loop.
+pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
+    let mut x = Curve::BaseField::zero();
+    loop {
+        let p = Affine::<Curve>::get_point_from_x_unchecked(x, false);
+        if p.is_some() && !p.unwrap().is_in_correct_subgroup_assuming_on_curve() {
+            return p.unwrap()
+        }
+        x = x + Curve::BaseField::one()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ark_ec::CurveGroup;
-    use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
+    use ark_ff::MontFp;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::rand::Rng;
     use ark_std::ops::Mul;
@@ -27,6 +42,7 @@ mod tests {
 
     use common::domain::Domain;
     use common::test_helpers::*;
+    use crate::find_complement_point;
 
     use crate::piop::params::PiopParams;
     use crate::ring_prover::RingProver;
@@ -37,8 +53,9 @@ mod tests {
 
         // SETUP per curve and domain
         let h = SWAffine::rand(rng);
+        let seed = find_complement_point::<BandersnatchConfig>();
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain.clone(), h);
+        let piop_params = PiopParams::setup(domain.clone(), h, seed);
 
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
@@ -64,6 +81,14 @@ mod tests {
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
+    }
+
+    #[test]
+    fn test_complement_point() {
+        let p = find_complement_point::<BandersnatchConfig>();
+        assert!(p.is_on_curve());
+        assert!(!p.is_in_correct_subgroup_assuming_on_curve());
+        assert_eq!(p, SWAffine::new_unchecked(MontFp!("0"), MontFp!("11982629110561008531870698410380659621661946968466267969586599013782997959645")))
     }
 
     #[test]
