@@ -4,7 +4,6 @@ use ark_ff::PrimeField;
 use fflonk::pcs::{PCS, RawVerifierKey};
 
 use common::domain::EvaluatedDomain;
-use common::gadgets::sw_cond_add::CondAdd;
 use common::piop::VerifierPiop;
 use common::verifier::PlonkVerifier;
 
@@ -40,8 +39,8 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
             PiopVerifier::<F, CS::C>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
         );
-        let init = CondAdd::<F, Affine<Curve>>::point_in_g1_complement();
-        let init_plus_result = (init + result).into_affine();
+        let seed = self.piop_params.seed;
+        let seed_plus_result = (seed + result).into_affine();
         let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(
@@ -49,8 +48,8 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
-            (init.x, init.y),
-            (init_plus_result.x, init_plus_result.y),
+            (seed.x, seed.y),
+            (seed_plus_result.x, seed_plus_result.y),
         );
 
         self.plonk_verifier.verify(piop, proof, challenges, &mut rng)

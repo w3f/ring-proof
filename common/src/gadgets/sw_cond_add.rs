@@ -44,7 +44,8 @@ pub struct CondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     points: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
-    pub acc: AffineColumn<F, P>, // accumulates the (conditional) rolling sum of the points
+    // Accumulates the (conditional) rolling sum of the points
+    pub acc: AffineColumn<F, P>,
     pub result: P,
 }
 
@@ -60,29 +61,30 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
     F: FftField,
     Curve: SWCurveConfig<BaseField=F>,
 {
-    // Populates the acc column starting from the supplied initial point (as 0 doesn't have an affine representation).
+    // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
+    // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
+    // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     pub fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, Affine<Curve>>,
+                seed: Affine<Curve>,
                 domain: &Domain<F>) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
         assert_eq!(points.points.len(), domain.capacity - 1);
         let not_last = domain.not_last_row.clone();
-        let init = Self::point_in_g1_complement();
-        assert!(!init.is_zero());
         let acc = bitmask.bits.iter()
             .zip(points.points.iter())
-            .scan(init.clone(), |acc, (&b, point)| {
+            .scan(seed, |acc, (&b, point)| {
                 if b {
                     *acc = (*acc + point).into_affine();
                 }
                 Some(*acc)
             });
-        let acc: Vec<_> = ark_std::iter::once(init)
+        let acc: Vec<_> = ark_std::iter::once(seed)
             .chain(acc)
             .collect();
         let init_plus_result = acc.last().unwrap();
-        let result = init_plus_result.into_group() - init.into_group();
+        let result = init_plus_result.into_group() - seed.into_group();
         let result = result.into_affine();
         let acc = AffineColumn::init(acc, domain);
 
@@ -96,11 +98,6 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
             not_last: self.not_last.evaluate(z),
             acc: self.acc.evaluate(z),
         }
-    }
-
-    //TODO: find
-    pub fn point_in_g1_complement() -> Affine<Curve> {
-        Affine::<Curve>::generator()
     }
 }
 
@@ -261,15 +258,15 @@ mod tests {
         let log_n = 10;
         let n = 2usize.pow(log_n);
         let domain = Domain::new(n, hiding);
+        let seed = SWAffine::generator();
 
         let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
         let points = random_vec::<SWAffine, _>(domain.capacity - 1, rng);
-        let init = CondAdd::point_in_g1_complement();
-        let expected_res = init + cond_sum(&bitmask, &points);
+        let expected_res = seed + cond_sum(&bitmask, &points);
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::init(points, &domain);
-        let gadget = CondAdd::init(bitmask_col, points_col, &domain);
+        let gadget = CondAdd::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 
