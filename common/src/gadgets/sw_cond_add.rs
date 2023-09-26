@@ -20,14 +20,22 @@ pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField=F>> {
 }
 
 impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
-    pub fn init(points: Vec<P>, domain: &Domain<F>) -> Self {
+
+    fn column(points: Vec<P>, domain: &Domain<F>, hidden: bool) -> Self {
         assert!(points.iter().all(|p| !p.is_zero()));
         let (xs, ys) = points.iter()
             .map(|p| p.xy().unwrap())
             .unzip();
-        let xs = domain.private_column(xs);
-        let ys = domain.private_column(ys);
+        let xs = domain.column(xs, hidden);
+        let ys = domain.column(ys, hidden);
         Self { points, xs, ys }
+    }
+    pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, true)
+    }
+
+    pub fn public_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, false)
     }
 
     pub fn evaluate(&self, z: &F) -> (F, F) {
@@ -86,7 +94,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
         let init_plus_result = acc.last().unwrap();
         let result = init_plus_result.into_group() - seed.into_group();
         let result = result.into_affine();
-        let acc = AffineColumn::init(acc, domain);
+        let acc = AffineColumn::private_column(acc, domain);
 
         Self { bitmask, points, acc, not_last, result }
     }
@@ -265,7 +273,7 @@ mod tests {
         let expected_res = seed + cond_sum(&bitmask, &points);
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
-        let points_col = AffineColumn::init(points, &domain);
+        let points_col = AffineColumn::private_column(points, &domain);
         let gadget = CondAdd::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
