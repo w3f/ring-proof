@@ -96,22 +96,25 @@ impl<F: FftField> Domain<F> {
         quotient
     }
 
-    pub fn column(&self, mut evals: Vec<F>) -> FieldColumn<F> {
+    pub(crate) fn column(&self, mut evals: Vec<F>, hidden: bool) -> FieldColumn<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
-        evals.resize(self.capacity, F::zero());
-        if self.hiding {
+        if self.hiding && hidden {
+            evals.resize(self.capacity, F::zero());
             evals.resize_with(self.domains.x1.size(), || F::rand(&mut test_rng())); //TODO
+        } else {
+            evals.resize(self.domains.x1.size(), F::zero());
         }
         self.domains.column_from_evals(evals, len)
     }
 
+    pub fn private_column(&self, evals: Vec<F>) -> FieldColumn<F> {
+        self.column(evals, true)
+    }
+
     // public column
-    pub fn selector(&self, mut evals: Vec<F>) -> FieldColumn<F> {
-        let len = evals.len();
-        assert!(len <= self.capacity);
-        evals.resize(self.domains.x1.size(), F::zero());
-        self.domains.column_from_evals(evals, len)
+    pub fn public_column(&self, evals: Vec<F>) -> FieldColumn<F> {
+        self.column(evals, false)
     }
 
     pub fn omega(&self) -> F {

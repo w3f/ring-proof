@@ -25,8 +25,8 @@ impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
         let (xs, ys) = points.iter()
             .map(|p| p.xy().unwrap())
             .unzip();
-        let xs = domain.column(xs);
-        let ys = domain.column(ys);
+        let xs = domain.private_column(xs);
+        let ys = domain.private_column(ys);
         Self { points, xs, ys }
     }
 

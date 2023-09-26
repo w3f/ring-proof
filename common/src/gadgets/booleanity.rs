@@ -19,7 +19,7 @@ impl<F: FftField> BitColumn<F> {
         let bits_as_field_elements = bits.iter()
             .map(|&b| if b { F::one() } else { F::zero() })
             .collect();
-        let col = domain.column(bits_as_field_elements);
+        let col = domain.private_column(bits_as_field_elements);
         Self { bits, col }
     }
 }

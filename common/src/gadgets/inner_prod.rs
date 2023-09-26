@@ -29,7 +29,7 @@ impl<F: FftField> InnerProd<F> {
         let inner_prods = Self::partial_inner_prods(a.vals(), b.vals());
         let mut acc = vec![F::zero()];
         acc.extend(inner_prods);
-        let acc = domain.column(acc);
+        let acc = domain.private_column(acc);
         Self { a, b, not_last: domain.not_last_row.clone(), acc }
     }
 
@@ -109,8 +109,8 @@ mod tests {
         let a = random_vec(domain.capacity - 1, rng);
         let b = random_vec(domain.capacity - 1, rng);
         let ab = inner_prod(&a, &b);
-        let a = domain.column(a);
-        let b = domain.column(b);
+        let a = domain.private_column(a);
+        let b = domain.private_column(b);
 
         let gadget = InnerProd::<Fq>::init(a, b, &domain);
 
