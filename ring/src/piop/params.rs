@@ -59,7 +59,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             &self.power_of_2_multiples_of_h(),
         ].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
-        AffineColumn::private_column(points, &self.domain)
+        AffineColumn::public_column(points, &self.domain)
     }
 
     pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
