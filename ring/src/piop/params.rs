@@ -43,7 +43,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
 
     pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
         let ring_selector = self.keyset_part_selector();
-        let ring_selector = self.domain.selector(ring_selector);
+        let ring_selector = self.domain.public_column(ring_selector);
         let points = self.points_column(&keys);
         FixedColumns { points, ring_selector }
     }
@@ -59,7 +59,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             &self.power_of_2_multiples_of_h(),
         ].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
-        AffineColumn::init(points, &self.domain)
+        AffineColumn::public_column(points, &self.domain)
     }
 
     pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
