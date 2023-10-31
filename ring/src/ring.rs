@@ -3,6 +3,8 @@ use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_std::vec::Vec;
+use fflonk::pcs::kzg::urs::URS;
+use fflonk::pcs::PcsParams;
 
 use crate::PiopParams;
 
@@ -105,14 +107,28 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     }
 }
 
+pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
+    // Lagrangian SRS
+    pub lis_in_g1: Vec<KzgCurve::G1Affine>,
+    // generator used in the SRS
+    pub g1: KzgCurve::G1,
+}
+
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve> {
+    fn from_srs(srs: URS<KzgCurve>, domain_size: usize) -> Self {
+        let g1 = srs.powers_in_g1[0].into_group();
+        let ck = srs.ck_with_lagrangian(domain_size);
+        let lis_in_g1 = ck.lagrangian.unwrap().lis_in_g;
+        Self { lis_in_g1, g1 }
+    }
+}
 
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
-    use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine};
     use ark_std::{test_rng, UniformRand, vec};
-    use fflonk::pcs::{PCS, PcsParams};
+    use fflonk::pcs::PCS;
     use fflonk::pcs::kzg::KZG;
     use fflonk::pcs::kzg::urs::URS;
 
@@ -132,9 +148,7 @@ mod tests {
         let domain_size = 1 << domain_size_log;
 
         let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
-        let ck = pcs_params.ck_with_lagrangian(domain_size);
-        let g1 = pcs_params.powers_in_g1[0].into_group();
-        let lagrangian_srs = ck.lagrangian.unwrap().lis_in_g;
+        let ring_builder_key = RingBuilderKey::from_srs(pcs_params.clone(), domain_size);
 
         // piop params
         let h = SWAffine::rand(rng);
@@ -142,13 +156,14 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &lagrangian_srs[piop_params.keyset_part_size..], g1);
+        let srs_segment = &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..];
+        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, srs_segment, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
-        let srs_segment = &lagrangian_srs[ring.curr_keys..ring.curr_keys + keys.len()];
+        let srs_segment = &ring_builder_key.lis_in_g1[ring.curr_keys..ring.curr_keys + keys.len()];
         let ring = ring.append(&keys, srs_segment);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys);
         assert_eq!(ring.cx, monimial_cx);
