@@ -1,4 +1,5 @@
-use ark_ec::{AffineRepr, CurveGroup};
+use ark_ec::{AffineRepr, VariableBaseMSM};
+use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_std::vec::Vec;
@@ -24,10 +25,10 @@ use crate::PiopParams;
 // `KzgCurve` -- outer curve, subgroup of a pairing-friendly curve. We instantiate it with bls12-381 G1.
 // `VrfCurveConfig` -- inner curve, the curve used by the VRF, in SW form. We instantiate it with Bandersnatch.
 // `F` shared scalar field of the outer and the base field of the inner curves.
-pub struct Ring<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> {
+pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> {
     // KZG commitments to the coordinates of the vector described above
-    pub cx: KzgCurve,
-    pub cy: KzgCurve,
+    pub cx: KzgCurve::G1,
+    pub cy: KzgCurve::G1,
     // maximal number of keys the commitment can "store". For domain of size `N` it is `N-(s+4)`
     max_keys: usize,
     // the number of keys "stored" in this commitment
@@ -36,7 +37,7 @@ pub struct Ring<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConf
     padding_point: Affine<VrfCurveConfig>,
 }
 
-impl<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> Ring<F, KzgCurve, VrfCurveConfig> {
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> Ring<F, KzgCurve, VrfCurveConfig> {
     // Builds the commitment to the vector
     // `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
     // We compute it as a sum of commitments of 2 vectors:
@@ -47,9 +48,9 @@ impl<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurve
         // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
         // MUST be set to `SRS[piop_params.keyset_part_size..]`
-        srs_segment: &[KzgCurve::Affine],
+        srs_segment: &[KzgCurve::G1Affine],
         // generator used in the SRS
-        g: KzgCurve,
+        g: KzgCurve::G1,
     ) -> Self {
         let padding_point = piop_params.padding_point;
         let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
@@ -63,8 +64,8 @@ impl<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurve
             .unzip();
         xs.resize(xs.len() + 4, -*padding_x);
         ys.resize(ys.len() + 4, -*padding_y);
-        let c2x = KzgCurve::msm(srs_segment, &xs).unwrap();
-        let c2y = KzgCurve::msm(srs_segment, &ys).unwrap();
+        let c2x = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
+        let c2y = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
         Self {
             cx: c1x + c2x,
@@ -79,7 +80,7 @@ impl<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurve
         self,
         keys: &[Affine<VrfCurveConfig>],
         // MUST be set to `SRS[ring.curr_keys..ring.curr_keys + keys.len()]`
-        srs_segment: &[KzgCurve::Affine],
+        srs_segment: &[KzgCurve::G1Affine],
     ) -> Self {
         let new_size = self.curr_keys + keys.len();
         assert!(new_size <= self.max_keys);
@@ -89,8 +90,8 @@ impl<F: PrimeField, KzgCurve: CurveGroup<ScalarField=F>, VrfCurveConfig: SWCurve
             .map(|p| p.xy().unwrap())
             .map(|(&x, &y)| (x - padding_x, y - padding_y))
             .unzip();
-        let cx_delta = KzgCurve::msm(srs_segment, &xs).unwrap();
-        let cy_delta = KzgCurve::msm(srs_segment, &ys).unwrap();
+        let cx_delta = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
+        let cy_delta = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
         Self {
             cx: self.cx + cx_delta,
             cy: self.cy + cy_delta,
@@ -141,7 +142,7 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let ring = Ring::empty(&piop_params, &lagrangian_srs[piop_params.keyset_part_size..], g1);
+        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &lagrangian_srs[piop_params.keyset_part_size..], g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
