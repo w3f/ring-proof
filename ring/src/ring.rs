@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, VariableBaseMSM};
+use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
@@ -115,11 +115,20 @@ pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
 }
 
 impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve> {
-    fn from_srs(srs: URS<KzgCurve>, domain_size: usize) -> Self {
+    pub fn from_srs(srs: URS<KzgCurve>, domain_size: usize) -> Self {
         let g1 = srs.powers_in_g1[0].into_group();
         let ck = srs.ck_with_lagrangian(domain_size);
         let lis_in_g1 = ck.lagrangian.unwrap().lis_in_g;
         Self { lis_in_g1, g1 }
+    }
+
+    pub fn ring_selector<VrfCurveConfig: SWCurveConfig<BaseField=F>>(
+        &self,
+        piop_params: &PiopParams<F, VrfCurveConfig>,
+    ) -> KzgCurve::G1Affine {
+        self.lis_in_g1[..piop_params.keyset_part_size].iter()
+            .sum::<KzgCurve::G1>()
+            .into_affine()
     }
 }
 
@@ -128,9 +137,9 @@ mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine};
     use ark_std::{test_rng, UniformRand, vec};
-    use fflonk::pcs::PCS;
     use fflonk::pcs::kzg::KZG;
     use fflonk::pcs::kzg::urs::URS;
+    use fflonk::pcs::PCS;
 
     use common::domain::Domain;
     use common::test_helpers::random_vec;
