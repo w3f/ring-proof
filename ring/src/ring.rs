@@ -48,7 +48,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     // `padding, ..., padding`, and
     // `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
     // The first one is `padding * G`, the second requires an `(4+s)`-msm to compute.
-    pub fn empty<Srs: Index<Range<usize>, Output=[<KzgCurve as Pairing>::G1Affine]>>(
+    pub fn empty<Srs: Index<Range<usize>, Output=[KzgCurve::G1Affine]>>(
         // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
         // MUST contain `srs[piop_params.keyset_part_size..domain_size]`
@@ -82,7 +82,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         }
     }
 
-    pub fn append<Srs: Index<Range<usize>, Output=[<KzgCurve as Pairing>::G1Affine]>>(
+    pub fn append<Srs: Index<Range<usize>, Output=[KzgCurve::G1Affine]>>(
         self,
         keys: &[Affine<VrfCurveConfig>],
         // MUST contain `srs[ring.curr_keys..ring.curr_keys + keys.len()]`
