@@ -3,6 +3,9 @@ use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::EvaluationDomain;
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::fmt;
+use ark_std::iter;
 use ark_std::ops::{Index, Range};
 use ark_std::vec::Vec;
 use fflonk::pcs::kzg::urs::URS;
@@ -29,6 +32,7 @@ use crate::PiopParams;
 // `KzgCurve` -- outer curve, subgroup of a pairing-friendly curve. We instantiate it with bls12-381 G1.
 // `VrfCurveConfig` -- inner curve, the curve used by the VRF, in SW form. We instantiate it with Bandersnatch.
 // `F` shared scalar field of the outer and the base field of the inner curves.
+#[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> {
     // KZG commitments to the coordinates of the vector described above
     pub cx: KzgCurve::G1,
@@ -39,6 +43,12 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig:
     curr_keys: usize,
     // a parameter
     padding_point: Affine<VrfCurveConfig>,
+}
+
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> fmt::Debug for Ring<F, KzgCurve, VrfCurveConfig> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Ring(curr_keys={}, max_keys{})", self.curr_keys, self.max_keys)
+    }
 }
 
 impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> Ring<F, KzgCurve, VrfCurveConfig> {
@@ -106,11 +116,58 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         }
     }
 
+    // Builds the ring from the keys provided using a single msm of size `keys.len() + scalar_bitlen + 5`.
+    // In some cases it may be beneficial to cash the empty ring, as updating it costs an msm of size `keys.len()`.
+    pub fn with_keys(
+        // SNARK parameters
+        piop_params: &PiopParams<F, VrfCurveConfig>,
+        keys: &[Affine<VrfCurveConfig>],
+        // full-size Lagrangian srs
+        srs: &RingBuilderKey<F, KzgCurve>,
+    ) -> Self {
+        let padding_point = piop_params.padding_point;
+        let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
+        let powers_of_h = piop_params.power_of_2_multiples_of_h();
+
+        // Computes
+        // [(pk1 - padding), ..., (pkn - padding),
+        //  (H - padding), ..., (2^(s-1)HH - padding),
+        //  -padding, -padding, -padding, -padding,
+        //  padding].
+        let (xs, ys): (Vec<F>, Vec<F>) = keys.iter()
+            .chain(&powers_of_h)
+            .map(|p| p.xy().unwrap())
+            .chain(iter::repeat((&F::zero(), &F::zero())).take(4))
+            .map(|(&x, &y)| (x - padding_x, y - padding_y))
+            .chain(iter::once((*padding_x, *padding_y)))
+            .unzip();
+
+        // Composes the corresponding slices of the SRS.
+        let bases = [
+            &srs.lis_in_g1[..keys.len()],
+            &srs.lis_in_g1[piop_params.keyset_part_size..],
+            &[srs.g1.into()],
+        ].concat();
+
+        let cx = KzgCurve::G1::msm(&bases, &xs).unwrap();
+        let cy = KzgCurve::G1::msm(&bases, &ys).unwrap();
+
+        Self {
+            cx,
+            cy,
+            max_keys: piop_params.keyset_part_size,
+            curr_keys: keys.len(),
+            padding_point,
+        }
+    }
+
     pub fn slots_left(&self) -> usize {
         self.max_keys - self.curr_keys
     }
 }
 
+
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
     // Lagrangian SRS
     pub lis_in_g1: Vec<KzgCurve::G1Affine>,
@@ -176,9 +233,33 @@ mod tests {
 
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
         let ring = ring.append(&keys, &ring_builder_key.lis_in_g1);
-        let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys);
+        let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys.clone());
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
+
+        let same_ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &keys, &ring_builder_key);
+        assert_eq!(ring, same_ring);
+    }
+
+    #[test]
+    fn test_empty_rings() {
+        let rng = &mut test_rng();
+
+        let domain_size_log = 9;
+        let domain_size = 1 << domain_size_log;
+
+        let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
+        let ring_builder_key = RingBuilderKey::from_srs(pcs_params.clone(), domain_size);
+
+        // piop params
+        let h = SWAffine::rand(rng);
+        let seed = SWAffine::rand(rng);
+        let domain = Domain::new(domain_size, true);
+        let piop_params = PiopParams::setup(domain, h, seed);
+
+        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
+        let same_ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &[], &ring_builder_key);
+        assert_eq!(ring, same_ring);
     }
 
     fn get_monomial_commitment(pcs_params: URS<Bls12_381>, piop_params: &PiopParams<Fr, BandersnatchConfig>, keys: Vec<SWAffine>) -> (G1Affine, G1Affine) {
