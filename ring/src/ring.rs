@@ -116,8 +116,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         }
     }
 
-    // Builds the ring from the keys provided using a single msm of size `keys.len() + scalar_bitlen + 5`.
-    // In some cases it may be beneficial to cash the empty ring, as updating it costs an msm of size `keys.len()`.
+    // Builds the ring from the keys provided with 2 MSMs of size `keys.len() + scalar_bitlen + 5`.
+    // In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
     pub fn with_keys(
         // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
@@ -126,7 +126,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         srs: &RingBuilderKey<F, KzgCurve>,
     ) -> Self {
         let padding_point = piop_params.padding_point;
-        let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
+        let (&padding_x, &padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
         let powers_of_h = piop_params.power_of_2_multiples_of_h();
 
         // Computes
@@ -137,9 +137,9 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let (xs, ys): (Vec<F>, Vec<F>) = keys.iter()
             .chain(&powers_of_h)
             .map(|p| p.xy().unwrap())
-            .chain(iter::repeat((&F::zero(), &F::zero())).take(4))
             .map(|(&x, &y)| (x - padding_x, y - padding_y))
-            .chain(iter::once((*padding_x, *padding_y)))
+            .chain(iter::repeat((-padding_x, -padding_y)).take(4))
+            .chain(iter::once((padding_x, padding_y)))
             .unzip();
 
         // Composes the corresponding slices of the SRS.
