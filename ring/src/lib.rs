@@ -95,8 +95,8 @@ mod tests {
 
         let (_, verifier_key) = index::<_, KZG::<Bls12_381>, _>(pcs_params, &piop_params, pks.clone());
 
-        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..], ring_builder_key.g1);
-        let ring = ring.append(&pks, &ring_builder_key.lis_in_g1[..pks.len()]);
+        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
+        let ring = ring.append(&pks, &ring_builder_key.lis_in_g1);
 
         let fixed_columns_committed = FixedColumnsCommitted::from_ring(ring, ring_selector);
         assert_eq!(fixed_columns_committed, verifier_key.fixed_columns_committed);
