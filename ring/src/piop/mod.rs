@@ -79,7 +79,7 @@ pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField=F>> {
 // Commitments to the fixed columns (see above).
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, PartialEq, Eq, Debug)]
 pub struct FixedColumnsCommitted<F: PrimeField, C: Commitment<F>> {
-    points: [C; 2],
+    pub points: [C; 2],
     ring_selector: C,
     phantom: PhantomData<F>,
 }

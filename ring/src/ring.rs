@@ -169,7 +169,6 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        // let srs_segment = &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..];
         let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
         assert_eq!(ring.cx, monimial_cx);
