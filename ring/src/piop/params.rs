@@ -31,6 +31,10 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 }
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
+    pub fn keyset_size(&self) -> usize {
+        self.keyset_part_size
+    }
+
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
         let padding_point = hash_to_curve::<Affine<Curve>>(b"w3f/ring-proof/common/padding");
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
