@@ -17,7 +17,7 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     pub(crate) scalar_bitlen: usize,
 
     // Length of the part of the column representing the public keys (including the padding).
-    pub(crate) keyset_part_size: usize,
+    pub keyset_part_size: usize,
 
     // The blinding base, a point from jubjub.
     pub(crate) h: Affine<Curve>,
