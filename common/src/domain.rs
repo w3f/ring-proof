@@ -1,7 +1,6 @@
 use ark_ff::{batch_inversion, FftField, Zero};
 use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
-use ark_std::test_rng;
 use ark_std::{vec, vec::Vec};
 
 use crate::FieldColumn;
@@ -101,7 +100,7 @@ impl<F: FftField> Domain<F> {
         assert!(len <= self.capacity);
         if self.hiding && hidden {
             evals.resize(self.capacity, F::zero());
-            evals.resize_with(self.domains.x1.size(), || F::rand(&mut test_rng())); //TODO
+            evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));
         } else {
             evals.resize(self.domains.x1.size(), F::zero());
         }

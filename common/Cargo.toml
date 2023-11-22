@@ -16,14 +16,15 @@ ark-serialize.workspace = true
 fflonk.workspace = true
 merlin.workspace = true
 rayon = { workspace = true, optional = true }
+getrandom_or_panic = { version = "0.0.3", default-features = false }
 rand_chacha = { version = "0.3.1", default-features = false }
 
 [dev-dependencies]
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]
-default = []
-std = ["ark-std/std", "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "fflonk/std", "merlin/std"]
+default = ["std"]
+std = ["ark-std/std", "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "fflonk/std", "merlin/std", "getrandom_or_panic/std"]
 parallel = ["std", "rayon", "ark-std/parallel", "ark-ff/parallel", "ark-ec/parallel", "ark-poly/parallel"]
 print-trace = ["ark-std/print-trace"]
 
