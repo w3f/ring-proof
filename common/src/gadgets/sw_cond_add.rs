@@ -4,6 +4,7 @@ use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::{vec, vec::Vec};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
 use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
@@ -12,7 +13,7 @@ use crate::gadgets::booleanity::BitColumn;
 
 // A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
 // and its convenience representation as columns of coordinates over the curve's base field.
-#[derive(Clone)]
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField=F>> {
     points: Vec<P>,
     pub xs: FieldColumn<F>,
