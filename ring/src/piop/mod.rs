@@ -7,6 +7,8 @@ use ark_std::{vec, vec::Vec};
 use ark_std::marker::PhantomData;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
 use fflonk::pcs::kzg::commitment::KzgCommitment;
+use fflonk::pcs::kzg::KZG;
+use fflonk::pcs::kzg::params::RawKzgVerifierKey;
 
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 use common::gadgets::sw_cond_add::AffineColumn;
@@ -96,7 +98,7 @@ impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
 
 impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
     pub fn from_ring<G: SWCurveConfig<BaseField=E::ScalarField>>(
-        ring: Ring<E::ScalarField, E, G>,
+        ring: &Ring<E::ScalarField, E, G>,
     ) -> Self {
         let cx = KzgCommitment(ring.cx.into_affine());
         let cy = KzgCommitment(ring.cy.into_affine());
@@ -126,13 +128,25 @@ pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
     pub(crate) verifier_key: VerifierKey<F, CS>, // used in the Fiat-Shamir transform
 }
 
-
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
     pub(crate) pcs_raw_vk: <CS::Params as PcsParams>::RVK,
     pub(crate) fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
     //TODO: domain
 }
+
+impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
+    pub fn from_ring_and_kzg_vk<G: SWCurveConfig<BaseField=E::ScalarField>>(
+        ring: &Ring<E::ScalarField, E, G>,
+        kzg_vk: RawKzgVerifierKey<E>,
+    ) -> Self {
+        Self {
+            pcs_raw_vk: kzg_vk,
+            fixed_columns_committed: FixedColumnsCommitted::from_ring(ring),
+        }
+    }
+}
+
 
 pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
     pcs_params: CS::Params,

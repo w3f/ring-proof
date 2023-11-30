@@ -96,7 +96,7 @@ mod tests {
 
         let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
 
-        let fixed_columns_committed = FixedColumnsCommitted::from_ring(ring);
+        let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
         assert_eq!(fixed_columns_committed, verifier_key.fixed_columns_committed);
     }
 
