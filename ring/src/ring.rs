@@ -99,11 +99,11 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     }
 
     pub fn append<Srs: Index<Range<usize>, Output=[KzgCurve::G1Affine]>>(
-        self,
+        &mut self,
         keys: &[Affine<VrfCurveConfig>],
         // MUST contain `srs[ring.curr_keys..ring.curr_keys + keys.len()]`
         srs: &Srs,
-    ) -> Self {
+    ) {
         let new_size = self.curr_keys + keys.len();
         assert!(new_size <= self.max_keys);
         let (padding_x, padding_y) = self.padding_point.xy().unwrap();
@@ -114,12 +114,10 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let srs_segment = &srs[self.curr_keys..self.curr_keys + keys.len()];
         let cx_delta = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
         let cy_delta = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
-        Self {
-            cx: self.cx + cx_delta,
-            cy: self.cy + cy_delta,
-            curr_keys: new_size,
-            ..self
-        }
+
+        self.cx += cx_delta;
+        self.cy += cy_delta;
+        self.curr_keys = new_size;
     }
 
     // Builds the ring from the keys provided with 2 MSMs of size `keys.len() + scalar_bitlen + 5`.
@@ -247,26 +245,26 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
+        let mut ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
         let srs_segment = &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..domain_size];
         let srs_segment = SrsSegment::<Bls12_381>::shift(srs_segment, piop_params.keyset_part_size);
-        let ring2 = Ring::<_, Bls12_381, _>::empty(&piop_params, &srs_segment, ring_builder_key.g1);
+        let mut ring2 = Ring::<_, Bls12_381, _>::empty(&piop_params, &srs_segment, ring_builder_key.g1);
         assert_eq!(ring2.cx, ring.cx);
         assert_eq!(ring2.cy, ring.cy);
 
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
-        let ring = ring.append(&keys, &ring_builder_key.lis_in_g1);
+        ring.append(&keys, &ring_builder_key.lis_in_g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys.clone());
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
         let srs_segment2 = &ring_builder_key.lis_in_g1[ring2.curr_keys..ring2.curr_keys + keys.len()];
         let srs_segment2 = SrsSegment::<Bls12_381>::shift(srs_segment2, ring2.curr_keys);
-        let ring2 = ring2.append(&keys, &srs_segment2);
+        ring2.append(&keys, &srs_segment2);
         assert_eq!(ring2.cx, ring.cx);
         assert_eq!(ring2.cy, ring.cy);
 
