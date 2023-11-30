@@ -166,6 +166,27 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     }
 }
 
+struct SrsSegment<'a, KzgCurve: Pairing> {
+    slice: &'a [KzgCurve::G1Affine],
+    offset: usize,
+}
+
+impl<'a, KzgCurve: Pairing> SrsSegment<'a, KzgCurve> {
+    fn shift(slice: &'a [KzgCurve::G1Affine], offset: usize) -> Self {
+        Self {
+            slice,
+            offset,
+        }
+    }
+}
+
+impl <'a, KzgCurve: Pairing> Index<Range<usize>> for SrsSegment<'a, KzgCurve> {
+    type Output = [KzgCurve::G1Affine];
+
+    fn index(&self, index: Range<usize>) -> &Self::Output {
+        &self.slice[index.start - self.offset..index.end - self.offset]
+    }
+}
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
@@ -231,11 +252,23 @@ mod tests {
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
+        let srs_segment = &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..domain_size];
+        let srs_segment = SrsSegment::<Bls12_381>::shift(srs_segment, piop_params.keyset_part_size);
+        let ring2 = Ring::<_, Bls12_381, _>::empty(&piop_params, &srs_segment, ring_builder_key.g1);
+        assert_eq!(ring2.cx, ring.cx);
+        assert_eq!(ring2.cy, ring.cy);
+
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
         let ring = ring.append(&keys, &ring_builder_key.lis_in_g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys.clone());
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
+
+        let srs_segment2 = &ring_builder_key.lis_in_g1[ring2.curr_keys..ring2.curr_keys + keys.len()];
+        let srs_segment2 = SrsSegment::<Bls12_381>::shift(srs_segment2, ring2.curr_keys);
+        let ring2 = ring2.append(&keys, &srs_segment2);
+        assert_eq!(ring2.cx, ring.cx);
+        assert_eq!(ring2.cy, ring.cy);
 
         let same_ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &keys, &ring_builder_key);
         assert_eq!(ring, same_ring);
