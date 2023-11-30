@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
+use ark_ec::{AffineRepr, VariableBaseMSM};
 use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
@@ -37,10 +37,12 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig:
     // KZG commitments to the coordinates of the vector described above
     pub cx: KzgCurve::G1,
     pub cy: KzgCurve::G1,
+    // KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
+    pub selector: KzgCurve::G1,
     // maximal number of keys the commitment can "store". For domain of size `N` it is `N-(s+4)`
     max_keys: usize,
     // the number of keys "stored" in this commitment
-    curr_keys: usize,
+    pub curr_keys: usize,
     // a parameter
     padding_point: Affine<VrfCurveConfig>,
 }
@@ -83,9 +85,13 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let c2x = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
         let c2y = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
+        let selector_inv = srs_segment.iter().sum::<KzgCurve::G1>();
+        let selector =  g - selector_inv;
+
         Self {
             cx: c1x + c2x,
             cy: c1y + c2y,
+            selector,
             max_keys: piop_params.keyset_part_size,
             curr_keys: 0,
             padding_point,
@@ -151,10 +157,13 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
 
         let cx = KzgCurve::G1::msm(&bases, &xs).unwrap();
         let cy = KzgCurve::G1::msm(&bases, &ys).unwrap();
+        let selector_inv = srs.lis_in_g1[piop_params.keyset_part_size..].iter().sum::<KzgCurve::G1>();
+        let selector =  srs.g1 - selector_inv;
 
         Self {
             cx,
             cy,
+            selector,
             max_keys: piop_params.keyset_part_size,
             curr_keys: keys.len(),
             padding_point,
@@ -166,13 +175,13 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     }
 }
 
-struct SrsSegment<'a, KzgCurve: Pairing> {
+pub struct SrsSegment<'a, KzgCurve: Pairing> {
     slice: &'a [KzgCurve::G1Affine],
     offset: usize,
 }
 
 impl<'a, KzgCurve: Pairing> SrsSegment<'a, KzgCurve> {
-    fn shift(slice: &'a [KzgCurve::G1Affine], offset: usize) -> Self {
+    pub fn shift(slice: &'a [KzgCurve::G1Affine], offset: usize) -> Self {
         Self {
             slice,
             offset,
@@ -197,20 +206,11 @@ pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
 }
 
 impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve> {
-    pub fn from_srs(srs: URS<KzgCurve>, domain_size: usize) -> Self {
+    pub fn from_srs(srs: &URS<KzgCurve>, domain_size: usize) -> Self {
         let g1 = srs.powers_in_g1[0].into_group();
         let ck = srs.ck_with_lagrangian(domain_size);
         let lis_in_g1 = ck.lagrangian.unwrap().lis_in_g;
         Self { lis_in_g1, g1 }
-    }
-
-    pub fn ring_selector<VrfCurveConfig: SWCurveConfig<BaseField=F>>(
-        &self,
-        piop_params: &PiopParams<F, VrfCurveConfig>,
-    ) -> KzgCurve::G1Affine {
-        self.lis_in_g1[..piop_params.keyset_part_size].iter()
-            .sum::<KzgCurve::G1>()
-            .into_affine()
     }
 }
 
@@ -239,7 +239,7 @@ mod tests {
         let domain_size = 1 << domain_size_log;
 
         let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
-        let ring_builder_key = RingBuilderKey::from_srs(pcs_params.clone(), domain_size);
+        let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
 
         // piop params
         let h = SWAffine::rand(rng);
@@ -282,7 +282,7 @@ mod tests {
         let domain_size = 1 << domain_size_log;
 
         let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
-        let ring_builder_key = RingBuilderKey::from_srs(pcs_params.clone(), domain_size);
+        let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
 
         // piop params
         let h = SWAffine::rand(rng);

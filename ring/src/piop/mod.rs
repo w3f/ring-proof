@@ -97,13 +97,12 @@ impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
 impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
     pub fn from_ring<G: SWCurveConfig<BaseField=E::ScalarField>>(
         ring: Ring<E::ScalarField, E, G>,
-        ring_selector: E::G1Affine
     ) -> Self {
         let cx = KzgCommitment(ring.cx.into_affine());
         let cy = KzgCommitment(ring.cy.into_affine());
         Self {
             points: [cx, cy],
-            ring_selector: KzgCommitment(ring_selector),
+            ring_selector: KzgCommitment(ring.selector.into_affine()),
             phantom: Default::default(),
         }
     }

@@ -86,8 +86,7 @@ mod tests {
         let domain_size = 2usize.pow(9);
 
         let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>>(rng, domain_size);
-        let ring_builder_key = RingBuilderKey::from_srs(pcs_params.clone(), domain_size);
-        let ring_selector = ring_builder_key.ring_selector(&piop_params);
+        let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
@@ -97,7 +96,7 @@ mod tests {
 
         let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
 
-        let fixed_columns_committed = FixedColumnsCommitted::from_ring(ring, ring_selector);
+        let fixed_columns_committed = FixedColumnsCommitted::from_ring(ring);
         assert_eq!(fixed_columns_committed, verifier_key.fixed_columns_committed);
     }
 
