@@ -24,6 +24,19 @@ jobs:
       - name: Build
         run: cargo build --verbose
 
+  build-wasm32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: wasm32-unknown-unknown
+      - name: Build
+        run: cargo build --verbose --no-default-features --target wasm32-unknown-unknown
+
   test:
     runs-on: ubuntu-latest
     steps:
