@@ -1,7 +1,7 @@
 use ark_ec::{AffineRepr, CurveGroup, Group};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
-use ark_std::{rand, vec, vec::Vec};
+use ark_std::{vec, vec::Vec};
 
 use common::domain::Domain;
 use common::gadgets::sw_cond_add::AffineColumn;
@@ -32,7 +32,7 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
-        let padding_point = hash_to_curve::<Affine<Curve>>(b"w3f/ring-proof/common/padding");
+        let padding_point = crate::hash_to_curve::<Affine<Curve>>(b"w3f/ring-proof/common/padding");
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
@@ -89,16 +89,6 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             vec![F::zero(); self.scalar_bitlen]
         ].concat()
     }
-}
-
-// TODO: switch to better hash to curve when available
-fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
-    use blake2::Digest;
-    use ark_std::rand::SeedableRng;
-
-    let seed = blake2::Blake2s::digest(message);
-    let rng = &mut rand::rngs::StdRng::from_seed(seed.into());
-    A::rand(rng)
 }
 
 #[cfg(test)]
