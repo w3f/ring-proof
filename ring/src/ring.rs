@@ -40,11 +40,11 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig:
     // KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
     pub selector: KzgCurve::G1Affine,
     // maximal number of keys the commitment can "store". For domain of size `N` it is `N-(s+4)`
-    max_keys: usize,
+    pub max_keys: usize,
     // the number of keys "stored" in this commitment
     pub curr_keys: usize,
     // a parameter
-    padding_point: Affine<VrfCurveConfig>,
+    pub padding_point: Affine<VrfCurveConfig>,
 }
 
 impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> fmt::Debug for Ring<F, KzgCurve, VrfCurveConfig> {
