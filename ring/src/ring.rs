@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, VariableBaseMSM};
+use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ec::pairing::Pairing;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
@@ -35,10 +35,10 @@ use crate::PiopParams;
 #[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> {
     // KZG commitments to the coordinates of the vector described above
-    pub cx: KzgCurve::G1,
-    pub cy: KzgCurve::G1,
+    pub cx: KzgCurve::G1Affine,
+    pub cy: KzgCurve::G1Affine,
     // KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
-    pub selector: KzgCurve::G1,
+    pub selector: KzgCurve::G1Affine,
     // maximal number of keys the commitment can "store". For domain of size `N` it is `N-(s+4)`
     max_keys: usize,
     // the number of keys "stored" in this commitment
@@ -86,11 +86,16 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let c2y = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
         let selector_inv = srs_segment.iter().sum::<KzgCurve::G1>();
-        let selector =  g - selector_inv;
+        let selector = g - selector_inv;
+
+        let (cx, cy, selector) = {
+            let affine = KzgCurve::G1::normalize_batch(&[c1x + c2x, c1y + c2y, selector]);
+            (affine[0], affine[1], affine[2])
+        };
 
         Self {
-            cx: c1x + c2x,
-            cy: c1y + c2y,
+            cx,
+            cy,
             selector,
             max_keys: piop_params.keyset_part_size,
             curr_keys: 0,
@@ -115,8 +120,13 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let cx_delta = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
         let cy_delta = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
-        self.cx += cx_delta;
-        self.cy += cy_delta;
+        let (new_cx, new_cy) = {
+            let affine = KzgCurve::G1::normalize_batch(&[self.cx + cx_delta, self.cy + cy_delta]);
+            (affine[0], affine[1])
+        };
+
+        self.cx = new_cx;
+        self.cy = new_cy;
         self.curr_keys = new_size;
     }
 
@@ -156,7 +166,12 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let cx = KzgCurve::G1::msm(&bases, &xs).unwrap();
         let cy = KzgCurve::G1::msm(&bases, &ys).unwrap();
         let selector_inv = srs.lis_in_g1[piop_params.keyset_part_size..].iter().sum::<KzgCurve::G1>();
-        let selector =  srs.g1 - selector_inv;
+        let selector = srs.g1 - selector_inv;
+
+        let (cx, cy, selector) = {
+            let affine = KzgCurve::G1::normalize_batch(&[cx, cy, selector]);
+            (affine[0], affine[1], affine[2])
+        };
 
         Self {
             cx,
@@ -187,7 +202,7 @@ impl<'a, KzgCurve: Pairing> SrsSegment<'a, KzgCurve> {
     }
 }
 
-impl <'a, KzgCurve: Pairing> Index<Range<usize>> for SrsSegment<'a, KzgCurve> {
+impl<'a, KzgCurve: Pairing> Index<Range<usize>> for SrsSegment<'a, KzgCurve> {
     type Output = [KzgCurve::G1Affine];
 
     fn index(&self, index: Range<usize>) -> &Self::Output {
