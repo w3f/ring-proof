@@ -128,7 +128,7 @@ pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
     pub(crate) verifier_key: VerifierKey<F, CS>, // used in the Fiat-Shamir transform
 }
 
-#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
     pub(crate) pcs_raw_vk: <CS::Params as PcsParams>::RVK,
     pub(crate) fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
