@@ -6,7 +6,7 @@ use ark_poly::EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::fmt;
 use ark_std::iter;
-use ark_std::ops::{Index, Range};
+use ark_std::ops::Range;
 use ark_std::vec::Vec;
 use fflonk::pcs::kzg::urs::URS;
 use fflonk::pcs::PcsParams;
@@ -60,11 +60,11 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     // `padding, ..., padding`, and
     // `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
     // The first one is `padding * G`, the second requires an `(4+s)`-msm to compute.
-    pub fn empty<Srs: Index<Range<usize>, Output=[KzgCurve::G1Affine]>>(
+    pub fn empty(
         // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
-        // MUST contain `srs[piop_params.keyset_part_size..domain_size]`
-        srs: &Srs,
+        // Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
+        srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
         // generator used in the SRS
         g: KzgCurve::G1,
     ) -> Self {
@@ -81,7 +81,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         xs.resize(xs.len() + 4, -*padding_x);
         ys.resize(ys.len() + 4, -*padding_y);
         let domain_size = piop_params.domain.domain().size();
-        let srs_segment = &srs[piop_params.keyset_part_size..domain_size];
+        let srs_segment = &srs(piop_params.keyset_part_size..domain_size).unwrap();
         let c2x = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
         let c2y = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
@@ -103,11 +103,11 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         }
     }
 
-    pub fn append<Srs: Index<Range<usize>, Output=[KzgCurve::G1Affine]>>(
+    pub fn append(
         &mut self,
         keys: &[Affine<VrfCurveConfig>],
-        // MUST contain `srs[ring.curr_keys..ring.curr_keys + keys.len()]`
-        srs: &Srs,
+        // Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
+        srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
     ) {
         let new_size = self.curr_keys + keys.len();
         assert!(new_size <= self.max_keys);
@@ -116,7 +116,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
             .map(|p| p.xy().unwrap())
             .map(|(&x, &y)| (x - padding_x, y - padding_y))
             .unzip();
-        let srs_segment = &srs[self.curr_keys..self.curr_keys + keys.len()];
+        let srs_segment = &srs(self.curr_keys..self.curr_keys + keys.len()).unwrap();
         let cx_delta = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
         let cy_delta = KzgCurve::G1::msm(srs_segment, &ys).unwrap();
 
@@ -188,28 +188,6 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     }
 }
 
-pub struct SrsSegment<'a, KzgCurve: Pairing> {
-    slice: &'a [KzgCurve::G1Affine],
-    offset: usize,
-}
-
-impl<'a, KzgCurve: Pairing> SrsSegment<'a, KzgCurve> {
-    pub fn shift(slice: &'a [KzgCurve::G1Affine], offset: usize) -> Self {
-        Self {
-            slice,
-            offset,
-        }
-    }
-}
-
-impl<'a, KzgCurve: Pairing> Index<Range<usize>> for SrsSegment<'a, KzgCurve> {
-    type Output = [KzgCurve::G1Affine];
-
-    fn index(&self, index: Range<usize>) -> &Self::Output {
-        &self.slice[index.start - self.offset..index.end - self.offset]
-    }
-}
-
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingBuilderKey<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> {
     // Lagrangian SRS
@@ -244,15 +222,17 @@ mod tests {
 
     use super::*;
 
+    type TestRing = Ring<Fr, Bls12_381, BandersnatchConfig>;
+
     #[test]
     fn test_ring_mgmt() {
         let rng = &mut test_rng();
 
-        let domain_size_log = 9;
-        let domain_size = 1 << domain_size_log;
+        let domain_size = 1 << 9;
 
         let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
         let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
+        let srs = |range: Range<usize>| Ok(ring_builder_key.lis_in_g1[range].to_vec());
 
         // piop params
         let h = SWAffine::rand(rng);
@@ -260,30 +240,18 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let mut ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
+        let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
-        let srs_segment = &ring_builder_key.lis_in_g1[piop_params.keyset_part_size..domain_size];
-        let srs_segment = SrsSegment::<Bls12_381>::shift(srs_segment, piop_params.keyset_part_size);
-        let mut ring2 = Ring::<_, Bls12_381, _>::empty(&piop_params, &srs_segment, ring_builder_key.g1);
-        assert_eq!(ring2.cx, ring.cx);
-        assert_eq!(ring2.cy, ring.cy);
-
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
-        ring.append(&keys, &ring_builder_key.lis_in_g1);
+        ring.append(&keys, srs);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys.clone());
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
-        let srs_segment2 = &ring_builder_key.lis_in_g1[ring2.curr_keys..ring2.curr_keys + keys.len()];
-        let srs_segment2 = SrsSegment::<Bls12_381>::shift(srs_segment2, ring2.curr_keys);
-        ring2.append(&keys, &srs_segment2);
-        assert_eq!(ring2.cx, ring.cx);
-        assert_eq!(ring2.cy, ring.cy);
-
-        let same_ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &keys, &ring_builder_key);
+        let same_ring = TestRing::with_keys(&piop_params, &keys, &ring_builder_key);
         assert_eq!(ring, same_ring);
     }
 
@@ -291,11 +259,11 @@ mod tests {
     fn test_empty_rings() {
         let rng = &mut test_rng();
 
-        let domain_size_log = 9;
-        let domain_size = 1 << domain_size_log;
+        let domain_size = 1 << 9;
 
         let pcs_params = KZG::<Bls12_381>::setup(domain_size - 1, rng);
         let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
+        let srs = |range: Range<usize>| Ok(ring_builder_key.lis_in_g1[range].to_vec());
 
         // piop params
         let h = SWAffine::rand(rng);
@@ -303,8 +271,8 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let ring = Ring::<_, Bls12_381, _>::empty(&piop_params, &ring_builder_key.lis_in_g1, ring_builder_key.g1);
-        let same_ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &[], &ring_builder_key);
+        let ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
+        let same_ring = TestRing::with_keys(&piop_params, &[], &ring_builder_key);
         assert_eq!(ring, same_ring);
     }
 
