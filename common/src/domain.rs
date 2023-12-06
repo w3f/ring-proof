@@ -5,7 +5,7 @@ use ark_std::{vec, vec::Vec};
 
 use crate::FieldColumn;
 
-const ZK_ROWS: usize = 3;
+pub const ZK_ROWS: usize = 3;
 
 // Domains for performing calculations with constraint polynomials of degree up to 4.
 #[derive(Clone)]

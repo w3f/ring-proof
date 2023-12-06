@@ -11,7 +11,11 @@ use ark_std::vec::Vec;
 use fflonk::pcs::kzg::urs::URS;
 use fflonk::pcs::PcsParams;
 
+use common::domain::ZK_ROWS;
+
 use crate::PiopParams;
+
+const IDLE_ROWS: usize = ZK_ROWS + 1;
 
 /// Commitment to a list of VRF public keys as is used as a public input to the ring proof SNARK verifier.
 
@@ -24,7 +28,7 @@ use crate::PiopParams;
 /// Additionally, to make the commitment compatible with the snark,
 /// we append the power-of-2 powers of the VRF blinding Pedersen base
 /// `H, 2H, 4H, ..., 2^(s-1)H`, where `s` is the bitness of the VRF curve scalar field.
-/// The last `4` elements are set to `(0, 0)`.
+/// The last `IDLE_ROWS = 4` elements are set to `(0, 0)`.
 
 /// Thus, the vector of points we commit to coordinatewise is
 /// `pk1, ..., pkn, padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`
@@ -39,7 +43,7 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig:
     pub cy: KzgCurve::G1Affine,
     // KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
     pub selector: KzgCurve::G1Affine,
-    // maximal number of keys the commitment can "store". For domain of size `N` it is `N-(s+4)`
+    // maximal number of keys the commitment can "store". For domain of size `N` it is `N - (s + IDLE_ROWS)`
     pub max_keys: usize,
     // the number of keys "stored" in this commitment
     pub curr_keys: usize,
@@ -59,7 +63,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     // We compute it as a sum of commitments of 2 vectors:
     // `padding, ..., padding`, and
     // `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
-    // The first one is `padding * G`, the second requires an `(4+s)`-msm to compute.
+    // The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
     pub fn empty(
         // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
@@ -78,8 +82,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
             .map(|p| p.xy().unwrap())
             .map(|(&x, &y)| (x - padding_x, y - padding_y))
             .unzip();
-        xs.resize(xs.len() + 4, -*padding_x);
-        ys.resize(ys.len() + 4, -*padding_y);
+        xs.resize(xs.len() + IDLE_ROWS, -*padding_x);
+        ys.resize(ys.len() + IDLE_ROWS, -*padding_y);
         let domain_size = piop_params.domain.domain().size();
         let srs_segment = &srs(piop_params.keyset_part_size..domain_size).unwrap();
         let c2x = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
@@ -185,6 +189,24 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
 
     pub fn slots_left(&self) -> usize {
         self.max_keys - self.curr_keys
+    }
+
+    pub const fn empty_unchecked(
+        domain_size: usize,
+        cx: KzgCurve::G1Affine,
+        cy: KzgCurve::G1Affine,
+        selector: KzgCurve::G1Affine,
+        padding_point: Affine<VrfCurveConfig>,
+    ) -> Self {
+        let max_keys = domain_size - (VrfCurveConfig::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
+        Self {
+            cx,
+            cy,
+            selector,
+            max_keys,
+            curr_keys: 0,
+            padding_point,
+        }
     }
 }
 
