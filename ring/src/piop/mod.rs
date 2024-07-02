@@ -130,8 +130,8 @@ pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
 
 #[derive(Clone, Debug, Eq, PartialEq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
-    pub pcs_raw_vk: <CS::Params as PcsParams>::RVK,
-    pub fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
+    pub(crate) pcs_raw_vk: <CS::Params as PcsParams>::RVK,
+    pub(crate) fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
     //TODO: domain
 }
 
@@ -140,10 +140,10 @@ impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
         ring: &Ring<E::ScalarField, E, G>,
         kzg_vk: RawKzgVerifierKey<E>,
     ) -> Self {
-        Self::from_commitment_and_kzg_vk::<G>(FixedColumnsCommitted::from_ring(ring), kzg_vk)
+        Self::from_commitment_and_kzg_vk(FixedColumnsCommitted::from_ring(ring), kzg_vk)
     }
 
-    pub fn from_commitment_and_kzg_vk<G: SWCurveConfig<BaseField=E::ScalarField>>(
+    pub fn from_commitment_and_kzg_vk(
         commitment: FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>>,
         kzg_vk: RawKzgVerifierKey<E>,
     ) -> Self {
