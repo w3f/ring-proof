@@ -11,7 +11,7 @@ use common::Proof;
 pub use piop::index;
 
 use crate::piop::{RingCommitments, RingEvaluations};
-pub use crate::piop::{params::PiopParams, ProverKey, VerifierKey};
+pub use crate::piop::{params::PiopParams, ProverKey, VerifierKey, FixedColumnsCommitted};
 
 mod piop;
 pub mod ring;
