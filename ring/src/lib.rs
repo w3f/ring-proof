@@ -74,7 +74,7 @@ mod tests {
         let k = rng.gen_range(0..keyset_size); // prover's secret index
         let pk = pks[k].clone();
 
-        let (prover_key, verifier_key) = index::<_, CS, _>(pcs_params, &piop_params, pks);
+        let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
@@ -104,7 +104,7 @@ mod tests {
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
         let pks = random_vec::<SWAffine, _>(keyset_size, rng);
 
-        let (_, verifier_key) = index::<_, KZG::<Bls12_381>, _>(pcs_params, &piop_params, pks.clone());
+        let (_, verifier_key) = index::<_, KZG::<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
 
         let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
 
