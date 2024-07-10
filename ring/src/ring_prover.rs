@@ -12,7 +12,6 @@ pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=
     piop_params: PiopParams<F, Curve>,
     fixed_columns: FixedColumns<F, Affine<Curve>>,
     k: usize,
-
     plonk_prover: PlonkProver<F, CS, merlin::Transcript>,
 }
 
