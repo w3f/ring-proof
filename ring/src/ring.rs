@@ -231,7 +231,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve
 mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine};
-    use ark_std::{test_rng, UniformRand, vec};
+    use ark_std::{test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
     use fflonk::pcs::kzg::urs::URS;
     use fflonk::pcs::PCS;
@@ -263,13 +263,13 @@ mod tests {
         let piop_params = PiopParams::setup(domain, h, seed);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
-        let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params.clone(), &piop_params, vec![]);
+        let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &[]);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
         let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
         ring.append(&keys, srs);
-        let (monimial_cx, monimial_cy) = get_monomial_commitment(pcs_params, &piop_params, keys.clone());
+        let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &keys);
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
@@ -298,8 +298,8 @@ mod tests {
         assert_eq!(ring, same_ring);
     }
 
-    fn get_monomial_commitment(pcs_params: URS<Bls12_381>, piop_params: &PiopParams<Fr, BandersnatchConfig>, keys: Vec<SWAffine>) -> (G1Affine, G1Affine) {
-        let (_, verifier_key) = crate::piop::index::<_, KZG::<Bls12_381>, _>(pcs_params, &piop_params, keys);
+    fn get_monomial_commitment(pcs_params: &URS<Bls12_381>, piop_params: &PiopParams<Fr, BandersnatchConfig>, keys: &[SWAffine]) -> (G1Affine, G1Affine) {
+        let (_, verifier_key) = crate::piop::index::<_, KZG::<Bls12_381>, _>(pcs_params, piop_params, keys);
         let [monimial_cx, monimial_cy] = verifier_key.fixed_columns_committed.points;
         (monimial_cx.0, monimial_cy.0)
     }
