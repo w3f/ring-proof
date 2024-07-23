@@ -20,11 +20,11 @@ pub mod ring_verifier;
 
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
-// Crates that are required by the downstream dependencies.
-pub mod prelude {
-    pub use fflonk;
-    pub use merlin;
-}
+/// Polynomial Commitment Schemes.
+pub use fflonk::pcs;
+
+/// Transcript for `RingProver` and `RingVerifier` construction.
+pub use merlin::Transcript;
 
 // Calling the method for a prime-order curve results in an infinite loop.
 pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
