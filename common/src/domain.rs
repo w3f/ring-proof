@@ -25,7 +25,7 @@ impl<F: FftField> Domains<F> {
         assert_eq!(evals.len(), self.x1.size());
         let evals = Evaluations::from_vec_and_domain(evals, self.x1);
         let poly = evals.interpolate_by_ref();
-        let evals_4x = poly.evaluate_over_domain_by_ref(self.x4);
+        let evals_4x = self.amplify(&poly);
         FieldColumn { len, poly, evals, evals_4x }
     }
 
@@ -38,6 +38,7 @@ impl<F: FftField> Domains<F> {
     }
 
     // Amplifies the number of the evaluations of the polynomial so it can be multiplied in linear time.
+    #[inline(always)]
     fn amplify(&self, poly: &DensePolynomial<F>) -> Evaluations<F> {
         poly.evaluate_over_domain_by_ref(self.x4)
     }
@@ -46,7 +47,6 @@ impl<F: FftField> Domains<F> {
 #[derive(Clone)]
 pub struct Domain<F: FftField> {
     domains: Domains<F>,
-    pub hiding: bool,
     pub capacity: usize,
     pub not_last_row: FieldColumn<F>,
     pub l_first: FieldColumn<F>,
@@ -72,7 +72,6 @@ impl<F: FftField> Domain<F> {
 
         Self {
             domains,
-            hiding,
             capacity,
             not_last_row,
             l_first,
@@ -85,12 +84,12 @@ impl<F: FftField> Domain<F> {
         &self,
         poly: &DensePolynomial<F>,
     ) -> DensePolynomial<F> {
-        let (quotient, remainder) = if self.hiding {
-            let exclude_zk_rows = poly * self.zk_rows_vanishing_poly.as_ref().unwrap();
-            exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
-        } else {
-            poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
-        };
+        let (quotient, remainder) = if let Some(zk_rows_vanishing) = self.zk_rows_vanishing_poly.as_ref() {
+                let exclude_zk_rows = poly * zk_rows_vanishing;
+                exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+            } else {
+                poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+            };
         assert!(remainder.is_zero()); //TODO error-handling
         quotient
     }
@@ -98,7 +97,7 @@ impl<F: FftField> Domain<F> {
     pub(crate) fn column(&self, mut evals: Vec<F>, hidden: bool) -> FieldColumn<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
-        if self.hiding && hidden {
+        if self.hiding() && hidden {
             evals.resize(self.capacity, F::zero());
             evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));
         } else {
@@ -107,21 +106,30 @@ impl<F: FftField> Domain<F> {
         self.domains.column_from_evals(evals, len)
     }
 
+    #[inline(always)]
     pub fn private_column(&self, evals: Vec<F>) -> FieldColumn<F> {
         self.column(evals, true)
     }
 
     // public column
+    #[inline(always)]
     pub fn public_column(&self, evals: Vec<F>) -> FieldColumn<F> {
         self.column(evals, false)
     }
 
+    #[inline(always)]
     pub fn omega(&self) -> F {
         self.domains.x1.group_gen()
     }
 
+    #[inline(always)]
     pub fn domain(&self) -> GeneralEvaluationDomain<F> {
         self.domains.x1
+    }
+
+    #[inline(always)]
+    pub fn hiding(&self) -> bool {
+        self.zk_rows_vanishing_poly.is_some()
     }
 }
 
