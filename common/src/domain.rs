@@ -84,11 +84,12 @@ impl<F: FftField> Domain<F> {
         &self,
         poly: &DensePolynomial<F>,
     ) -> DensePolynomial<F> {
+        // `divide_by_vanishing_poly` can't fail: https://github.com/arkworks-rs/algebra/pull/850
         let (quotient, remainder) = if let Some(zk_rows_vanishing) = self.zk_rows_vanishing_poly.as_ref() {
                 let exclude_zk_rows = poly * zk_rows_vanishing;
-                exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+                exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap()
             } else {
-                poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+                poly.divide_by_vanishing_poly(self.domains.x1).unwrap()
             };
         assert!(remainder.is_zero()); //TODO error-handling
         quotient
