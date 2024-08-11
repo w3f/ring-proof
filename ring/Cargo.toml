@@ -50,6 +50,5 @@ print-trace = [
   "ark-std/print-trace",
   "common/print-trace"
 ]
-asm = [
-  "fflonk/asm"
-]
+asm = ["fflonk/asm"]
+test-vectors = ["common/test-vectors"]
