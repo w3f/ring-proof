@@ -122,7 +122,7 @@ mod tests {
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
 
-        let domain = Domain::new(domain_size, true);
+        let domain = Domain::new(domain_size);
         let h = SWAffine::rand(rng);
         let seed = find_complement_point::<BandersnatchConfig>();
         let piop_params = PiopParams::setup(domain, h, seed);

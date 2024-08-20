@@ -259,7 +259,7 @@ mod tests {
         // piop params
         let h = SWAffine::rand(rng);
         let seed = SWAffine::rand(rng);
-        let domain = Domain::new(domain_size, true);
+        let domain = Domain::new(domain_size);
         let piop_params = PiopParams::setup(domain, h, seed);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
@@ -290,7 +290,7 @@ mod tests {
         // piop params
         let h = SWAffine::rand(rng);
         let seed = SWAffine::rand(rng);
-        let domain = Domain::new(domain_size, true);
+        let domain = Domain::new(domain_size);
         let piop_params = PiopParams::setup(domain, h, seed);
 
         let ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);

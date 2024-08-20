@@ -107,7 +107,7 @@ mod tests {
         let rng = &mut test_rng();
         let h = SWAffine::rand(rng);
         let seed = SWAffine::rand(rng);
-        let domain = Domain::new(1024, false);
+        let domain = Domain::new(1024).hiding(false);
         let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);

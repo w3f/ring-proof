@@ -56,10 +56,7 @@ pub struct Domain<F: FftField> {
 
 impl<F: FftField> Domain<F> {
     /// Construct a new evaluation domain.
-    ///
-    /// `hiding` parameter determines whether we wish to produce a zk-PROOF or not.
-    /// This parameter is only relevant for the prover.
-    pub fn new(n: usize, hiding: bool) -> Self {
+    pub fn new(n: usize) -> Self {
         let domains = Domains::new(n);
         let size = domains.x1.size();
         let capacity = size - ZK_ROWS;
@@ -76,7 +73,7 @@ impl<F: FftField> Domain<F> {
 
         Self {
             domains,
-            hiding,
+            hiding: true,
             capacity,
             not_last_row,
             l_first,
@@ -84,6 +81,15 @@ impl<F: FftField> Domain<F> {
             zk_rows_vanishing_poly,
         }
     }
+
+    /// Set whether we wish to produce a zk-PROOF or not.
+    ///
+    /// Defaults to `true` and this is only relevant for the prover.
+    pub fn hiding(mut self, value: bool) -> Self {
+        self.hiding = value;
+        self
+    }
+
 
     pub(crate) fn divide_by_vanishing_poly<>(
         &self,
@@ -228,7 +234,7 @@ mod tests {
 
         // let domain = GeneralEvaluationDomain::new(1024);
         let n = 1024;
-        let domain = Domain::new(n, hiding);
+        let domain = Domain::new(n).hiding(hiding);
         let z = Fq::rand(rng);
         let domain_eval = EvaluatedDomain::new(domain.domain(), z);
         assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
