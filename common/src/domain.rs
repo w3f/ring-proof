@@ -85,7 +85,7 @@ impl<F: FftField> Domain<F> {
     /// Set whether we wish to produce a zk-PROOF or not.
     ///
     /// Defaults to `true` and this is only relevant for the prover.
-    pub fn hiding(mut self, value: bool) -> Self {
+    pub fn with_hiding(mut self, value: bool) -> Self {
         self.hiding = value;
         self
     }
@@ -234,7 +234,7 @@ mod tests {
 
         // let domain = GeneralEvaluationDomain::new(1024);
         let n = 1024;
-        let domain = Domain::new(n).hiding(hiding);
+        let domain = Domain::new(n).with_hiding(hiding);
         let z = Fq::rand(rng);
         let domain_eval = EvaluatedDomain::new(domain.domain(), z);
         assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
