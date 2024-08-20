@@ -51,14 +51,18 @@ pub struct Domain<F: FftField> {
     pub not_last_row: FieldColumn<F>,
     pub l_first: FieldColumn<F>,
     pub l_last: FieldColumn<F>,
-    zk_rows_vanishing_poly: Option<DensePolynomial<F>>,
+    zk_rows_vanishing_poly: DensePolynomial<F>,
 }
 
 impl<F: FftField> Domain<F> {
+    /// Construct a new evaluation domain.
+    ///
+    /// `hiding` parameter determines whether we wish to produce a zk-PROOF or not.
+    /// This parameter is only relevant for the prover.
     pub fn new(n: usize, hiding: bool) -> Self {
         let domains = Domains::new(n);
         let size = domains.x1.size();
-        let capacity = if hiding { size - ZK_ROWS } else { size };
+        let capacity = size - ZK_ROWS;
         let last_row_index = capacity - 1;
 
         let l_first = l_i(0, size);
@@ -68,7 +72,7 @@ impl<F: FftField> Domain<F> {
         let not_last_row = vanishes_on_row(last_row_index, domains.x1);
         let not_last_row = domains.column_from_poly(not_last_row, capacity);
 
-        let zk_rows_vanishing_poly = hiding.then(|| vanishes_on_last_3_rows(domains.x1));
+        let zk_rows_vanishing_poly = vanishes_on_last_3_rows(domains.x1);
 
         Self {
             domains,
@@ -85,13 +89,10 @@ impl<F: FftField> Domain<F> {
         &self,
         poly: &DensePolynomial<F>,
     ) -> DensePolynomial<F> {
-        let (quotient, remainder) = if self.hiding {
-            let exclude_zk_rows = poly * self.zk_rows_vanishing_poly.as_ref().unwrap();
-            exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
-        } else {
-            poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
-        };
-        assert!(remainder.is_zero()); //TODO error-handling
+        let exclude_zk_rows = poly * &self.zk_rows_vanishing_poly;
+        // NOTE: `divide_by_vanishing_poly` can't fail: https://github.com/arkworks-rs/algebra/pull/850
+        let (quotient, remainder) = exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap();
+        assert!(remainder.is_zero()); // TODO error-handling
         quotient
     }
 
@@ -163,8 +164,8 @@ pub struct EvaluatedDomain<F: FftField> {
 }
 
 impl<F: FftField> EvaluatedDomain<F> {
-    pub fn new(domain: GeneralEvaluationDomain<F>, z: F, hiding: bool) -> Self {
-        let k = if hiding { ZK_ROWS } else { 0 };
+    pub fn new(domain: GeneralEvaluationDomain<F>, z: F) -> Self {
+        let k = ZK_ROWS;
         let mut z_n = z; // z^n, n=2^d - domain size, so squarings only
         for _ in 0..domain.log_size_of_group() {
             z_n.square_in_place();
@@ -229,7 +230,7 @@ mod tests {
         let n = 1024;
         let domain = Domain::new(n, hiding);
         let z = Fq::rand(rng);
-        let domain_eval = EvaluatedDomain::new(domain.domain(), z, hiding);
+        let domain_eval = EvaluatedDomain::new(domain.domain(), z);
         assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
         assert_eq!(domain.l_last.poly.evaluate(&z), domain_eval.l_last);
         assert_eq!(domain.not_last_row.poly.evaluate(&z), domain_eval.not_last_row);
