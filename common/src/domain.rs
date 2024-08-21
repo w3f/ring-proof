@@ -97,21 +97,9 @@ impl<F: FftField> Domain<F> {
     pub(crate) fn column(&self, mut evals: Vec<F>, hidden: bool) -> FieldColumn<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
-        if self.hiding() && hidden {
-            #[cfg(feature = "test-vectors")]
-            let mut rng = {
-                use ark_std::rand::SeedableRng;
-                use ark_serialize::CanonicalSerialize;
-                let mut buf = Vec::new();
-                evals.serialize_compressed(&mut buf).unwrap();
-                let hash = blake2b_simd::Params::new().hash_length(32).hash(&buf);
-                let seed = hash.as_bytes().try_into().unwrap();
-                rand_chacha::ChaCha20Rng::from_seed(seed)
-            };
-            #[cfg(not(feature = "test-vectors"))]
-            let mut rng = getrandom_or_panic::getrandom_or_panic();
+        if self.hiding() && hidden && !cfg!(feature = "test-vectors") {
             evals.resize(self.capacity, F::zero());
-            evals.resize_with(self.domains.x1.size(), || F::rand(&mut rng));        
+            evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));        
         } else {
             evals.resize(self.domains.x1.size(), F::zero());
         }
