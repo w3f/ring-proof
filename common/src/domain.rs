@@ -38,7 +38,6 @@ impl<F: FftField> Domains<F> {
     }
 
     // Amplifies the number of the evaluations of the polynomial so it can be multiplied in linear time.
-    #[inline(always)]
     fn amplify(&self, poly: &DensePolynomial<F>) -> Evaluations<F> {
         poly.evaluate_over_domain_by_ref(self.x4)
     }
@@ -101,7 +100,7 @@ impl<F: FftField> Domain<F> {
         assert!(len <= self.capacity);
         if self.hiding && hidden && !cfg!(feature = "test-vectors") {
             evals.resize(self.capacity, F::zero());
-            evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));        
+            evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));
         } else {
             evals.resize(self.domains.x1.size(), F::zero());
         }
