@@ -55,7 +55,6 @@ pub struct CondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     not_last: FieldColumn<F>,
     // Accumulates the (conditional) rolling sum of the points
     pub acc: AffineColumn<F, P>,
-    // Accumulated result minus the seed.
     pub result: P,
 }
 

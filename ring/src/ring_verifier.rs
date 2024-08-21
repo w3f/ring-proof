@@ -41,7 +41,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
-        let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding());
+        let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
         let piop = PiopVerifier::init(
             domain_eval,
