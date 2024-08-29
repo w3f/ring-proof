@@ -5,21 +5,42 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::{vec, vec::Vec};
 
-use crate::{Column, const_evals};
+use crate::{Column, FieldColumn, const_evals};
 use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::cond_add::{AffineColumn, CondAdd, CondAddValues};
 
-impl<F, Curve> CondAdd<F, Affine<Curve>> where
+// Conditional affine addition:
+// if the bit is set for a point, add the point to the acc and store,
+// otherwise copy the acc value
+pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
+    pub(super)bitmask: BitColumn<F>,
+    pub(super)points: AffineColumn<F, P>,
+    // The polynomial `X - w^{n-1}` in the Lagrange basis
+    pub(super)not_last: FieldColumn<F>,
+    // Accumulates the (conditional) rolling sum of the points
+    pub acc: AffineColumn<F, P>,
+    pub result: P,
+}
+
+pub struct SwCondAddValues<F: Field> {
+    pub bitmask: F,
+    pub points: (F, F),
+    pub not_last: F,
+    pub acc: (F, F),
+}
+
+impl<F, Curve> CondAdd<F, Curve, Affine<Curve>, SwCondAddValues<F>> for SwCondAdd<F, Affine<Curve>> where
     F: FftField,
     Curve: SWCurveConfig<BaseField=F>,
 {
+
     // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
     // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
-    pub fn init(bitmask: BitColumn<F>,
+    fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, Affine<Curve>>,
                 seed: Affine<Curve>,
                 domain: &Domain<F>) -> Self {
@@ -45,8 +66,8 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
         Self { bitmask, points, acc, not_last, result }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F> {
-        CondAddValues {
+    fn evaluate_assignment(&self, z: &F) -> SwCondAddValues<F> {
+        SwCondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -56,7 +77,7 @@ impl<F, Curve> CondAdd<F, Affine<Curve>> where
 }
 
 
-impl<F, Curve> ProverGadget<F> for CondAdd<F, Affine<Curve>>
+impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
     where
         F: FftField,
         Curve: SWCurveConfig<BaseField=F>,
@@ -137,7 +158,7 @@ impl<F, Curve> ProverGadget<F> for CondAdd<F, Affine<Curve>>
 }
 
 
-impl<F: Field> VerifierGadget<F> for CondAddValues<F> {
+impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -164,8 +185,9 @@ impl<F: Field> VerifierGadget<F> for CondAddValues<F> {
 }
 
 
-impl<F: Field> CondAddValues<F> {
-    pub fn acc_coeffs_1(&self) -> (F, F) {
+impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
+
+    fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, _y1) = self.acc;
         let (x2, _y2) = self.points;
@@ -179,7 +201,7 @@ impl<F: Field> CondAddValues<F> {
         (c_acc_x, c_acc_y)
     }
 
-    pub fn acc_coeffs_2(&self) -> (F, F) {
+    fn acc_coeffs_2(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
@@ -220,7 +242,7 @@ mod tests {
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = CondAdd::init(bitmask_col, points_col, seed, &domain);
+        let gadget = SwCondAdd::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 

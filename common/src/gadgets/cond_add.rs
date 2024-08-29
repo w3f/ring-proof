@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr};
+use ark_ec::{AffineRepr, CurveConfig};
 use ark_ff::{FftField, Field};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use crate::{Column, FieldColumn};
@@ -38,25 +38,25 @@ impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
     }
 }
 
+pub trait CondAdd<F, Curve, AffinePoint, ContAddVal> where
+    F: FftField,
+    Curve: CurveConfig,
+    AffinePoint: AffineRepr<BaseField=F>,
+    ContAddVal: CondAddValues<F>
+{
+    fn init(bitmask: BitColumn<F>,
+                points: AffineColumn<F, AffinePoint>,
+                seed: AffinePoint,
+                domain: &Domain<F>) -> Self;
+    
+    fn evaluate_assignment(&self, z: &F) -> ContAddVal;
 
-// Conditional affine addition:
-// if the bit is set for a point, add the point to the acc and store,
-// otherwise copy the acc value
-pub struct CondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
-    pub(super)bitmask: BitColumn<F>,
-    pub(super)points: AffineColumn<F, P>,
-    // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(super)not_last: FieldColumn<F>,
-    // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
-    pub result: P,
 }
 
-pub struct CondAddValues<F: Field> {
-    pub bitmask: F,
-    pub points: (F, F),
-    pub not_last: F,
-    pub acc: (F, F),
+pub trait CondAddValues<F>
+    where F: Field
+{
+    fn acc_coeffs_1(&self) -> (F, F);
+    fn acc_coeffs_2(&self) -> (F, F);
+
 }
-
-
