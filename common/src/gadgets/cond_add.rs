@@ -38,18 +38,19 @@ impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
     }
 }
 
-pub trait CondAdd<F, Curve, AffinePoint, ContAddVal> where
+pub trait CondAdd<F, Curve, AffinePoint> where
     F: FftField,
     Curve: CurveConfig,
     AffinePoint: AffineRepr<BaseField=F>,
-    ContAddVal: CondAddValues<F>
+    
 {
+    type CondAddValT: CondAddValues<F>;
     fn init(bitmask: BitColumn<F>,
                 points: AffineColumn<F, AffinePoint>,
                 seed: AffinePoint,
                 domain: &Domain<F>) -> Self;
     
-    fn evaluate_assignment(&self, z: &F) -> ContAddVal;
+    fn evaluate_assignment(&self, z: &F) -> Self::CondAddValT;
 
 }
 

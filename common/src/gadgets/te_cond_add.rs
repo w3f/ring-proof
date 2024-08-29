@@ -1,5 +1,5 @@
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::twisted_edwards::{Affine,TECurveConfig};
 use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
@@ -14,7 +14,7 @@ use crate::gadgets::cond_add::{AffineColumn, CondAdd, CondAddValues};
 // Conditional affine addition:
 // if the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
-pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
+pub struct TeCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     pub(super)bitmask: BitColumn<F>,
     pub(super)points: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
@@ -24,21 +24,20 @@ pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     pub result: P,
 }
 
-pub struct SwCondAddValues<F: Field> {
+pub struct TeCondAddValues<F: Field> {
     pub bitmask: F,
     pub points: (F, F),
     pub not_last: F,
     pub acc: (F, F),
 }
 
-impl<F, Curve> CondAdd<F, Curve, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
+impl<F, Curve> CondAdd<F, Curve, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> where
     F: FftField,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: TECurveConfig<BaseField=F>,
 {
-
-    type CondAddValT = SwCondAddValues<F>;
-    // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
-    // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
+    type CondAddValT = TeCondAddValues<F>;
+    // Populates the acc column starting from the supplied seed (as 0 doesn't work with the addition formula).
+    // As the TE addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     fn init(bitmask: BitColumn<F>,
@@ -67,8 +66,8 @@ impl<F, Curve> CondAdd<F, Curve, Affine<Curve> > for SwCondAdd<F, Affine<Curve>>
         Self { bitmask, points, acc, not_last, result }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> SwCondAddValues<F> {
-        SwCondAddValues {
+    fn evaluate_assignment(&self, z: &F) -> TeCondAddValues<F> {
+        TeCondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -77,11 +76,10 @@ impl<F, Curve> CondAdd<F, Curve, Affine<Curve> > for SwCondAdd<F, Affine<Curve>>
     }
 }
 
-
-impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
+impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
     where
         F: FftField,
-        Curve: SWCurveConfig<BaseField=F>,
+        Curve: TECurveConfig<BaseField=F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -159,7 +157,7 @@ impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
 }
 
 
-impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
+impl<F: Field> VerifierGadget<F> for TeCondAddValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -186,8 +184,7 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
 }
 
 
-impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
-
+impl<F: Field> CondAddValues<F> for TeCondAddValues<F> {
     fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, _y1) = self.acc;
@@ -220,7 +217,7 @@ impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::SWAffine;
+    use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
 
@@ -229,21 +226,21 @@ mod tests {
 
     use super::*;
 
-    fn _test_sw_cond_add_gadget(hiding: bool) {
+    fn _test_te_cond_add_gadget(hiding: bool) {
         let rng = &mut test_rng();
 
         let log_n = 10;
         let n = 2usize.pow(log_n);
         let domain = Domain::new(n, hiding);
-        let seed = SWAffine::generator();
+        let seed = EdwardsAffine::generator();
 
         let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
-        let points = random_vec::<SWAffine, _>(domain.capacity - 1, rng);
+        let points = random_vec::<EdwardsAffine, _>(domain.capacity - 1, rng);
         let expected_res = seed + cond_sum(&bitmask, &points);
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = SwCondAdd::init(bitmask_col, points_col, seed, &domain);
+        let gadget = TeCondAdd::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 
@@ -261,8 +258,8 @@ mod tests {
     }
 
     #[test]
-    fn test_sw_cond_add_gadget() {
-        _test_sw_cond_add_gadget(false);
-        _test_sw_cond_add_gadget(true);
+    fn test_te_cond_add_gadget() {
+        _test_te_cond_add_gadget(false);
+        _test_te_cond_add_gadget(true);
     }
 }
