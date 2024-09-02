@@ -89,45 +89,43 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
         let domain = self.bitmask.domain_4x();
         let b = &self.bitmask.col.evals_4x;
         let one = &const_evals(F::one(), domain);
+        let te_a_coeff = &const_evals(Curve::COEFF_A, domain);
         let (x1, y1) = (&self.acc.xs.evals_4x, &self.acc.ys.evals_4x);
         let (x2, y2) = (&self.points.xs.evals_4x, &self.points.ys.evals_4x);
         let (x3, y3) = (&self.acc.xs.shifted_4x(), &self.acc.ys.shifted_4x());
 
+        //b (x_3 (y_1 y_2 + ax_1 x_2) - x_1 y_1 - y_2 x_2) + (1 - b) (x_3 - x_1) = 0
         let mut c1 =
             &(
                 b *
                     &(
-                        &(
+                        x3 *
                             &(
-                                &(x1 - x2) * &(x1 - x2)
-                            ) *
-                                &(
-                                    &(x1 + x2) + x3
-                                )
-                        ) -
-                            &(
-                                &(y2 - y1) * &(y2 - y1)
-                            )
+                                &(y1 * y2 -
+                                  te_a_coeff *
+                                    &(x1 * x2)
+                                  
+                                )                            
+                            ) -
+                            &(x1 * y1 + y2* x1)
                     )
             ) +
-                &(
-                    &(one - b) * &(y3 - y1)
-                );
-
+            &(
+                &(one - b) * &(x3 - x1)
+            );
+        //b (y_3 (x_1 y_2 - x_2 y_1) - x_1 y_1 + x_2 y_2) + (1 - b) (y_3 - y_1) = 0
         let mut c2 =
             &(
                 b *
-                    &(
-                        &(
-                            &(x1 - x2) * &(y3 + y1)
-                        ) -
-                            &(
-                                &(y2 - y1) * &(x3 - x1)
-                            )
+                    &( y3 * 
+                       &(x1 * y1 - x2 * y2)  -
+                       
+                    &(x1 * y1 - x2 * y2)
                     )
-            ) +
+            )
+                    +
                 &(
-                    &(one - b) * &(x3 - x1)
+                    &(one - b) * &(y3 - y1)
                 );
 
         let not_last = &self.not_last.evals_4x;
