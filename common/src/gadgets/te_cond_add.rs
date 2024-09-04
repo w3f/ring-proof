@@ -99,15 +99,23 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
             &(
                 b *
                     &(
-                        x3 *
-                            &(
-                                &(y1 * y2 -
-                                  te_a_coeff *
-                                    &(x1 * x2)
+                        &(
+                            x3 *
+                                &(
+                                    &(y1 * y2) -
                                   
-                                )                            
-                            ) -
-                            &(x1 * y1 + y2* x1)
+                                        &(te_a_coeff *
+
+                                          &(x1 * x2)
+                                        )
+                                  
+                                )
+                        )
+                            -
+                             
+                            &(
+                                &(x1 * y1) + &(y2* x1)
+                            )
                     )
             ) +
             &(
@@ -117,10 +125,10 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
         let mut c2 =
             &(
                 b *
-                    &( y3 * 
-                       &(x1 * y1 - x2 * y2)  -
-                       
-                    &(x1 * y1 - x2 * y2)
+                    &( &(y3 *
+                         &(
+                             &(x1 * y1) - &(x2 * y2)))  -                       
+                         &(&(x1 * y1) - &(x2 * y2))
                     )
             )
                     +
