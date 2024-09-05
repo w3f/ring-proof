@@ -1,10 +1,9 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
-use ark_std::{vec, vec::Vec};
-use ark_std::rand::SeedableRng;
+use ark_std::vec::Vec;
 use fflonk::pcs::{PCS, PcsParams};
-use rand_chacha::ChaCha20Rng;
+use rand_core::RngCore;
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
 
@@ -25,14 +24,6 @@ pub trait Transcript<F: PrimeField, CS: PCS<F>>: Clone {
     fn add_committed_cols(&mut self, committed_cols: &impl ColumnsCommited<F, CS::C>) {
         self._add_serializable(b"committed_cols", committed_cols);
     }
-
-    // fn get_bitmask_aggregation_challenge(&mut self) -> Fr {
-    //     self._get_128_bit_challenge(b"bitmask_aggregation")
-    // }
-
-    // fn append_2nd_round_register_commitments(&mut self, register_commitments: &impl RegisterCommitments) {
-    //     self._append_serializable(b"2nd_round_register_commitments", register_commitments);
-    // }
 
     fn get_constraints_aggregation_coeffs(&mut self, n: usize) -> Vec<F> {
         self._128_bit_coeffs(b"constraints_aggregation", n)
@@ -63,25 +54,5 @@ pub trait Transcript<F: PrimeField, CS: PCS<F>>: Clone {
 
     fn _add_serializable(&mut self, label: &'static [u8], message: &impl CanonicalSerialize);
 
-    fn to_rng(self) -> ChaCha20Rng;
-}
-
-impl<F: PrimeField, CS: PCS<F>> Transcript<F, CS> for merlin::Transcript {
-    fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
-        let mut buf = [0u8; 16];
-        self.challenge_bytes(label, &mut buf);
-        F::from_random_bytes(&buf).unwrap()
-    }
-
-    fn _add_serializable(&mut self, label: &'static [u8], message: &impl CanonicalSerialize) {
-        let mut buf = vec![0; message.uncompressed_size()];
-        message.serialize_uncompressed(&mut buf).unwrap();
-        self.append_message(label, &buf);
-    }
-
-    fn to_rng(mut self) -> ChaCha20Rng {
-        let mut buf = [0u8; 32];
-        self.challenge_bytes(b"transcript_rng", &mut buf);
-        ChaCha20Rng::from_seed(buf)
-    }
+    fn to_rng(self) -> impl RngCore;
 }

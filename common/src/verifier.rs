@@ -3,7 +3,7 @@ use ark_serialize::CanonicalSerialize;
 use ark_std::{vec, vec::Vec};
 use ark_std::rand::Rng;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
-use rand_chacha::ChaCha20Rng;
+use rand_core::RngCore;
 
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
 use crate::piop::VerifierPiop;
@@ -74,7 +74,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
         proof: &Proof<F, CS, Commitments, Evaluations>,
         n_polys: usize,
         n_constraints: usize,
-    ) -> (Challenges<F>, ChaCha20Rng)
+    ) -> (Challenges<F>, impl RngCore)
         where
             Commitments: ColumnsCommited<F, CS::C>,
             Evaluations: ColumnsEvaluated<F>,

@@ -6,13 +6,13 @@ use common::prover::PlonkProver;
 
 use crate::piop::{FixedColumns, PiopProver, ProverKey};
 use crate::piop::params::PiopParams;
-use crate::RingProof;
+use crate::{FS, RingProof};
 
 pub struct RingProver<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,
     fixed_columns: FixedColumns<F, Affine<Curve>>,
     k: usize,
-    plonk_prover: PlonkProver<F, CS, merlin::Transcript>,
+    plonk_prover: PlonkProver<F, CS, FS>,
 }
 
 
@@ -20,7 +20,7 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingProver<F,
     pub fn init(prover_key: ProverKey<F, CS, Affine<Curve>>,
                 piop_params: PiopParams<F, Curve>,
                 k: usize,
-                empty_transcript: merlin::Transcript,
+                empty_transcript: FS,
     ) -> Self {
         let ProverKey { pcs_ck, fixed_columns, verifier_key } = prover_key;
 

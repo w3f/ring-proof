@@ -9,18 +9,18 @@ use common::verifier::PlonkVerifier;
 
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::piop::params::PiopParams;
-use crate::RingProof;
+use crate::{FS, RingProof};
 
 pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
     piop_params: PiopParams<F, Curve>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
-    plonk_verifier: PlonkVerifier<F, CS, merlin::Transcript>,
+    plonk_verifier: PlonkVerifier<F, CS, FS>,
 }
 
 impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<F, CS, Curve> {
     pub fn init(verifier_key: VerifierKey<F, CS>,
                 piop_params: PiopParams<F, Curve>,
-                empty_transcript: merlin::Transcript,
+                empty_transcript: FS,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
         let plonk_verifier = PlonkVerifier::init(pcs_vk, &verifier_key, empty_transcript);
