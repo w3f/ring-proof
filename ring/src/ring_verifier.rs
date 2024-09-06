@@ -5,22 +5,35 @@ use fflonk::pcs::{PCS, RawVerifierKey};
 
 use common::domain::EvaluatedDomain;
 use common::piop::VerifierPiop;
+use common::transcript::Transcript;
 use common::verifier::PlonkVerifier;
 
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::piop::params::PiopParams;
-use crate::{FS, RingProof};
+use crate::RingProof;
 
-pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
+pub struct RingVerifier<F, CS, Curve, T>
+where
+    F: PrimeField,
+    CS: PCS<F>,
+    Curve: SWCurveConfig<BaseField=F>,
+    T: Transcript<F, CS>,
+{
     piop_params: PiopParams<F, Curve>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
-    plonk_verifier: PlonkVerifier<F, CS, FS>,
+    plonk_verifier: PlonkVerifier<F, CS, T>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<F, CS, Curve> {
+impl<F, CS, Curve, T> RingVerifier<F, CS, Curve, T>
+where
+    F: PrimeField,
+    CS: PCS<F>,
+    Curve: SWCurveConfig<BaseField=F>,
+    T: Transcript<F, CS>,
+{
     pub fn init(verifier_key: VerifierKey<F, CS>,
                 piop_params: PiopParams<F, Curve>,
-                empty_transcript: FS,
+                empty_transcript: T,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
         let plonk_verifier = PlonkVerifier::init(pcs_vk, &verifier_key, empty_transcript);
