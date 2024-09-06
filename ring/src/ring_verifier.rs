@@ -5,7 +5,7 @@ use fflonk::pcs::{PCS, RawVerifierKey};
 
 use common::domain::EvaluatedDomain;
 use common::piop::VerifierPiop;
-use common::transcript::Transcript;
+use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
@@ -17,7 +17,7 @@ where
     F: PrimeField,
     CS: PCS<F>,
     Curve: SWCurveConfig<BaseField=F>,
-    T: Transcript<F, CS>,
+    T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Curve>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
@@ -29,7 +29,7 @@ where
     F: PrimeField,
     CS: PCS<F>,
     Curve: SWCurveConfig<BaseField=F>,
-    T: Transcript<F, CS>,
+    T: PlonkTranscript<F, CS>,
 {
     pub fn init(verifier_key: VerifierKey<F, CS>,
                 piop_params: PiopParams<F, Curve>,

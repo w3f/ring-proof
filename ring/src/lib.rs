@@ -50,7 +50,7 @@ pub fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
 
-impl<F: PrimeField, CS: PCS<F>> common::transcript::Transcript<F, CS> for ArkTranscript {
+impl<F: PrimeField, CS: PCS<F>> common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         self.0.challenge(label).read_reduce()
     }
