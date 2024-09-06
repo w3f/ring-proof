@@ -48,9 +48,9 @@ pub fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
 }
 
 #[derive(Clone)]
-pub struct FS(ark_transcript::Transcript);
+pub struct ArkTranscript(ark_transcript::Transcript);
 
-impl<F: PrimeField, CS: PCS<F>> common::transcript::Transcript<F, CS> for FS {
+impl<F: PrimeField, CS: PCS<F>> common::transcript::Transcript<F, CS> for ArkTranscript {
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         self.0.challenge(label).read_reduce()
     }
@@ -65,7 +65,7 @@ impl<F: PrimeField, CS: PCS<F>> common::transcript::Transcript<F, CS> for FS {
     }
 }
 
-impl FS {
+impl ArkTranscript {
     pub fn new(label: &'static [u8]) -> Self {
         Self(ark_transcript::Transcript::new_labeled(label))
     }
@@ -107,12 +107,12 @@ mod tests {
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
         let result = piop_params.h.mul(secret) + pk;
-        let ring_prover = RingProver::init(prover_key, piop_params.clone(), k, FS::new(b"ring-vrf-test"));
+        let ring_prover = RingProver::init(prover_key, piop_params.clone(), k, ArkTranscript::new(b"ring-vrf-test"));
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
         end_timer!(t_prove);
 
-        let ring_verifier = RingVerifier::init(verifier_key, piop_params, FS::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(verifier_key, piop_params, ArkTranscript::new(b"ring-vrf-test"));
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);
