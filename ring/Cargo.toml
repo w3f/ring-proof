@@ -18,14 +18,19 @@ rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
-ark-transcript = { git = "https://github.com/w3f/ring-vrf", default-features = false }
+
+# Optional built-in FS transcripts implementations
+ark-transcript = { git = "https://github.com/w3f/ring-vrf", default-features = false, optional = true }
+merlin = { version = "3.0", default-features = false, optional = true }
+rand_chacha = { version = "0.3.1", default-features = false, optional = true }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
+rand_chacha = { version = "0.3.1", default-features = false }
 
 [features]
-default = []
+default = [ "std" ]
 std = [
   "ark-std/std",
   "ark-ff/std",
@@ -33,7 +38,9 @@ std = [
   "ark-poly/std",
   "ark-serialize/std",
   "fflonk/std",
-  "common/std"
+  "common/std",
+  "ark-transcript?/std",
+  "merlin?/std"
 ]
 parallel = [
   "std",
@@ -45,10 +52,8 @@ parallel = [
   "common/parallel",
   "fflonk/parallel"
 ]
-print-trace = [
-  "ark-std/print-trace",
-  "common/print-trace"
-]
-asm = [
-  "fflonk/asm"
-]
+print-trace = [ "ark-std/print-trace", "common/print-trace" ]
+asm = [ "fflonk/asm" ]
+
+ark-transcript = [ "dep:ark-transcript" ]
+merlin-transcript = [ "dep:merlin", "rand_chacha" ]
