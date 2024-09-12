@@ -255,11 +255,10 @@ mod tests {
         let c1 = c1.interpolate_by_ref();
         let c2 = c2.interpolate_by_ref();
         assert_eq!(c1.degree(), 4 * n - 3);
-        assert_eq!(c2.degree(), 3 * n - 2);
+        assert_eq!(c2.degree(), 4 * n - 3);
 
         domain.divide_by_vanishing_poly(&c1);
         domain.divide_by_vanishing_poly(&c2);
-
         // test_gadget(gadget);
     }
 
