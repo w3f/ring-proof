@@ -3,7 +3,6 @@
 use ark_ec::AffineRepr;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{One, Zero};
-use ark_std::rand;
 use fflonk::pcs::PCS;
 
 pub use common::domain::Domain;
@@ -38,13 +37,12 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     }
 }
 
-// TODO: switch to better hash to curve when available
 pub fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
     use blake2::Digest;
     use ark_std::rand::SeedableRng;
 
     let seed = blake2::Blake2s::digest(message);
-    let rng = &mut rand::rngs::StdRng::from_seed(seed.into());
+    let rng = &mut rand_chacha::ChaCha12Rng::from_seed(seed.into());
     A::rand(rng)
 }
 

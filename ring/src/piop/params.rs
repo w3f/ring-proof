@@ -46,11 +46,6 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         }
     }
 
-    pub fn with_padding(mut self, padding: Affine<Curve>) -> Self {
-        self.padding_point = padding;
-        self
-    }
-
     pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
@@ -93,6 +88,10 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
             vec![F::one(); self.keyset_part_size],
             vec![F::zero(); self.scalar_bitlen]
         ].concat()
+    }
+
+    pub fn padding_point(&self) -> Affine<Curve> {
+        self.padding_point
     }
 }
 
