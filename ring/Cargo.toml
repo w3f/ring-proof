@@ -18,6 +18,7 @@ rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
+rand_chacha = { version = "0.3", default-features = false }
 ark-transcript = { git = "https://github.com/w3f/ring-vrf", default-features = false }
 
 [dev-dependencies]
@@ -25,7 +26,7 @@ ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]
-default = []
+default = [ "std" ]
 std = [
   "ark-std/std",
   "ark-ff/std",
@@ -49,6 +50,4 @@ print-trace = [
   "ark-std/print-trace",
   "common/print-trace"
 ]
-asm = [
-  "fflonk/asm"
-]
+asm = [ "fflonk/asm" ]

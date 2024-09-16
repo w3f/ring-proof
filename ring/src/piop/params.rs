@@ -32,7 +32,13 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
-        let padding_point = crate::hash_to_curve::<Affine<Curve>>(b"w3f/ring-proof/common/padding");
+        let padding_point = {
+            use ark_std::{rand::SeedableRng, UniformRand};
+            use blake2::Digest;
+            let seed = blake2::Blake2s::digest(b"w3f/ring-proof/common/padding");
+            Affine::<Curve>::rand(&mut rand_chacha::ChaCha20Rng::from_seed(seed.into()))
+        };
+        
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
