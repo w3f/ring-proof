@@ -35,7 +35,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         let padding_point = {
             use ark_std::{rand::SeedableRng, UniformRand};
             use blake2::Digest;
-            let seed = blake2::Blake2s::digest(b"w3f/ring-proof/common/padding");
+            let seed = blake2::Blake2b::digest(b"w3f/ring-proof/common/padding");
             Affine::<Curve>::rand(&mut rand_chacha::ChaCha20Rng::from_seed(seed.into()))
         };
         
