@@ -4,6 +4,7 @@ use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::{vec, vec::Vec};
+use std::marker::PhantomData;
 
 use crate::{Column, FieldColumn, const_evals};
 use crate::domain::Domain;
@@ -24,18 +25,19 @@ pub struct TeCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
     pub result: P,
 }
 
-pub struct TeCondAddValues<F: Field> {
+pub struct TeCondAddValues<F: Field, Curve: TECurveConfig<BaseField=F>> {
     pub bitmask: F,
     pub points: (F, F),
     pub not_last: F,
     pub acc: (F, F),
+    pub _curve: PhantomData<Curve>,
 }
 
 impl<F, Curve> CondAdd<F, Curve, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> where
     F: FftField,
     Curve: TECurveConfig<BaseField=F>,
 {
-    type CondAddValT = TeCondAddValues<F>;
+    type CondAddValT = TeCondAddValues<F, Curve>;
     // Populates the acc column starting from the supplied seed (as 0 doesn't work with the addition formula).
     // As the TE addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
@@ -66,12 +68,13 @@ impl<F, Curve> CondAdd<F, Curve, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> 
         Self { bitmask, points, acc, not_last, result }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> TeCondAddValues<F> {
+    fn evaluate_assignment(&self, z: &F) -> TeCondAddValues<F, Curve> {
         TeCondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
             acc: self.acc.evaluate(z),
+            _curve: PhantomData,
         }
     }
 }
@@ -162,24 +165,26 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
     }
 }
 
-impl<F: Field> VerifierGadget<F> for TeCondAddValues<F> {
+impl<F: Field, Curve: TECurveConfig<BaseField=F>> VerifierGadget<F> for TeCondAddValues<F, Curve> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
         let (x3, y3) = (F::zero(), F::zero());
 
+        //b (x_3 (y_1 y_2 + ax_1 x_2) - x_1 y_1 - y_2 x_2) + (1 - b) (x_3 - x_1) = 0
         let mut c1 =
             b * (
-                (x1 - x2) * (x1 - x2) * (x1 + x2 + x3)
-                    - (y2 - y1) * (y2 - y1)
-            ) + (F::one() - b) * (y3 - y1);
+                x3 * (y1*y2 + Curve::COEFF_A * x1 * x2) 
+                    - (x1*y1 + x2*y2) 
+            ) + (F::one() - b) * (x3 - x1);
 
+        //b (y_3 (x_1 y_2 - x_2 y_1) - x_1 y_1 + x_2 y_2) + (1 - b) (y_3 - y_1) = 0
         let mut c2 =
             b * (
-                (x1 - x2) * (y3 + y1)
-                    - (y2 - y1) * (x3 - x1)
-            ) + (F::one() - b) * (x3 - x1);
+                y3 * (x1*y2 + x2*y1)
+                    - (x1*y1 - x2*y2)
+            ) + (F::one() - b) * (y3 - y1);
 
         c1 *= self.not_last;
         c2 *= self.not_last;
@@ -188,8 +193,7 @@ impl<F: Field> VerifierGadget<F> for TeCondAddValues<F> {
     }
 }
 
-
-impl<F: Field> CondAddValues<F> for TeCondAddValues<F> {
+impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAddValues<F, Curve> {
     fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, _y1) = self.acc;
