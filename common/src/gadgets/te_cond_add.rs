@@ -102,7 +102,7 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
                         &(
                             x3 *
                                 &(
-                                    &(y1 * y2) -
+                                    &(y1 * y2) +
                                   
                                         &(te_a_coeff *
 
@@ -114,7 +114,7 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
                             -
                              
                             &(
-                                &(x1 * y1) + &(y2* x1)
+                                &(x1 * y1) + &(y2* x2)
                             )
                     )
             ) +
@@ -127,7 +127,7 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
                 b *
                     &( &(y3 *
                          &(
-                             &(x1 * y1) - &(x2 * y2)))  -                       
+                             &(x1 * y2) - &(x2 * y1)))  -                       
                          &(&(x1 * y1) - &(x2 * y2))
                     )
             )
@@ -161,7 +161,6 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
         self.bitmask.domain()
     }
 }
-
 
 impl<F: Field> VerifierGadget<F> for TeCondAddValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
