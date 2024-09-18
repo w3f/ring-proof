@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::{short_weierstrass::{Affine, SWCurveConfig}, AffineRepr};
 use ark_ff::{One, PrimeField, Zero};
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
@@ -32,6 +32,24 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
             return p.unwrap();
         }
         x = x + Curve::BaseField::one()
+    }
+}
+
+// Hash to curve using TAI
+pub fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
+    use blake2::Digest;
+    let mut seed = message.to_vec();
+    seed.push(0);
+    let cnt_offset = seed.len() - 1;
+    loop {
+        let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
+        let x = F::from_le_bytes_mod_order(&hash);
+        if let Some(point) = Affine::<Curve>::get_point_from_x_unchecked(x, false) {
+            let point = point.clear_cofactor();
+            assert!(point.is_in_correct_subgroup_assuming_on_curve());
+            return point
+        }
+        seed[cnt_offset] += 1;
     }
 }
 
