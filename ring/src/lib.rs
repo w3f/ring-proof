@@ -39,8 +39,8 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
 pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
     use blake2::Digest;
     let mut seed = message.to_vec();
+    let cnt_offset = seed.len();
     seed.push(0);
-    let cnt_offset = seed.len() - 1;
     loop {
         let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
         let x = F::from_le_bytes_mod_order(&hash);
