@@ -36,7 +36,7 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
 }
 
 // Hash to curve using TAI
-pub fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
+pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
     use blake2::Digest;
     let mut seed = message.to_vec();
     seed.push(0);
