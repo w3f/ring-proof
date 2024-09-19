@@ -146,16 +146,17 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
         vec![c1, c2]
     }
 
+    /// Mary-Oana Linearization technique. See: https://hackmd.io/0kdBl3GVSmmcB7QJe1NTuw?view#Linearizationo
     fn constraints_linearized(&self, z: &F) -> Vec<DensePolynomial<F>> {
         let vals = self.evaluate_assignment(z);
         let acc_x = self.acc.xs.as_poly();
         let acc_y = self.acc.ys.as_poly();
 
         let (c_acc_x, c_acc_y) = vals.acc_coeffs_1();
-        let c1_lin = acc_x * c_acc_x + acc_y * c_acc_y;
+        let c1_lin = acc_x * c_acc_x + acc_y * c_acc_y; //though acc_y is 0
 
         let (c_acc_x, c_acc_y) = vals.acc_coeffs_2();
-        let c2_lin = acc_x * c_acc_x + acc_y * c_acc_y;
+        let c2_lin = acc_x * c_acc_x + acc_y * c_acc_y; //though acc_x is 0
 
         vec![c1_lin, c2_lin]
     }
@@ -196,11 +197,11 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> VerifierGadget<F> for TeCondAd
 impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAddValues<F, Curve> {
     fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
-        let (x1, _y1) = self.acc;
-        let (x2, _y2) = self.points;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
 
-        let mut c_acc_x = b * (x1 - x2) * (x1 - x2);
-        let mut c_acc_y = F::one() - b;
+        let mut c_acc_x = b * (y1*y2 + Curve::COEFF_A * x1*x2) + F::one() - b;
+        let mut c_acc_y = F::zero();
 
         c_acc_x *= self.not_last;
         c_acc_y *= self.not_last;
@@ -213,8 +214,8 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAdd
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
 
-        let mut c_acc_x = b * (y1 - y2) + F::one() - b;
-        let mut c_acc_y = b * (x1 - x2);
+        let mut c_acc_x = b * (x2*y1 - x1*y2) + F::one() - b;
+        let mut c_acc_y = F::zero();
 
         c_acc_x *= self.not_last;
         c_acc_y *= self.not_last;
