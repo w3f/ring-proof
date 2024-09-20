@@ -25,7 +25,7 @@ ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]
-default = []
+default = [ "std" ]
 std = [
   "ark-std/std",
   "ark-ff/std",
@@ -49,6 +49,4 @@ print-trace = [
   "ark-std/print-trace",
   "common/print-trace"
 ]
-asm = [
-  "fflonk/asm"
-]
+asm = [ "fflonk/asm" ]

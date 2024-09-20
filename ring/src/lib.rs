@@ -1,10 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::AffineRepr;
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::{short_weierstrass::{Affine, SWCurveConfig}, AffineRepr};
 use ark_ff::{One, PrimeField, Zero};
 use ark_serialize::CanonicalSerialize;
-use ark_std::rand;
 use ark_std::rand::RngCore;
 use fflonk::pcs::PCS;
 
@@ -37,14 +35,22 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     }
 }
 
-// TODO: switch to better hash to curve when available
-pub fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
+// Try and increment hash to curve.
+pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
     use blake2::Digest;
-    use ark_std::rand::SeedableRng;
-
-    let seed = blake2::Blake2s::digest(message);
-    let rng = &mut rand::rngs::StdRng::from_seed(seed.into());
-    A::rand(rng)
+    let mut seed = message.to_vec();
+    let cnt_offset = seed.len();
+    seed.push(0);
+    loop {
+        let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
+        let x = F::from_le_bytes_mod_order(&hash);
+        if let Some(point) = Affine::<Curve>::get_point_from_x_unchecked(x, false) {
+            let point = point.clear_cofactor();
+            assert!(point.is_in_correct_subgroup_assuming_on_curve());
+            return point
+        }
+        seed[cnt_offset] += 1;
+    }
 }
 
 #[derive(Clone)]
