@@ -1,15 +1,14 @@
 use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
-use ark_std::{vec, vec::Vec};
+use ark_std::{vec, vec::Vec, rand::RngCore};
 use ark_std::rand::Rng;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
-use rand_chacha::ChaCha20Rng;
 
 use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
 use crate::piop::VerifierPiop;
-use crate::transcript::Transcript;
+use crate::transcript::PlonkTranscript;
 
-pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
+pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> {
     // Polynomial commitment scheme verifier's key.
     pcs_vk: CS::VK,
     // Transcript,
@@ -17,7 +16,7 @@ pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
     transcript_prelude: T,
 }
 
-impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
+impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, T> {
     pub fn init(pcs_vk: <CS::Params as PcsParams>::VK,
                 verifier_key: &impl CanonicalSerialize,
                 empty_transcript: T) -> Self {
@@ -74,7 +73,7 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
         proof: &Proof<F, CS, Commitments, Evaluations>,
         n_polys: usize,
         n_constraints: usize,
-    ) -> (Challenges<F>, ChaCha20Rng)
+    ) -> (Challenges<F>, impl RngCore)
         where
             Commitments: ColumnsCommited<F, CS::C>,
             Evaluations: ColumnsEvaluated<F>,

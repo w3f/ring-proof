@@ -14,12 +14,11 @@ ark-ec.workspace = true
 ark-poly.workspace = true
 ark-serialize.workspace = true
 fflonk.workspace = true
-merlin.workspace = true
 rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
-rand_chacha = { version = "0.3.1", default-features = false }
+ark-transcript = { git = "https://github.com/w3f/ark-transcript", rev = "288e49d", default-features = false }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
@@ -33,7 +32,6 @@ std = [
   "ark-ec/std",
   "ark-poly/std",
   "ark-serialize/std",
-  "merlin/std",
   "fflonk/std",
   "common/std"
 ]
