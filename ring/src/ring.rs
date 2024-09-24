@@ -244,7 +244,7 @@ mod tests {
 
     use super::*;
 
-    type TestRing = Ring<Fr, Bls12_381, BandersnatchConfig>;
+    type TestRing = Ring<Fr, Bls12_381, SWAffine>;
 
     #[test]
     fn test_ring_mgmt() {
@@ -298,7 +298,7 @@ mod tests {
         assert_eq!(ring, same_ring);
     }
 
-    fn get_monomial_commitment(pcs_params: &URS<Bls12_381>, piop_params: &PiopParams<Fr, BandersnatchConfig>, keys: &[SWAffine]) -> (G1Affine, G1Affine) {
+    fn get_monomial_commitment(pcs_params: &URS<Bls12_381>, piop_params: &PiopParams<Fr, SWAffine>, keys: &[SWAffine]) -> (G1Affine, G1Affine) {
         let (_, verifier_key) = crate::piop::index::<_, KZG::<Bls12_381>, _>(pcs_params, piop_params, keys);
         let [monimial_cx, monimial_cy] = verifier_key.fixed_columns_committed.points;
         (monimial_cx.0, monimial_cy.0)
