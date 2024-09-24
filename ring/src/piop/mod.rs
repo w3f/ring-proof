@@ -11,7 +11,7 @@ use fflonk::pcs::kzg::KZG;
 use fflonk::pcs::kzg::params::RawKzgVerifierKey;
 
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
-use common::gadgets::sw_cond_add::AffineColumn;
+use common::gadgets::cond_add::AffineColumn;
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 
@@ -157,8 +157,8 @@ impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
 }
 
 impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
-    pub fn from_ring<G: SWCurveConfig<BaseField=E::ScalarField>>(
-        ring: &Ring<E::ScalarField, E, G>,
+    pub fn from_ring<P: AffineRepr<BaseField=E::ScalarField>>(
+        ring: &Ring<E::ScalarField, E, P>,
     ) -> Self {
         let cx = KzgCommitment(ring.cx);
         let cy = KzgCommitment(ring.cy);
@@ -170,7 +170,7 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
     }
 }
 
-impl<F: PrimeField, G: AffineRepr<BaseField=F>> FixedColumns<F, G> {
+impl<F: PrimeField, P: AffineRepr<BaseField=F>> FixedColumns<F, P> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [
             CS::commit(ck, self.points.xs.as_poly()),
@@ -182,9 +182,9 @@ impl<F: PrimeField, G: AffineRepr<BaseField=F>> FixedColumns<F, G> {
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize)]
-pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
+pub struct ProverKey<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField=F>> {
     pub(crate) pcs_ck: CS::CK,
-    pub(crate) fixed_columns: FixedColumns<F, G>,
+    pub(crate) fixed_columns: FixedColumns<F, P>,
     pub(crate) verifier_key: VerifierKey<F, CS>, // used in the Fiat-Shamir transform
 }
 
@@ -196,8 +196,8 @@ pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
 }
 
 impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
-    pub fn from_ring_and_kzg_vk<G: SWCurveConfig<BaseField=E::ScalarField>>(
-        ring: &Ring<E::ScalarField, E, G>,
+    pub fn from_ring_and_kzg_vk<P: AffineRepr<BaseField=E::ScalarField>>(
+        ring: &Ring<E::ScalarField, E, P>,
         kzg_vk: RawKzgVerifierKey<E>,
     ) -> Self {
         Self::from_commitment_and_kzg_vk(FixedColumnsCommitted::from_ring(ring), kzg_vk)
@@ -219,11 +219,11 @@ impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
 }
 
 
-pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
+pub fn index<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField=F>,>(
     pcs_params: &CS::Params,
-    piop_params: &PiopParams<F, Curve>,
-    keys: &[Affine<Curve>],
-) -> (ProverKey<F, CS, Affine<Curve>>, VerifierKey<F, CS>) {
+    piop_params: &PiopParams<F, P>,
+    keys: &[P],
+) -> (ProverKey<F, CS, P>, VerifierKey<F, CS>) {
     let pcs_ck = pcs_params.ck();
     let pcs_raw_vk = pcs_params.raw_vk();
     let fixed_columns = piop_params.fixed_columns(&keys);

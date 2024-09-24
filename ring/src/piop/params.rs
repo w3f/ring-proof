@@ -1,15 +1,15 @@
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AffineRepr, CurveGroup, Group, CurveConfig};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
 use common::domain::Domain;
-use common::gadgets::sw_cond_add::AffineColumn;
+use common::gadgets::cond_add::AffineColumn;
 
 use crate::piop::FixedColumns;
 
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
+pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField=F>> {
     // Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
 
@@ -20,20 +20,20 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     pub keyset_part_size: usize,
 
     // The blinding base, a point from jubjub.
-    pub(crate) h: Affine<Curve>,
+    pub(crate) h: P,
 
     // The point to start the summation from (as zero doesn't have a SW affine representation),
     // should be from the jubjub prime-order subgroup complement.
-    pub(crate) seed: Affine<Curve>,
+    pub(crate) seed: P,
 
     // The point used to pad the actual list of public keys. Should be of an unknown dlog.
-    pub(crate) padding_point: Affine<Curve>,
+    pub(crate) padding_point: P,
 }
 
-impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
-    pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
-        let padding_point = crate::hash_to_curve::<Affine<Curve>>(b"w3f/ring-proof/common/padding");
-        let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
+impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
+    pub fn setup(domain: Domain<F>, h: P, seed: P) -> Self {
+        let padding_point = crate::hash_to_curve::<P>(b"w3f/ring-proof/common/padding");
+        let scalar_bitlen = P::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
         Self {
@@ -46,14 +46,14 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         }
     }
 
-    pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
+    pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
         let points = self.points_column(&keys);
         FixedColumns { points, ring_selector }
     }
 
-    pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+    pub fn points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
         assert!(keys.len() <= self.keyset_part_size);
         let padding_len = self.keyset_part_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
@@ -66,7 +66,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         AffineColumn::public_column(points, &self.domain)
     }
 
-    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
+    pub fn power_of_2_multiples_of_h(&self) -> Vec<P> {
         let mut h = self.h.into_group();
         let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
@@ -77,7 +77,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         CurveGroup::normalize_batch(&multiples)
     }
 
-    pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
+    pub fn scalar_part(&self, e: P::ScalarField) -> Vec<bool> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
         significant_bits.to_vec()

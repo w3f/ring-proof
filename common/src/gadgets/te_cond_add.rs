@@ -4,7 +4,7 @@ use ark_ff::{FftField, Field};
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
 use ark_std::{vec, vec::Vec};
-use std::marker::PhantomData;
+use core::marker::PhantomData;
 
 use crate::{Column, FieldColumn, const_evals};
 use crate::domain::Domain;
@@ -33,7 +33,7 @@ pub struct TeCondAddValues<F: Field, Curve: TECurveConfig<BaseField=F>> {
     pub _curve: PhantomData<Curve>,
 }
 
-impl<F, Curve> CondAdd<F, Curve, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> where
+impl<F, Curve> CondAdd<F, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> where
     F: FftField,
     Curve: TECurveConfig<BaseField=F>,
 {
@@ -77,6 +77,15 @@ impl<F, Curve> CondAdd<F, Curve, Affine<Curve>> for TeCondAdd<F, Affine<Curve>> 
             _curve: PhantomData,
         }
     }
+
+    fn get_acc(&self) -> AffineColumn<F, Affine<Curve>> {
+        self.acc.clone()
+    }
+
+    fn get_result(&self) -> Affine<Curve> {
+        self.result.clone()
+    }
+
 }
 
 impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
@@ -146,7 +155,7 @@ impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
         vec![c1, c2]
     }
 
-    /// Mary-Oana Linearization technique. See: https://hackmd.io/0kdBl3GVSmmcB7QJe1NTuw?view#Linearizationo
+    /// Mary-Oana Linearization technique. See: https://hackmd.io/0kdBl3GVSmmcB7QJe1NTuw?view#Linearization
     fn constraints_linearized(&self, z: &F) -> Vec<DensePolynomial<F>> {
         let vals = self.evaluate_assignment(z);
         let acc_x = self.acc.xs.as_poly();
@@ -195,6 +204,20 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> VerifierGadget<F> for TeCondAd
 }
 
 impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAddValues<F, Curve> {
+    fn init(
+        bitmask: F,
+        points: (F, F),
+        not_last: F,
+        acc: (F, F),
+    )-> Self {
+        TeCondAddValues::<F, Curve> {
+            bitmask,
+            points,
+            not_last,
+            acc,
+            _curve : PhantomData,
+        }
+    }
     fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, y1) = self.acc;

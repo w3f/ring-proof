@@ -1,25 +1,27 @@
 use ark_ec::CurveGroup;
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use fflonk::pcs::{PCS, RawVerifierKey};
 
 use common::domain::EvaluatedDomain;
 use common::piop::VerifierPiop;
 use common::verifier::PlonkVerifier;
+use common::gadgets::cond_add::CondAddValues;
+use common::gadgets::VerifierGadget;
 
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::piop::params::PiopParams;
 use crate::RingProof;
 
-pub struct RingVerifier<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> {
-    piop_params: PiopParams<F, Curve>,
+pub struct RingVerifier<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField=F>> {
+    piop_params: PiopParams<F, P>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
     plonk_verifier: PlonkVerifier<F, CS, merlin::Transcript>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<F, CS, Curve> {
+impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField=F>> RingVerifier<F, CS, P> {
     pub fn init(verifier_key: VerifierKey<F, CS>,
-                piop_params: PiopParams<F, Curve>,
+                piop_params: PiopParams<F, P>,
                 empty_transcript: merlin::Transcript,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
@@ -31,31 +33,31 @@ impl<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>> RingVerifier<
         }
     }
 
-    pub fn verify_ring_proof(&self, proof: RingProof<F, CS>, result: Affine<Curve>) -> bool {
+    pub fn verify_ring_proof<CondAddValuesT: CondAddValues<F> + VerifierGadget<F>>(&self, proof: RingProof<F, CS>, result: P) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
-            PiopVerifier::<F, CS::C>::N_COLUMNS + 1,
-            PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
+            PiopVerifier::<F, CS::C, CondAddValuesT>::N_COLUMNS + 1,
+            PiopVerifier::<F, CS::C, CondAddValuesT>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
         let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
 
-        let piop = PiopVerifier::init(
+        let piop: PiopVerifier<F, <CS as PCS<F>>::C, CondAddValuesT> = PiopVerifier::init(
             domain_eval,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
-            (seed.x, seed.y),
-            (seed_plus_result.x, seed_plus_result.y),
+            (*seed.x().unwrap(), *seed.y().unwrap()),
+            (*seed_plus_result.x().unwrap(), *seed_plus_result.y().unwrap()),
         );
 
         self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
     }
 
-    pub fn piop_params(&self) -> &PiopParams<F, Curve> {
+    pub fn piop_params(&self) -> &PiopParams<F, P> {
         &self.piop_params
     }
 }

@@ -31,7 +31,7 @@ pub struct SwCondAddValues<F: Field> {
     pub acc: (F, F),
 }
 
-impl<F, Curve> CondAdd<F, Curve, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
+impl<F, Curve> CondAdd<F, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
     F: FftField,
     Curve: SWCurveConfig<BaseField=F>,
 {
@@ -75,6 +75,15 @@ impl<F, Curve> CondAdd<F, Curve, Affine<Curve> > for SwCondAdd<F, Affine<Curve>>
             acc: self.acc.evaluate(z),
         }
     }
+
+    fn get_acc(&self) -> AffineColumn<F, Affine<Curve>> {
+        self.acc.clone()
+    }
+
+    fn get_result(&self) -> Affine<Curve> {
+        self.result.clone()
+    }
+
 }
 
 
@@ -187,6 +196,19 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
 
 
 impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
+    fn init(
+        bitmask: F,
+        points: (F, F),
+        not_last: F,
+        acc: (F, F),
+    )-> Self {
+        SwCondAddValues::<F> {
+            bitmask,
+            points,
+            not_last,
+            acc,
+        }
+    }
 
     fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;

@@ -37,7 +37,7 @@ const IDLE_ROWS: usize = ZK_ROWS + 1;
 // `VrfCurveConfig` -- inner curve, the curve used by the VRF, in SW form. We instantiate it with Bandersnatch.
 // `F` shared scalar field of the outer and the base field of the inner curves.
 #[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
-pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> {
+pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfAffineT: AffineRepr<BaseField=F>> {
     // KZG commitments to the coordinates of the vector described above
     pub cx: KzgCurve::G1Affine,
     pub cy: KzgCurve::G1Affine,
@@ -48,16 +48,16 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig:
     // the number of keys "stored" in this commitment
     pub curr_keys: usize,
     // a parameter
-    pub padding_point: Affine<VrfCurveConfig>,
+    pub padding_point: VrfAffineT,
 }
 
-impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> fmt::Debug for Ring<F, KzgCurve, VrfCurveConfig> {
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfAffineT: AffineRepr<BaseField=F>> fmt::Debug for Ring<F, KzgCurve, VrfAffineT> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "Ring(curr_keys={}, max_keys{})", self.curr_keys, self.max_keys)
     }
 }
 
-impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveConfig<BaseField=F>> Ring<F, KzgCurve, VrfCurveConfig> {
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfAffineT: AffineRepr<BaseField=F>> Ring<F, KzgCurve, VrfAffineT> {
     // Builds the commitment to the vector
     // `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
     // We compute it as a sum of commitments of 2 vectors:
@@ -66,7 +66,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     // The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
     pub fn empty(
         // SNARK parameters
-        piop_params: &PiopParams<F, VrfCurveConfig>,
+        piop_params: &PiopParams<F, VrfAffineT>,
         // Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
         // generator used in the SRS
@@ -109,7 +109,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
 
     pub fn append(
         &mut self,
-        keys: &[Affine<VrfCurveConfig>],
+        keys: &[VrfAffineT],
         // Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
     ) {
@@ -138,8 +138,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
     // In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
     pub fn with_keys(
         // SNARK parameters
-        piop_params: &PiopParams<F, VrfCurveConfig>,
-        keys: &[Affine<VrfCurveConfig>],
+        piop_params: &PiopParams<F, VrfAffineT>,
+        keys: &[VrfAffineT],
         // full-size Lagrangian srs
         srs: &RingBuilderKey<F, KzgCurve>,
     ) -> Self {
@@ -196,9 +196,9 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         cx: KzgCurve::G1Affine,
         cy: KzgCurve::G1Affine,
         selector: KzgCurve::G1Affine,
-        padding_point: Affine<VrfCurveConfig>,
+        padding_point: VrfAffineT,
     ) -> Self {
-        let max_keys = domain_size - (VrfCurveConfig::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
+        let max_keys = domain_size - (VrfAffineT::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
         Self {
             cx,
             cy,

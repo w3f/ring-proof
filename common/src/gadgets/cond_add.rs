@@ -1,6 +1,8 @@
-use ark_ec::{AffineRepr, CurveConfig};
+use ark_ec::{AffineRepr};
 use ark_ff::{FftField, Field};
+use ark_poly::{Evaluations};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::{vec::Vec};
 use crate::{Column, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
@@ -38,9 +40,8 @@ impl<F: FftField, P: AffineRepr<BaseField=F>> AffineColumn<F, P> {
     }
 }
 
-pub trait CondAdd<F, Curve, AffinePoint> where
+pub trait CondAdd<F, AffinePoint> where
     F: FftField,
-    Curve: CurveConfig,
     AffinePoint: AffineRepr<BaseField=F>,
     
 {
@@ -51,7 +52,8 @@ pub trait CondAdd<F, Curve, AffinePoint> where
                 domain: &Domain<F>) -> Self;
     
     fn evaluate_assignment(&self, z: &F) -> Self::CondAddValT;
-
+    fn get_acc(&self) -> AffineColumn<F, AffinePoint>;
+    fn get_result(&self) -> AffinePoint;
 }
 
 pub trait CondAddValues<F>
@@ -59,5 +61,12 @@ pub trait CondAddValues<F>
 {
     fn acc_coeffs_1(&self) -> (F, F);
     fn acc_coeffs_2(&self) -> (F, F);
+
+    fn init(
+        bitmask: F,
+        points: (F, F),
+        not_last: F,
+        acc: (F, F),
+    )-> Self;
 
 }
