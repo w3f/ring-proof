@@ -108,7 +108,7 @@ mod tests {
         let h = SWAffine::rand(rng);
         let seed = SWAffine::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed);
+        let params = PiopParams::<Fq, SWAffine>::setup(domain, h, seed);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
