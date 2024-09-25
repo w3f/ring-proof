@@ -192,7 +192,7 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> VerifierGadget<F> for TeCondAd
         //b (y_3 (x_1 y_2 - x_2 y_1) - x_1 y_1 + x_2 y_2) + (1 - b) (y_3 - y_1) = 0
         let mut c2 =
             b * (
-                y3 * (x1*y2 + x2*y1)
+                y3 * (x1*y2 - x2*y1)
                     - (x1*y1 - x2*y2)
             ) + (F::one() - b) * (y3 - y1);
 
@@ -237,8 +237,8 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAdd
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
 
-        let mut c_acc_x = b * (x2*y1 - x1*y2) + F::one() - b;
-        let mut c_acc_y = F::zero();
+        let mut c_acc_x = F::zero();
+        let mut c_acc_y = b * (x1*y2 - x2*y1) + F::one() - b;
 
         c_acc_x *= self.not_last;
         c_acc_y *= self.not_last;
@@ -253,6 +253,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
+    use ark_ff::Zero;
 
     use crate::test_helpers::*;
     use crate::test_helpers::cond_sum;
@@ -294,4 +295,39 @@ mod tests {
         _test_te_cond_add_gadget(false);
         _test_te_cond_add_gadget(true);
     }
+
+    #[test]
+    fn test_linearized_constrain() {
+        let rng = &mut test_rng();
+
+        let log_n = 10;
+        let n = 2usize.pow(log_n);
+        let domain = Domain::new(n, false);
+        let seed = EdwardsAffine::generator();
+
+        let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
+        let points = random_vec::<EdwardsAffine, _>(domain.capacity - 1, rng);
+        let expected_res = seed + cond_sum(&bitmask, &points);
+
+        let bitmask_col = BitColumn::init(bitmask, &domain);
+        let points_col = AffineColumn::private_column(points, &domain);
+        let gadget = TeCondAdd::init(bitmask_col, points_col, seed, &domain);
+        let res = gadget.acc.points.last().unwrap();
+        assert_eq!(res, &expected_res);
+
+        let cs = gadget.constraints();
+        let (c1, c2) = (&cs[0], &cs[1]);
+        let c1 = c1.interpolate_by_ref();
+        let c2 = c2.interpolate_by_ref();
+
+        let random_point = random_vec::<<EdwardsAffine as AffineRepr>::BaseField, _>(1, rng)[0];
+        let vals = gadget.evaluate_assignment(&random_point);
+        let linearized_evaluation = gadget.constraints_linearized(&random_point);
+        let result0 = linearized_evaluation[0].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[0];
+        let result1 = linearized_evaluation[1].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[1];
+        assert_eq!(c1.evaluate(&random_point), result0);
+        assert_eq!(c2.evaluate(&random_point), result1);        
+
+    }
+
 }

@@ -94,6 +94,8 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkVerifier<F, CS, T> {
             zeta,
             nus,
         };
+        println!("zeta {:?}, alpha {:?}, nu {:?}", challenges.zeta, challenges.alphas,  challenges.nus);
+
         (challenges, transcript.to_rng())
     }
 }

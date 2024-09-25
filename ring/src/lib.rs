@@ -81,10 +81,13 @@ mod tests {
     use crate::ring::{Ring, RingBuilderKey};
     use crate::ring_prover::RingProver;
     use crate::ring_verifier::RingVerifier;
+    use common::gadgets::VerifierGadget;
 
     use super::*;
 
-    fn _test_ring_proof<CS: PCS<Fq>, P: AffineRepr<BaseField=Fq, ScalarField=Fr>, CondAddT: CondAdd<Fq, P> + ProverGadget<Fq>>(domain_size: usize) {
+    fn _test_ring_proof<CS: PCS<Fq>, P: AffineRepr<BaseField=Fq, ScalarField=Fr>, CondAddT: CondAdd<Fq, P> + ProverGadget<Fq>>(domain_size: usize)
+        where CondAddT::CondAddValT : VerifierGadget<Fq>
+    {
         let rng = &mut test_rng();
 
         let (pcs_params, piop_params) = setup::<_, CS, P>(rng, domain_size);
@@ -107,23 +110,22 @@ mod tests {
 
         let ring_verifier = RingVerifier::init(verifier_key, piop_params, Transcript::new(b"ring-vrf-test"));
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify_ring_proof::<SwCondAddValues<Fq>>(proof, result.into_affine());
+        let res = ring_verifier.verify_ring_proof::<CondAddT::CondAddValT>(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
     }
 
-    #[test]
-    fn test_lagrangian_commitment() {
+    fn _test_lagrangian_commitment<P: AffineRepr<BaseField=Fq>>() {
         let rng = &mut test_rng();
 
         let domain_size = 2usize.pow(9);
 
-        let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>, SWAffine>(rng, domain_size);
+        let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>, P>(rng, domain_size);
         let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<SWAffine, _>(keyset_size, rng);
+        let pks = random_vec::<P, _>(keyset_size, rng);
 
         let (_, verifier_key) = index::<_, KZG::<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
 
@@ -146,6 +148,16 @@ mod tests {
     }
 
     #[test]
+    fn test_lagrangian_commitment_sw() {
+        _test_lagrangian_commitment::<SWAffine>();
+    }
+
+    #[test]
+    fn test_lagrangian_commitment_te() {
+        _test_lagrangian_commitment::<SWAffine>();
+    }
+
+    #[test]
     fn test_complement_point() {
         let p = find_complement_point::<BandersnatchConfig>();
         assert!(p.is_on_curve());
@@ -164,7 +176,12 @@ mod tests {
     }
 
     #[test]
-    fn test_ring_proof_id() {
+    fn test_ring_proof_id_sw() {
         _test_ring_proof::<fflonk::pcs::IdentityCommitment, SWAffine, SwCondAdd<Fq, SWAffine>>(2usize.pow(10));
+    }
+
+    #[test]
+    fn test_ring_proof_id_te() {
+        _test_ring_proof::<fflonk::pcs::IdentityCommitment, EdwardsAffine, TeCondAdd<Fq, EdwardsAffine>>(2usize.pow(10));
     }
 }

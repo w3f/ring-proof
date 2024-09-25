@@ -230,7 +230,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine, Fq};
+    use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_std::{test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
     use fflonk::pcs::kzg::urs::URS;
@@ -244,10 +245,9 @@ mod tests {
 
     use super::*;
 
-    type TestRing = Ring<Fr, Bls12_381, SWAffine>;
+    type TestRing<P> = Ring<Fr, Bls12_381, P>;
 
-    #[test]
-    fn test_ring_mgmt() {
+    fn _test_ring_mgmt<P: AffineRepr<BaseField=Fq>>() {
         let rng = &mut test_rng();
 
         let domain_size = 1 << 9;
@@ -278,7 +278,16 @@ mod tests {
     }
 
     #[test]
-    fn test_empty_rings() {
+    fn test_ring_mgmt_sw() {
+        _test_ring_mgmt::<SWAffine>();
+    }
+
+    #[test]
+    fn test_ring_mgmt_te() {
+        _test_ring_mgmt::<EdwardsAffine>();
+    }
+
+    fn _test_empty_rings<P: AffineRepr<BaseField=Fq>>() {
         let rng = &mut test_rng();
 
         let domain_size = 1 << 9;
@@ -288,15 +297,27 @@ mod tests {
         let srs = |range: Range<usize>| Ok(ring_builder_key.lis_in_g1[range].to_vec());
 
         // piop params
-        let h = SWAffine::rand(rng);
-        let seed = SWAffine::rand(rng);
+        let h = P::rand(rng);
+        let seed = P::rand(rng);
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed);
 
-        let ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
+        let ring = TestRing::<P>::empty(&piop_params, srs, ring_builder_key.g1);
         let same_ring = TestRing::with_keys(&piop_params, &[], &ring_builder_key);
         assert_eq!(ring, same_ring);
+
     }
+
+    #[test]
+    fn test_empty_rings_sw() {
+        _test_empty_rings::<SWAffine>();
+    }
+
+    #[test]
+    fn test_empty_rings_te() {
+        _test_empty_rings::<EdwardsAffine>();
+    }
+
 
     fn get_monomial_commitment(pcs_params: &URS<Bls12_381>, piop_params: &PiopParams<Fr, SWAffine>, keys: &[SWAffine]) -> (G1Affine, G1Affine) {
         let (_, verifier_key) = crate::piop::index::<_, KZG::<Bls12_381>, _>(pcs_params, piop_params, keys);

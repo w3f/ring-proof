@@ -93,7 +93,8 @@ impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine, EdwardsAffine};
+    use ark_ec::AffineRepr;
     use ark_std::{test_rng, UniformRand};
     use ark_std::ops::Mul;
 
@@ -102,16 +103,25 @@ mod tests {
 
     use crate::piop::params::PiopParams;
 
-    #[test]
-    fn test_powers_of_h() {
+    fn _test_powers_of_h<P: AffineRepr<BaseField=Fq, ScalarField = Fr>>() {
         let rng = &mut test_rng();
-        let h = SWAffine::rand(rng);
-        let seed = SWAffine::rand(rng);
+        let h = P::rand(rng);
+        let seed = P::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, SWAffine>::setup(domain, h, seed);
+        let params = PiopParams::<Fq, P>::setup(domain, h, seed);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
-        assert_eq!(th, params.h.mul(t));
+        assert_eq!(th, params.h.mul(t).into());
+    }
+
+    #[test]
+    fn test_powers_of_h_te() {
+        _test_powers_of_h::<EdwardsAffine>();
+    }
+
+    #[test]
+    fn test_powers_of_h_sw() {
+        _test_powers_of_h::<SWAffine>();
     }
 }
