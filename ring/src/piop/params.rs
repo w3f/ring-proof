@@ -1,5 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, Group, CurveConfig};
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::{AffineRepr, CurveGroup, Group};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -93,10 +92,9 @@ impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine, EdwardsAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine, EdwardsAffine};
     use ark_ec::AffineRepr;
     use ark_std::{test_rng, UniformRand};
-    use ark_std::ops::Mul;
 
     use common::domain::Domain;
     use common::test_helpers::cond_sum;

@@ -250,17 +250,16 @@ impl<F: Field, Curve: TECurveConfig<BaseField=F>> CondAddValues<F> for TeCondAdd
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
+    use ark_ed_on_bls12_381_bandersnatch::{Fq, EdwardsAffine};
     use ark_poly::Polynomial;
     use ark_std::test_rng;
-    use ark_ff::Zero;
 
     use crate::test_helpers::*;
     use crate::test_helpers::cond_sum;
 
     use super::*;
 
-    fn _test_te_cond_add_gadget(hiding: bool) {
+    fn _test_te_cond_add_gadget(hiding: bool) -> (Domain<Fq>, TeCondAdd<Fq,EdwardsAffine>, Vec<Evaluations<Fq>>){
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -287,7 +286,8 @@ mod tests {
 
         domain.divide_by_vanishing_poly(&c1);
         domain.divide_by_vanishing_poly(&c2);
-        // test_gadget(gadget);
+
+        return (domain, gadget, cs,)        
     }
 
     #[test]
@@ -298,35 +298,21 @@ mod tests {
 
     #[test]
     fn test_linearized_constrain() {
+
+        let (domain, gadget, constrains) = _test_te_cond_add_gadget(false);
+
         let rng = &mut test_rng();
-
-        let log_n = 10;
-        let n = 2usize.pow(log_n);
-        let domain = Domain::new(n, false);
-        let seed = EdwardsAffine::generator();
-
-        let bitmask = random_bitvec(domain.capacity - 1, 0.5, rng);
-        let points = random_vec::<EdwardsAffine, _>(domain.capacity - 1, rng);
-        let expected_res = seed + cond_sum(&bitmask, &points);
-
-        let bitmask_col = BitColumn::init(bitmask, &domain);
-        let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = TeCondAdd::init(bitmask_col, points_col, seed, &domain);
-        let res = gadget.acc.points.last().unwrap();
-        assert_eq!(res, &expected_res);
-
-        let cs = gadget.constraints();
-        let (c1, c2) = (&cs[0], &cs[1]);
-        let c1 = c1.interpolate_by_ref();
-        let c2 = c2.interpolate_by_ref();
-
         let random_point = random_vec::<<EdwardsAffine as AffineRepr>::BaseField, _>(1, rng)[0];
+
         let vals = gadget.evaluate_assignment(&random_point);
         let linearized_evaluation = gadget.constraints_linearized(&random_point);
-        let result0 = linearized_evaluation[0].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[0];
-        let result1 = linearized_evaluation[1].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[1];
-        assert_eq!(c1.evaluate(&random_point), result0);
-        assert_eq!(c2.evaluate(&random_point), result1);        
+
+        for i in 0..2 {
+            
+            let result = linearized_evaluation[i].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[i];
+            let constrain_poly = constrains[i].interpolate_by_ref();
+            assert_eq!(constrain_poly.evaluate(&random_point), result);
+        }
 
     }
 

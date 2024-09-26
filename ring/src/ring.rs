@@ -1,6 +1,5 @@
 use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ec::pairing::Pairing;
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
@@ -230,7 +229,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>> RingBuilderKey<F, KzgCurve
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine, Fq};
+    use ark_ed_on_bls12_381_bandersnatch::{SWAffine, Fq};
     use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_std::{test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;

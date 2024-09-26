@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveConfig};
+use ark_ec::{AffineRepr};
 use ark_ff::PrimeField;
 use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;

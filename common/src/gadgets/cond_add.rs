@@ -1,6 +1,5 @@
 use ark_ec::{AffineRepr};
 use ark_ff::{FftField, Field};
-use ark_poly::{Evaluations};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec::Vec};
 use crate::{Column, FieldColumn};

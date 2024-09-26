@@ -66,15 +66,14 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine, EdwardsAffine};
     use ark_ff::MontFp;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
-    use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use fflonk::pcs::kzg::KZG;
     use merlin::Transcript;
 
     use common::test_helpers::random_vec;
 
-    use common::gadgets::sw_cond_add::{SwCondAdd, SwCondAddValues};
-    use common::gadgets::te_cond_add::{TeCondAdd, TeCondAddValues};
+    use common::gadgets::sw_cond_add::{SwCondAdd};
+    use common::gadgets::te_cond_add::{TeCondAdd};
     use common::gadgets::cond_add::CondAdd;
     use common::gadgets::ProverGadget;
     use crate::piop::FixedColumnsCommitted;

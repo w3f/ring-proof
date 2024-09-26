@@ -72,7 +72,6 @@ impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
         let agg_at_zeta_proof = CS::open(&self.pcs_ck, &agg_at_zeta, zeta);
         let lin_at_zeta_omega_proof = CS::open(&self.pcs_ck, &lin, zeta_omega);
 
-        println!("zeta {:?}, alpha {:?}, nu {:?}", zeta, alphas,  nus);
         Proof {
             column_commitments,
             quotient_commitment,
