@@ -1,15 +1,15 @@
 use ark_ff::{FftField, Field};
-use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::vec::Vec;
 
 pub mod booleanity;
 // pub mod inner_prod_pub;
 pub mod cond_add;
-pub mod sw_cond_add;
-pub mod te_cond_add;
 pub mod fixed_cells;
 pub mod inner_prod;
+pub mod sw_cond_add;
+pub mod te_cond_add;
 
 pub trait ProverGadget<F: FftField> {
     // Columns populated by the gadget.

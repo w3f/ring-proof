@@ -1,19 +1,19 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use ark_ff::{FftField, PrimeField};
-use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{Commitment, PCS};
 
+pub mod domain;
 pub mod gadgets;
-pub mod test_helpers;
 pub mod piop;
 pub mod prover;
-pub mod verifier;
+pub mod test_helpers;
 pub mod transcript;
-pub mod domain;
+pub mod verifier;
 
 pub trait Column<F: FftField> {
     fn domain(&self) -> GeneralEvaluationDomain<F>;
@@ -66,22 +66,24 @@ pub fn const_evals<F: FftField>(c: F, domain: GeneralEvaluationDomain<F>) -> Eva
     Evaluations::from_vec_and_domain(vec![c; domain.size()], domain)
 }
 
-
 pub trait ColumnsEvaluated<F: PrimeField>: CanonicalSerialize + CanonicalDeserialize {
     fn to_vec(self) -> Vec<F>;
 }
 
-pub trait ColumnsCommited<F: PrimeField, C: Commitment<F>>: CanonicalSerialize + CanonicalDeserialize {
+pub trait ColumnsCommited<F: PrimeField, C: Commitment<F>>:
+    CanonicalSerialize + CanonicalDeserialize
+{
     fn to_vec(self) -> Vec<C>;
 }
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<F, CS, Commitments, Evaluations>
-    where
-        F: PrimeField,
-        CS: PCS<F>,
-        Commitments: ColumnsCommited<F, CS::C>,
-        Evaluations: ColumnsEvaluated<F>, {
+where
+    F: PrimeField,
+    CS: PCS<F>,
+    Commitments: ColumnsCommited<F, CS::C>,
+    Evaluations: ColumnsEvaluated<F>,
+{
     pub column_commitments: Commitments,
     pub columns_at_zeta: Evaluations,
     pub quotient_commitment: CS::C,

@@ -1,24 +1,24 @@
-use ark_ec::{AffineRepr, CurveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
-use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
 
-use crate::{Column, FieldColumn, const_evals};
 use crate::domain::Domain;
-use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::cond_add::{AffineColumn, CondAdd, CondAddValues};
+use crate::gadgets::{ProverGadget, VerifierGadget};
+use crate::{const_evals, Column, FieldColumn};
 
 // Conditional affine addition:
 // if the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
-pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField=F>> {
-    pub(super)bitmask: BitColumn<F>,
-    pub(super)points: AffineColumn<F, P>,
+pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
+    pub(super) bitmask: BitColumn<F>,
+    pub(super) points: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(super)not_last: FieldColumn<F>,
+    pub(super) not_last: FieldColumn<F>,
     // Accumulates the (conditional) rolling sum of the points
     pub acc: AffineColumn<F, P>,
     pub result: P,
@@ -31,24 +31,28 @@ pub struct SwCondAddValues<F: Field> {
     pub acc: (F, F),
 }
 
-impl<F, Curve> CondAdd<F, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
+impl<F, Curve> CondAdd<F, Affine<Curve>> for SwCondAdd<F, Affine<Curve>>
+where
     F: FftField,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: SWCurveConfig<BaseField = F>,
 {
-
     type CondAddValT = SwCondAddValues<F>;
     // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
     // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
-    fn init(bitmask: BitColumn<F>,
-                points: AffineColumn<F, Affine<Curve>>,
-                seed: Affine<Curve>,
-                domain: &Domain<F>) -> Self {
+    fn init(
+        bitmask: BitColumn<F>,
+        points: AffineColumn<F, Affine<Curve>>,
+        seed: Affine<Curve>,
+        domain: &Domain<F>,
+    ) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
         assert_eq!(points.points.len(), domain.capacity - 1);
         let not_last = domain.not_last_row.clone();
-        let acc = bitmask.bits.iter()
+        let acc = bitmask
+            .bits
+            .iter()
             .zip(points.points.iter())
             .scan(seed, |acc, (&b, point)| {
                 if b {
@@ -56,15 +60,19 @@ impl<F, Curve> CondAdd<F, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
                 }
                 Some(*acc)
             });
-        let acc: Vec<_> = ark_std::iter::once(seed)
-            .chain(acc)
-            .collect();
+        let acc: Vec<_> = ark_std::iter::once(seed).chain(acc).collect();
         let init_plus_result = acc.last().unwrap();
         let result = init_plus_result.into_group() - seed.into_group();
         let result = result.into_affine();
         let acc = AffineColumn::private_column(acc, domain);
 
-        Self { bitmask, points, acc, not_last, result }
+        Self {
+            bitmask,
+            points,
+            acc,
+            not_last,
+            result,
+        }
     }
 
     fn evaluate_assignment(&self, z: &F) -> SwCondAddValues<F> {
@@ -83,14 +91,12 @@ impl<F, Curve> CondAdd<F, Affine<Curve> > for SwCondAdd<F, Affine<Curve>> where
     fn get_result(&self) -> Affine<Curve> {
         self.result.clone()
     }
-
 }
 
-
 impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
-    where
-        F: FftField,
-        Curve: SWCurveConfig<BaseField=F>,
+where
+    F: FftField,
+    Curve: SWCurveConfig<BaseField = F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -104,42 +110,12 @@ impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
         let (x2, y2) = (&self.points.xs.evals_4x, &self.points.ys.evals_4x);
         let (x3, y3) = (&self.acc.xs.shifted_4x(), &self.acc.ys.shifted_4x());
 
-        let mut c1 =
-            &(
-                b *
-                    &(
-                        &(
-                            &(
-                                &(x1 - x2) * &(x1 - x2)
-                            ) *
-                                &(
-                                    &(x1 + x2) + x3
-                                )
-                        ) -
-                            &(
-                                &(y2 - y1) * &(y2 - y1)
-                            )
-                    )
-            ) +
-                &(
-                    &(one - b) * &(y3 - y1)
-                );
+        let mut c1 = &(b * &(&(&(&(x1 - x2) * &(x1 - x2)) * &(&(x1 + x2) + x3))
+            - &(&(y2 - y1) * &(y2 - y1))))
+            + &(&(one - b) * &(y3 - y1));
 
-        let mut c2 =
-            &(
-                b *
-                    &(
-                        &(
-                            &(x1 - x2) * &(y3 + y1)
-                        ) -
-                            &(
-                                &(y2 - y1) * &(x3 - x1)
-                            )
-                    )
-            ) +
-                &(
-                    &(one - b) * &(x3 - x1)
-                );
+        let mut c2 = &(b * &(&(&(x1 - x2) * &(y3 + y1)) - &(&(y2 - y1) * &(x3 - x1))))
+            + &(&(one - b) * &(x3 - x1));
 
         let not_last = &self.not_last.evals_4x;
         c1 *= not_last;
@@ -167,7 +143,6 @@ impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
     }
 }
 
-
 impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
@@ -175,17 +150,11 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
         let (x2, y2) = self.points;
         let (x3, y3) = (F::zero(), F::zero());
 
-        let mut c1 =
-            b * (
-                (x1 - x2) * (x1 - x2) * (x1 + x2 + x3)
-                    - (y2 - y1) * (y2 - y1)
-            ) + (F::one() - b) * (y3 - y1);
+        let mut c1 = b * ((x1 - x2) * (x1 - x2) * (x1 + x2 + x3) - (y2 - y1) * (y2 - y1))
+            + (F::one() - b) * (y3 - y1);
 
         let mut c2 =
-            b * (
-                (x1 - x2) * (y3 + y1)
-                    - (y2 - y1) * (x3 - x1)
-            ) + (F::one() - b) * (x3 - x1);
+            b * ((x1 - x2) * (y3 + y1) - (y2 - y1) * (x3 - x1)) + (F::one() - b) * (x3 - x1);
 
         c1 *= self.not_last;
         c2 *= self.not_last;
@@ -194,14 +163,8 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
     }
 }
 
-
 impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
-    fn init(
-        bitmask: F,
-        points: (F, F),
-        not_last: F,
-        acc: (F, F),
-    )-> Self {
+    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
         SwCondAddValues::<F> {
             bitmask,
             points,
@@ -239,19 +202,20 @@ impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{SWAffine, Fq};
+    use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
     use ark_poly::Polynomial;
     use ark_std::test_rng;
 
-    use crate::test_helpers::*;
     use crate::test_helpers::cond_sum;
+    use crate::test_helpers::*;
 
     use super::*;
 
-    fn _test_sw_cond_add_gadget(hiding: bool) -> (Domain<Fq>, SwCondAdd<Fq,SWAffine>, Vec<Evaluations<Fq>>) {
+    fn _test_sw_cond_add_gadget(
+        hiding: bool,
+    ) -> (Domain<Fq>, SwCondAdd<Fq, SWAffine>, Vec<Evaluations<Fq>>) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -279,11 +243,9 @@ mod tests {
         domain.divide_by_vanishing_poly(&c1);
         domain.divide_by_vanishing_poly(&c2);
 
-        return (domain, gadget, cs,)        
-
+        return (domain, gadget, cs);
     }
 
-    
     #[test]
     fn test_sw_cond_add_gadget() {
         _test_sw_cond_add_gadget(false);
@@ -301,12 +263,10 @@ mod tests {
         let linearized_evaluation = gadget.constraints_linearized(&random_point);
 
         for i in 0..2 {
-            
-            let result = linearized_evaluation[i].evaluate(&(random_point*domain.omega())) + vals.evaluate_constraints_main()[i];
+            let result = linearized_evaluation[i].evaluate(&(random_point * domain.omega()))
+                + vals.evaluate_constraints_main()[i];
             let constrain_poly = constrains[i].interpolate_by_ref();
             assert_eq!(constrain_poly.evaluate(&random_point), result);
         }
-
     }
-    
 }

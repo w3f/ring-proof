@@ -8,7 +8,7 @@ use common::gadgets::cond_add::AffineColumn;
 use crate::piop::FixedColumns;
 
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField=F>> {
+pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
     // Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
 
@@ -29,7 +29,7 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField=F>> {
     pub(crate) padding_point: P,
 }
 
-impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
+impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     pub fn setup(domain: Domain<F>, h: P, seed: P) -> Self {
         let padding_point = crate::hash_to_curve::<P>(b"w3f/ring-proof/common/padding");
         let scalar_bitlen = P::ScalarField::MODULUS_BIT_SIZE as usize;
@@ -49,18 +49,17 @@ impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
         let points = self.points_column(&keys);
-        FixedColumns { points, ring_selector }
+        FixedColumns {
+            points,
+            ring_selector,
+        }
     }
 
     pub fn points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
         assert!(keys.len() <= self.keyset_part_size);
         let padding_len = self.keyset_part_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
-        let points = [
-            keys,
-            &padding,
-            &self.power_of_2_multiples_of_h(),
-        ].concat();
+        let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }
@@ -85,15 +84,16 @@ impl<F: PrimeField, P: AffineRepr<BaseField=F>> PiopParams<F, P> {
     pub fn keyset_part_selector(&self) -> Vec<F> {
         [
             vec![F::one(); self.keyset_part_size],
-            vec![F::zero(); self.scalar_bitlen]
-        ].concat()
+            vec![F::zero(); self.scalar_bitlen],
+        ]
+        .concat()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{Fq, Fr, SWAffine, EdwardsAffine};
     use ark_ec::AffineRepr;
+    use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fq, Fr, SWAffine};
     use ark_std::{test_rng, UniformRand};
 
     use common::domain::Domain;
@@ -101,7 +101,7 @@ mod tests {
 
     use crate::piop::params::PiopParams;
 
-    fn _test_powers_of_h<P: AffineRepr<BaseField=Fq, ScalarField = Fr>>() {
+    fn _test_powers_of_h<P: AffineRepr<BaseField = Fq, ScalarField = Fr>>() {
         let rng = &mut test_rng();
         let h = P::rand(rng);
         let seed = P::rand(rng);

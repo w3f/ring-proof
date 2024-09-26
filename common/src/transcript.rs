@@ -1,15 +1,19 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
-use ark_std::{vec, vec::Vec};
 use ark_std::rand::SeedableRng;
-use fflonk::pcs::{PCS, PcsParams};
+use ark_std::{vec, vec::Vec};
+use fflonk::pcs::{PcsParams, PCS};
 use rand_chacha::ChaCha20Rng;
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
 
 pub trait Transcript<F: PrimeField, CS: PCS<F>>: Clone {
-    fn add_protocol_params(&mut self, domain: &GeneralEvaluationDomain<F>, pcs_raw_vk: &<CS::Params as PcsParams>::RVK) {
+    fn add_protocol_params(
+        &mut self,
+        domain: &GeneralEvaluationDomain<F>,
+        pcs_raw_vk: &<CS::Params as PcsParams>::RVK,
+    ) {
         self._add_serializable(b"domain", domain);
         self._add_serializable(b"pcs_raw_vk", pcs_raw_vk);
     }

@@ -1,27 +1,27 @@
-use ark_ec::{AffineRepr};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
-use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::Commitment;
 
-use common::{Column, FieldColumn};
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
+use common::gadgets::cond_add::{AffineColumn, CondAdd};
 use common::gadgets::fixed_cells::FixedCells;
 use common::gadgets::inner_prod::InnerProd;
 use common::gadgets::ProverGadget;
-use common::gadgets::cond_add::{AffineColumn, CondAdd};
 use common::piop::ProverPiop;
+use common::{Column, FieldColumn};
 
-use crate::piop::{RingCommitments, RingEvaluations};
-use crate::piop::FixedColumns;
 use crate::piop::params::PiopParams;
+use crate::piop::FixedColumns;
+use crate::piop::{RingCommitments, RingEvaluations};
 
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
-pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField=F>, CondAddT: CondAdd<F,P>> {
+pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>> {
     domain: Domain<F>,
     // Fixed (public input) columns:
     points: AffineColumn<F, P>,
@@ -37,14 +37,20 @@ pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField=F>, CondAddT: CondA
     cond_add_acc_y: FixedCells<F>,
 }
 
-impl<F: PrimeField, P: AffineRepr<BaseField=F>, CondAddT: CondAdd<F, P>> PiopProver<F, P, CondAddT>
+impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
+    PiopProver<F, P, CondAddT>
 {
-    pub fn build(params: &PiopParams<F, P>,
-                 fixed_columns: FixedColumns<F, P>,
-                 prover_index_in_keys: usize,
-                 secret: P::ScalarField) -> Self {
+    pub fn build(
+        params: &PiopParams<F, P>,
+        fixed_columns: FixedColumns<F, P>,
+        prover_index_in_keys: usize,
+        secret: P::ScalarField,
+    ) -> Self {
         let domain = params.domain.clone();
-        let FixedColumns { points, ring_selector } = fixed_columns;
+        let FixedColumns {
+            points,
+            ring_selector,
+        } = fixed_columns;
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAddT::init(bits.clone(), points.clone(), params.seed, &domain);
@@ -67,36 +73,39 @@ impl<F: PrimeField, P: AffineRepr<BaseField=F>, CondAddT: CondAdd<F, P>> PiopPro
         }
     }
 
-    fn bits_column(params: &PiopParams<F, P>, index_in_keys: usize, secret: P::ScalarField) -> BitColumn<F> {
+    fn bits_column(
+        params: &PiopParams<F, P>,
+        index_in_keys: usize,
+        secret: P::ScalarField,
+    ) -> BitColumn<F> {
         let mut keyset_part = vec![false; params.keyset_part_size];
         keyset_part[index_in_keys] = true;
         let scalar_part = params.scalar_part(secret);
-        let bits = [
-            keyset_part,
-            scalar_part
-        ].concat();
+        let bits = [keyset_part, scalar_part].concat();
         assert_eq!(bits.len(), params.domain.capacity - 1);
         BitColumn::init(bits, &params.domain)
     }
 }
 
 impl<F, C, P, CondAddT> ProverPiop<F, C> for PiopProver<F, P, CondAddT>
-    where
-        F: PrimeField,
-        C: Commitment<F>,
-    P: AffineRepr<BaseField=F>,
+where
+    F: PrimeField,
+    C: Commitment<F>,
+    P: AffineRepr<BaseField = F>,
     CondAddT: CondAdd<F, P> + ProverGadget<F>,
-
 {
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
     type Instance = P;
 
-    fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(&self, commit: Fun) -> Self::Commitments {
+    fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(
+        &self,
+        commit: Fun,
+    ) -> Self::Commitments {
         let bits = commit(self.bits.as_poly());
         let cond_add_acc = super::ArrayWrap([
             commit(self.cond_add.get_acc().xs.as_poly()),
-            commit(self.cond_add.get_acc().ys.as_poly())
+            commit(self.cond_add.get_acc().ys.as_poly()),
         ]);
         let inn_prod_acc = commit(self.inner_prod.acc.as_poly());
         Self::Commitments {
@@ -122,10 +131,8 @@ impl<F, C, P, CondAddT> ProverPiop<F, C> for PiopProver<F, P, CondAddT>
     }
 
     fn columns_evaluated(&self, zeta: &F) -> Self::Evaluations {
-        let points = super::ArrayWrap([
-            self.points.xs.evaluate(zeta),
-            self.points.ys.evaluate(zeta),
-        ]);
+        let points =
+            super::ArrayWrap([self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)]);
         let ring_selector = self.ring_selector.evaluate(zeta);
         let bits = self.bits.evaluate(zeta);
         let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
@@ -150,7 +157,8 @@ impl<F, C, P, CondAddT> ProverPiop<F, C> for PiopProver<F, P, CondAddT>
             self.cond_add_acc_x.constraints(),
             self.cond_add_acc_y.constraints(),
             self.inner_prod_acc.constraints(),
-        ].concat()
+        ]
+        .concat()
     }
 
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>> {
@@ -161,7 +169,8 @@ impl<F, C, P, CondAddT> ProverPiop<F, C> for PiopProver<F, P, CondAddT>
             self.cond_add_acc_x.constraints_linearized(zeta),
             self.cond_add_acc_y.constraints_linearized(zeta),
             self.inner_prod_acc.constraints_linearized(zeta),
-        ].concat()
+        ]
+        .concat()
     }
 
     fn domain(&self) -> &Domain<F> {
