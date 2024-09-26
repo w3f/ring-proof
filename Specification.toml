@@ -1,0 +1,20 @@
+[metadata]
+name = "Ring Proof"
+description = "zk proof of knowledge of blindinng factor of a Pedersen commitment"
+authors = ["Alistair, Davide, Jeff, Syed, Sergey"]
+
+[config]
+template = "specification_template.md"
+
+[sections]
+# Plonk Prover
+plonk-prover = "common/src/prover.rs"
+
+# Plonk Verifier
+plonk-verifier = "common/src/verifier.rs"
+
+# Ring Prover
+ring-prover = "ring/src/ring_prover.rs"
+
+## Ring Verifier
+ring-verifier = "ring/src/ring_verifier.rs"

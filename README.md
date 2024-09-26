@@ -18,3 +18,11 @@
 * Add zk
 * Batch verification
 * Batch proving
+
+## Building the Specification document
+
+The specification is built by means of [Cargo spec](https://crates.io/crates/cargo-spec) crate. To build the specification document, oneneed pandoc and latex. With requirement installed, on can simply invoke:
+```
+$ make spec-build
+```
+and get the specification in `./spec/specification.pdf`
