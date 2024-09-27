@@ -18,7 +18,7 @@ rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
-ark-transcript = { git = "https://github.com/w3f/ark-transcript", rev = "288e49d", default-features = false }
+ark-transcript = { version = "0.0.2", default-features = false }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
