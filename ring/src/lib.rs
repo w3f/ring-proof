@@ -1,9 +1,12 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
-use ark_ec::AffineRepr;
-use ark_ff::{Field, One, Zero};
-use ark_std::rand;
+use ark_ec::{
+    short_weierstrass::{Affine, SWCurveConfig},
+    AffineRepr,
+};
+use ark_ff::{One, PrimeField, Zero};
+use ark_serialize::CanonicalSerialize;
+use ark_std::rand::RngCore;
 use fflonk::pcs::PCS;
 
 pub use common::domain::Domain;
@@ -23,9 +26,6 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 /// Polynomial Commitment Schemes.
 pub use fflonk::pcs;
 
-/// Transcript for `RingProver` and `RingVerifier` construction.
-pub use merlin::Transcript;
-
 // Calling the method for a prime-order curve results in an infinite loop.
 pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     let mut x = Curve::BaseField::zero();
@@ -38,7 +38,7 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     }
 }
 
-pub fn find_random_point<F: Field, P: AffineRepr<BaseField = F>>() -> P {
+pub fn find_random_point<F: PrimeField, P: AffineRepr<BaseField = F>>() -> P {
     let mut x: u8 = 0;
     loop {
         let p = P::from_random_bytes(&[x]);
@@ -50,14 +50,49 @@ pub fn find_random_point<F: Field, P: AffineRepr<BaseField = F>>() -> P {
     }
 }
 
-// TODO: switch to better hash to curve when available
-pub fn hash_to_curve<A: AffineRepr>(message: &[u8]) -> A {
-    use ark_std::rand::SeedableRng;
+// Try and increment hash to curve.
+pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message: &[u8]) -> P {
     use blake2::Digest;
+    let mut seed = message.to_vec();
+    let cnt_offset = seed.len();
+    let mut no_tries: usize = 0;
 
-    let seed = blake2::Blake2s::digest(message);
-    let rng = &mut rand::rngs::StdRng::from_seed(seed.into());
-    A::rand(rng)
+    seed.push(0);
+    loop {
+        let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
+        if let Some(point) = P::from_random_bytes(&hash) {
+            let point = point.clear_cofactor();
+            //assert!(point.is_in_correct_subgroup_assuming_on_curve());
+            return point;
+        }
+        seed[cnt_offset] += 1;
+        no_tries += 1;
+        assert!(no_tries < 256);
+    }
+}
+
+#[derive(Clone)]
+pub struct ArkTranscript(ark_transcript::Transcript);
+
+impl<F: PrimeField, CS: PCS<F>> common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
+    fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
+        self.0.challenge(label).read_reduce()
+    }
+
+    fn _add_serializable(&mut self, label: &'static [u8], message: &impl CanonicalSerialize) {
+        self.0.label(label);
+        self.0.append(message);
+    }
+
+    fn to_rng(mut self) -> impl RngCore {
+        self.0.challenge(b"transcript_rng")
+    }
+}
+
+impl ArkTranscript {
+    pub fn new(label: &'static [u8]) -> Self {
+        Self(ark_transcript::Transcript::new_labeled(label))
+    }
 }
 
 #[cfg(test)]
@@ -69,7 +104,6 @@ mod tests {
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
-    use merlin::Transcript;
 
     use common::test_helpers::random_vec;
 
@@ -116,7 +150,7 @@ mod tests {
             prover_key,
             piop_params.clone(),
             k,
-            Transcript::new(b"ring-vrf-test"),
+            ArkTranscript::new(b"ring-vrf-test"),
         );
         let t_prove = start_timer!(|| "Prove");
         let mut proofs: Vec<RingProof<_, CS>> = vec![];
@@ -127,8 +161,11 @@ mod tests {
         let proof = ring_prover.prove::<CondAddT>(secret);
         end_timer!(t_prove);
 
-        let ring_verifier =
-            RingVerifier::init(verifier_key, piop_params, Transcript::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(
+            verifier_key,
+            piop_params,
+            ArkTranscript::new(b"ring-vrf-test"),
+        );
         let t_verify = start_timer!(|| "Verify");
         for _ in 0..repeat - 1 {
             black_box(ring_verifier.verify_ring_proof::<CondAddT::CondAddValT>(

@@ -14,25 +14,24 @@ ark-ec.workspace = true
 ark-poly.workspace = true
 ark-serialize.workspace = true
 fflonk.workspace = true
-merlin.workspace = true
 rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
+ark-transcript = { version = "0.0.2", default-features = false }
 
 [dev-dependencies]
 ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
 
 [features]
-default = []
+default = [ "std" ]
 std = [
   "ark-std/std",
   "ark-ff/std",
   "ark-ec/std",
   "ark-poly/std",
   "ark-serialize/std",
-  "merlin/std",
   "fflonk/std",
   "common/std"
 ]
@@ -50,6 +49,4 @@ print-trace = [
   "ark-std/print-trace",
   "common/print-trace"
 ]
-asm = [
-  "fflonk/asm"
-]
+asm = [ "fflonk/asm" ]

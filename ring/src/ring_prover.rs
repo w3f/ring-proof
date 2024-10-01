@@ -5,24 +5,32 @@ use fflonk::pcs::PCS;
 use common::gadgets::cond_add::CondAdd;
 use common::gadgets::ProverGadget;
 use common::prover::PlonkProver;
+use common::transcript::PlonkTranscript;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumns, PiopProver, ProverKey};
 use crate::RingProof;
 
-pub struct RingProver<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>> {
+pub struct RingProver<
+    F: PrimeField,
+    CS: PCS<F>,
+    P: AffineRepr<BaseField = F>,
+    T: PlonkTranscript<F, CS>,
+> {
     piop_params: PiopParams<F, P>,
     fixed_columns: FixedColumns<F, P>,
     k: usize,
-    plonk_prover: PlonkProver<F, CS, merlin::Transcript>,
+    plonk_prover: PlonkProver<F, CS, T>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>> RingProver<F, CS, P> {
+impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript<F, CS>>
+    RingProver<F, CS, P, T>
+{
     pub fn init(
         prover_key: ProverKey<F, CS, P>,
         piop_params: PiopParams<F, P>,
         k: usize,
-        empty_transcript: merlin::Transcript,
+        empty_transcript: T,
     ) -> Self {
         let ProverKey {
             pcs_ck,

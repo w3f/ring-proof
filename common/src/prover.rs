@@ -6,10 +6,10 @@ use fflonk::aggregation::single::aggregate_polys;
 use fflonk::pcs::PCS;
 
 use crate::piop::ProverPiop;
-use crate::transcript::Transcript;
+use crate::transcript::PlonkTranscript;
 use crate::Proof;
 
-pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
+pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> {
     // Polynomial commitment scheme committer's key.
     pcs_ck: CS::CK,
     // Transcript,
@@ -17,7 +17,7 @@ pub struct PlonkProver<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> {
     transcript_prelude: T,
 }
 
-impl<F: PrimeField, CS: PCS<F>, T: Transcript<F, CS>> PlonkProver<F, CS, T> {
+impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T> {
     pub fn init(
         pcs_ck: CS::CK,
         verifier_key: impl CanonicalSerialize, //TODO: a type,

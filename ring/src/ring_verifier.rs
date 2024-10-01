@@ -7,23 +7,31 @@ use common::domain::EvaluatedDomain;
 use common::gadgets::cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
+use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::RingProof;
 
-pub struct RingVerifier<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>> {
+pub struct RingVerifier<
+    F: PrimeField,
+    CS: PCS<F>,
+    P: AffineRepr<BaseField = F>,
+    T: PlonkTranscript<F, CS>,
+> {
     piop_params: PiopParams<F, P>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
-    plonk_verifier: PlonkVerifier<F, CS, merlin::Transcript>,
+    plonk_verifier: PlonkVerifier<F, CS, T>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>> RingVerifier<F, CS, P> {
+impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript<F, CS>>
+    RingVerifier<F, CS, P, T>
+{
     pub fn init(
         verifier_key: VerifierKey<F, CS>,
         piop_params: PiopParams<F, P>,
-        empty_transcript: merlin::Transcript,
+        empty_transcript: T,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
         let plonk_verifier = PlonkVerifier::init(pcs_vk, &verifier_key, empty_transcript);

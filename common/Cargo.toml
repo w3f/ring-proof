@@ -14,10 +14,9 @@ ark-ec.workspace = true
 ark-poly.workspace = true
 ark-serialize.workspace = true
 fflonk.workspace = true
-merlin.workspace = true
 rayon = { workspace = true, optional = true }
 getrandom_or_panic = { version = "0.0.3", default-features = false }
-rand_chacha = { version = "0.3.1", default-features = false }
+rand_core = "0.6"
 
 [dev-dependencies]
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
@@ -31,8 +30,8 @@ std = [
   "ark-poly/std",
   "ark-serialize/std",
   "fflonk/std",
-  "merlin/std",
-  "getrandom_or_panic/std"
+  "getrandom_or_panic/std",
+  "rand_core/std"
 ]
 parallel = [
   "std",
