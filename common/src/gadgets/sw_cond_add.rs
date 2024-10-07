@@ -110,12 +110,44 @@ where
         let (x2, y2) = (&self.points.xs.evals_4x, &self.points.ys.evals_4x);
         let (x3, y3) = (&self.acc.xs.shifted_4x(), &self.acc.ys.shifted_4x());
 
-        let mut c1 = &(b * &(&(&(&(x1 - x2) * &(x1 - x2)) * &(&(x1 + x2) + x3))
-            - &(&(y2 - y1) * &(y2 - y1))))
-            + &(&(one - b) * &(y3 - y1));
+        #[rustfmt::skip]
+        let mut c1 =
+            &(
+                b *
+                    &(
+                        &(
+                            &(
+                                &(x1 - x2) * &(x1 - x2)
+                            ) *
+                                &(
+                                    &(x1 + x2) + x3
+                                )
+                        ) -
+                            &(
+                                &(y2 - y1) * &(y2 - y1)
+                            )
+                    )
+            ) +
+                &(
+                    &(one - b) * &(y3 - y1)
+                );
 
-        let mut c2 = &(b * &(&(&(x1 - x2) * &(y3 + y1)) - &(&(y2 - y1) * &(x3 - x1))))
-            + &(&(one - b) * &(x3 - x1));
+        #[rustfmt::skip]
+        let mut c2 =
+            &(
+                b *
+                    &(
+                        &(
+                            &(x1 - x2) * &(y3 + y1)
+                        ) -
+                            &(
+                                &(y2 - y1) * &(x3 - x1)
+                            )
+                    )
+            ) +
+                &(
+                    &(one - b) * &(x3 - x1)
+                );
 
         let not_last = &self.not_last.evals_4x;
         c1 *= not_last;
