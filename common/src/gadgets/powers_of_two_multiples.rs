@@ -4,7 +4,7 @@ use ark_ec::{AffineRepr, CurveGroup, Group};
 use ark_ff::{FftField, Field, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
-use ark_std::vec::Vec;
+use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
@@ -253,7 +253,6 @@ mod tests {
         let point = EdwardsAffine::rand(rng);
 
         let scalar_bitlen = domain.capacity; //<EdwardsAffine as AffineRepr>::ScalarField::MODULUS_BIT_SIZE as usize;
-        println!("length of column:{}", scalar_bitlen);
         let expected_res = power_of_two_multiple(point, scalar_bitlen);
 
         let gadget = PowersOfTwoMultiplesTE::init(point, &domain);
