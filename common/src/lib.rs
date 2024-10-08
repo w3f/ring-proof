@@ -1,11 +1,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use ark_ec::AffineRepr;
 use ark_ff::{FftField, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{Commitment, PCS};
+
+use domain::Domain;
 
 pub mod domain;
 pub mod gadgets;
@@ -59,6 +62,36 @@ impl<F: FftField> Column<F> for FieldColumn<F> {
 
     fn as_poly(&self) -> &DensePolynomial<F> {
         &self.poly
+    }
+}
+
+// A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
+// and its convenience representation as columns of coordinates over the curve's base field.
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
+pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField = F>> {
+    pub(crate) points: Vec<P>,
+    pub xs: FieldColumn<F>,
+    pub ys: FieldColumn<F>,
+}
+
+impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
+    fn column(points: Vec<P>, domain: &Domain<F>, hidden: bool) -> Self {
+        assert!(points.iter().all(|p| !p.is_zero()));
+        let (xs, ys) = points.iter().map(|p| p.xy().unwrap()).unzip();
+        let xs = domain.column(xs, hidden);
+        let ys = domain.column(ys, hidden);
+        Self { points, xs, ys }
+    }
+    pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, true)
+    }
+
+    pub fn public_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, false)
+    }
+
+    pub fn evaluate(&self, z: &F) -> (F, F) {
+        (self.xs.evaluate(z), self.ys.evaluate(z))
     }
 }
 

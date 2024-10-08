@@ -3,7 +3,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
 use common::domain::Domain;
-use common::gadgets::cond_add::AffineColumn;
+use common::AffineColumn;
 
 use crate::piop::FixedColumns;
 

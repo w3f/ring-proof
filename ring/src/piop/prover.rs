@@ -8,12 +8,12 @@ use fflonk::pcs::Commitment;
 
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
-use common::gadgets::cond_add::{AffineColumn, CondAdd};
+use common::gadgets::cond_add::CondAdd;
 use common::gadgets::fixed_cells::FixedCells;
 use common::gadgets::inner_prod::InnerProd;
 use common::gadgets::ProverGadget;
 use common::piop::ProverPiop;
-use common::{Column, FieldColumn};
+use common::{AffineColumn, Column, FieldColumn};
 
 use crate::piop::params::PiopParams;
 use crate::piop::FixedColumns;

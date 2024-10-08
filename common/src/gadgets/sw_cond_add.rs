@@ -7,9 +7,9 @@ use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
-use crate::gadgets::cond_add::{AffineColumn, CondAdd, CondAddValues};
+use crate::gadgets::cond_add::{CondAdd, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, Column, FieldColumn};
+use crate::{const_evals, AffineColumn, Column, FieldColumn};
 
 // Conditional affine addition:
 // if the bit is set for a point, add the point to the acc and store,
