@@ -1,44 +1,47 @@
-use ark_ec::AffineRepr;
 use ark_ec::pairing::Pairing;
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::{vec, vec::Vec};
 use ark_std::marker::PhantomData;
-use fflonk::pcs::{Commitment, PCS, PcsParams};
+use ark_std::{vec, vec::Vec};
 use fflonk::pcs::kzg::commitment::KzgCommitment;
-use fflonk::pcs::kzg::KZG;
 use fflonk::pcs::kzg::params::RawKzgVerifierKey;
+use fflonk::pcs::kzg::KZG;
+use fflonk::pcs::{Commitment, PcsParams, PCS};
 
+use common::AffineColumn;
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
-use common::gadgets::sw_cond_add::AffineColumn;
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 
-use crate::PiopParams;
 use crate::ring::Ring;
+use crate::PiopParams;
 
+pub mod params;
 mod prover;
 mod verifier;
-pub mod params;
 
 // Workaround while waiting for https://github.com/arkworks-rs/algebra/pull/837
 // to be on [crates.io](https://crates.io/crates/ark-serialize) (allegedly ark-serialize 0.4.3 )
 mod ark_serialize_837 {
-    use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate, Valid, SerializationError, Read};
+    use ark_serialize::{
+        CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid,
+        Validate,
+    };
 
     #[derive(Clone, CanonicalSerialize)]
     #[repr(transparent)]
     pub struct ArrayWrap<T: CanonicalSerialize, const N: usize>(pub [T; N]);
 
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize>  Valid for ArrayWrap<T, N>
-    {
+    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> Valid for ArrayWrap<T, N> {
         fn check(&self) -> Result<(), SerializationError> {
             self.0.check()
         }
     }
 
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> CanonicalDeserialize for ArrayWrap<T, N> {
+    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> CanonicalDeserialize
+        for ArrayWrap<T, N>
+    {
         fn deserialize_with_mode<R: Read>(
             mut reader: R,
             compress: Compress,
@@ -46,7 +49,11 @@ mod ark_serialize_837 {
         ) -> Result<Self, SerializationError> {
             let mut array = arrayvec::ArrayVec::<T, N>::new();
             for _ in 0..N {
-                array.push(T::deserialize_with_mode(&mut reader, compress, Validate::No)?);
+                array.push(T::deserialize_with_mode(
+                    &mut reader,
+                    compress,
+                    Validate::No,
+                )?);
             }
             if let ark_serialize::Validate::Yes = validate {
                 T::batch_check(array.iter())?
@@ -55,7 +62,9 @@ mod ark_serialize_837 {
         }
     }
 
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> core::ops::Deref for ArrayWrap<T, N> {
+    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> core::ops::Deref
+        for ArrayWrap<T, N>
+    {
         type Target = [T; N];
 
         fn deref(&self) -> &Self::Target {
@@ -126,7 +135,7 @@ impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
 
 // Columns commitment to which the verifier knows (or trusts).
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
-pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField=F>> {
+pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField = F>> {
     // Public keys of the ring participants in order,
     // followed by the powers-of-2 multiples of the second Pedersen base.
     // pk_1, ..., pk_n, H, 2H, 4H, ..., 2^sH
@@ -157,8 +166,8 @@ impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
 }
 
 impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
-    pub fn from_ring<G: SWCurveConfig<BaseField=E::ScalarField>>(
-        ring: &Ring<E::ScalarField, E, G>,
+    pub fn from_ring<P: AffineRepr<BaseField = E::ScalarField>>(
+        ring: &Ring<E::ScalarField, E, P>,
     ) -> Self {
         let cx = KzgCommitment(ring.cx);
         let cy = KzgCommitment(ring.cy);
@@ -170,21 +179,25 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
     }
 }
 
-impl<F: PrimeField, G: AffineRepr<BaseField=F>> FixedColumns<F, G> {
+impl<F: PrimeField, P: AffineRepr<BaseField = F>> FixedColumns<F, P> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [
             CS::commit(ck, self.points.xs.as_poly()),
             CS::commit(ck, self.points.ys.as_poly()),
         ];
         let ring_selector = CS::commit(ck, self.ring_selector.as_poly());
-        FixedColumnsCommitted { points, ring_selector, phantom: Default::default() }
+        FixedColumnsCommitted {
+            points,
+            ring_selector,
+            phantom: Default::default(),
+        }
     }
 }
 
 #[derive(CanonicalSerialize, CanonicalDeserialize)]
-pub struct ProverKey<F: PrimeField, CS: PCS<F>, G: AffineRepr<BaseField=F>> {
+pub struct ProverKey<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>> {
     pub(crate) pcs_ck: CS::CK,
-    pub(crate) fixed_columns: FixedColumns<F, G>,
+    pub(crate) fixed_columns: FixedColumns<F, P>,
     pub(crate) verifier_key: VerifierKey<F, CS>, // used in the Fiat-Shamir transform
 }
 
@@ -196,8 +209,8 @@ pub struct VerifierKey<F: PrimeField, CS: PCS<F>> {
 }
 
 impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
-    pub fn from_ring_and_kzg_vk<G: SWCurveConfig<BaseField=E::ScalarField>>(
-        ring: &Ring<E::ScalarField, E, G>,
+    pub fn from_ring_and_kzg_vk<P: AffineRepr<BaseField = E::ScalarField>>(
+        ring: &Ring<E::ScalarField, E, P>,
         kzg_vk: RawKzgVerifierKey<E>,
     ) -> Self {
         Self::from_commitment_and_kzg_vk(FixedColumnsCommitted::from_ring(ring), kzg_vk)
@@ -218,12 +231,11 @@ impl<E: Pairing> VerifierKey<E::ScalarField, KZG<E>> {
     }
 }
 
-
-pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
+pub fn index<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>>(
     pcs_params: &CS::Params,
-    piop_params: &PiopParams<F, Curve>,
-    keys: &[Affine<Curve>],
-) -> (ProverKey<F, CS, Affine<Curve>>, VerifierKey<F, CS>) {
+    piop_params: &PiopParams<F, P>,
+    keys: &[P],
+) -> (ProverKey<F, CS, P>, VerifierKey<F, CS>) {
     let pcs_ck = pcs_params.ck();
     let pcs_raw_vk = pcs_params.raw_vk();
     let fixed_columns = piop_params.fixed_columns(&keys);
@@ -232,7 +244,14 @@ pub fn index<F: PrimeField, CS: PCS<F>, Curve: SWCurveConfig<BaseField=F>>(
         pcs_raw_vk: pcs_raw_vk.clone(),
         fixed_columns_committed: fixed_columns_committed.clone(),
     };
-    let prover_key = ProverKey { pcs_ck, fixed_columns, verifier_key };
-    let verifier_key = VerifierKey { pcs_raw_vk, fixed_columns_committed };
+    let prover_key = ProverKey {
+        pcs_ck,
+        fixed_columns,
+        verifier_key,
+    };
+    let verifier_key = VerifierKey {
+        pcs_raw_vk,
+        fixed_columns_committed,
+    };
     (prover_key, verifier_key)
 }

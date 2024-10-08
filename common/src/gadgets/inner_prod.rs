@@ -1,11 +1,11 @@
 use ark_ff::{FftField, Field};
-use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
 
-use crate::{Column, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
+use crate::{Column, FieldColumn};
 
 pub struct InnerProd<F: FftField> {
     a: FieldColumn<F>,
@@ -21,7 +21,6 @@ pub struct InnerProdValues<F: Field> {
     pub acc: F,
 }
 
-
 impl<F: FftField> InnerProd<F> {
     pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, domain: &Domain<F>) -> Self {
         assert_eq!(a.len, domain.capacity - 1); // last element is not constrained
@@ -30,7 +29,12 @@ impl<F: FftField> InnerProd<F> {
         let mut acc = vec![F::zero()];
         acc.extend(inner_prods);
         let acc = domain.private_column(acc);
-        Self { a, b, not_last: domain.not_last_row.clone(), acc }
+        Self {
+            a,
+            b,
+            not_last: domain.not_last_row.clone(),
+            acc,
+        }
     }
 
     /// Returns a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-1]b[n-1]
@@ -71,14 +75,12 @@ impl<F: FftField> ProverGadget<F> for InnerProd<F> {
     }
 }
 
-
 impl<F: Field> VerifierGadget<F> for InnerProdValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let c = (-self.acc - self.a * self.b) * self.not_last;
         vec![c]
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -94,9 +96,7 @@ mod tests {
 
     fn inner_prod<F: Field>(a: &[F], b: &[F]) -> F {
         assert_eq!(a.len(), b.len());
-        a.iter().zip(b)
-            .map(|(a, b)| *a * b)
-            .sum()
+        a.iter().zip(b).map(|(a, b)| *a * b).sum()
     }
 
     fn _test_inner_prod_gadget(hiding: bool) {

@@ -1,11 +1,11 @@
 use ark_ff::{FftField, Field, Zero};
-use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
 
-use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
+use crate::{const_evals, Column, FieldColumn};
 
 #[derive(Clone)]
 pub struct BitColumn<F: FftField> {
@@ -13,17 +13,16 @@ pub struct BitColumn<F: FftField> {
     pub col: FieldColumn<F>,
 }
 
-
 impl<F: FftField> BitColumn<F> {
     pub fn init(bits: Vec<bool>, domain: &Domain<F>) -> Self {
-        let bits_as_field_elements = bits.iter()
+        let bits_as_field_elements = bits
+            .iter()
             .map(|&b| if b { F::one() } else { F::zero() })
             .collect();
         let col = domain.private_column(bits_as_field_elements);
         Self { bits, col }
     }
 }
-
 
 impl<F: FftField> Column<F> for BitColumn<F> {
     fn domain(&self) -> GeneralEvaluationDomain<F> {
@@ -39,11 +38,9 @@ impl<F: FftField> Column<F> for BitColumn<F> {
     }
 }
 
-
 pub struct Booleanity<F: FftField> {
     bits: BitColumn<F>,
 }
-
 
 impl<'a, F: FftField> Booleanity<F> {
     pub fn init(bits: BitColumn<F>) -> Self {
@@ -63,11 +60,9 @@ impl<'a, F: FftField> Booleanity<F> {
     }
 }
 
-
 pub struct BooleanityValues<F: Field> {
     pub bits: F,
 }
-
 
 impl<F: Field> VerifierGadget<F> for BooleanityValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {

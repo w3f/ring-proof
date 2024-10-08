@@ -1,11 +1,11 @@
 use ark_ff::{FftField, Field, Zero};
-use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::Evaluations;
 use ark_std::{vec, vec::Vec};
 
-use crate::{Column, const_evals, FieldColumn};
 use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
+use crate::{const_evals, Column, FieldColumn};
 
 pub struct FixedCells<F: FftField> {
     col: FieldColumn<F>,
@@ -15,7 +15,6 @@ pub struct FixedCells<F: FftField> {
     l_last: FieldColumn<F>,
 }
 
-
 pub struct FixedCellsValues<F: Field> {
     pub col: F,
     pub col_first: F,
@@ -24,7 +23,6 @@ pub struct FixedCellsValues<F: Field> {
     pub l_last: F,
 }
 
-
 impl<F: FftField> FixedCells<F> {
     pub fn init(col: FieldColumn<F>, domain: &Domain<F>) -> Self {
         assert_eq!(col.len, domain.capacity);
@@ -32,7 +30,13 @@ impl<F: FftField> FixedCells<F> {
         let col_last = col.evals.evals[domain.capacity - 1];
         let l_first = domain.l_first.clone();
         let l_last = domain.l_last.clone();
-        Self { col, col_first, col_last, l_first, l_last }
+        Self {
+            col,
+            col_first,
+            col_last,
+            l_first,
+            l_last,
+        }
     }
 
     pub fn constraints(&self) -> Vec<Evaluations<F>> {
@@ -52,10 +56,10 @@ impl<F: FftField> FixedCells<F> {
     }
 }
 
-
 impl<F: Field> VerifierGadget<F> for FixedCellsValues<F> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
-        let c = (self.col - self.col_first) * self.l_first + (self.col - self.col_last) * self.l_last;
+        let c =
+            (self.col - self.col_first) * self.l_first + (self.col - self.col_last) * self.l_last;
         vec![c]
     }
 }

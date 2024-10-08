@@ -1,12 +1,12 @@
 use ark_ff::PrimeField;
-use ark_poly::Evaluations;
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::Evaluations;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::vec::Vec;
 use fflonk::pcs::Commitment;
 
-use crate::{ColumnsCommited, ColumnsEvaluated};
 use crate::domain::{Domain, EvaluatedDomain};
+use crate::{ColumnsCommited, ColumnsEvaluated};
 
 pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     type Commitments: ColumnsCommited<F, C>;
@@ -14,7 +14,10 @@ pub trait ProverPiop<F: PrimeField, C: Commitment<F>> {
     type Instance: CanonicalSerialize + CanonicalDeserialize;
 
     // Commitments to the column polynomials excluding the precommitted columns.
-    fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(&self, commit: Fun) -> Self::Commitments;
+    fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(
+        &self,
+        commit: Fun,
+    ) -> Self::Commitments;
 
     // All the column polynomials (including precommitted columns)
     fn columns(&self) -> Vec<DensePolynomial<F>>;
