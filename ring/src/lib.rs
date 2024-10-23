@@ -62,7 +62,6 @@ pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message
         let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
         if let Some(point) = P::from_random_bytes(&hash) {
             let point = point.clear_cofactor();
-            //assert!(point.is_in_correct_subgroup_assuming_on_curve());
             return point;
         }
         seed[cnt_offset] += 1;

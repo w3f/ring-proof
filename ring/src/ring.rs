@@ -39,7 +39,7 @@ const IDLE_ROWS: usize = ZK_ROWS + 1;
 pub struct Ring<
     F: PrimeField,
     KzgCurve: Pairing<ScalarField = F>,
-    VrfAffineT: AffineRepr<BaseField = F>,
+    P: AffineRepr<BaseField = F>,
 > {
     // KZG commitments to the coordinates of the vector described above
     pub cx: KzgCurve::G1Affine,
@@ -51,7 +51,7 @@ pub struct Ring<
     // the number of keys "stored" in this commitment
     pub curr_keys: usize,
     // a parameter
-    pub padding_point: VrfAffineT,
+    pub padding_point: P,
 }
 
 impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<BaseField = F>>
