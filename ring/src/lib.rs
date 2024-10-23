@@ -38,18 +38,6 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     }
 }
 
-pub fn find_random_point<F: PrimeField, P: AffineRepr<BaseField = F>>() -> P {
-    let mut x: u8 = 0;
-    loop {
-        let p = P::from_random_bytes(&[x]);
-        if p.is_some() && !p.unwrap().is_zero() {
-            // && !p.unwrap().is_in_correct_subgroup_assuming_on_curve() {
-            return p.unwrap().clear_cofactor();
-        }
-        x = x + 1;
-    }
-}
-
 // Try and increment hash to curve.
 pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message: &[u8]) -> P {
     use blake2::Digest;
@@ -62,7 +50,9 @@ pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message
         let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
         if let Some(point) = P::from_random_bytes(&hash) {
             let point = point.clear_cofactor();
-            return point;
+            if !point.is_zero() {
+                return point;
+            }
         }
         seed[cnt_offset] += 1;
         no_tries += 1;
@@ -104,7 +94,7 @@ mod tests {
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
 
-    use common::test_helpers::random_vec;
+    use common::test_helpers::{find_random_point, random_vec};
 
     use crate::piop::FixedColumnsCommitted;
     use crate::ring::{Ring, RingBuilderKey};
@@ -116,8 +106,7 @@ mod tests {
     use common::gadgets::ProverGadget;
     use common::gadgets::VerifierGadget;
 
-    
-    #[cfg(feature="intensive_benchmarking")]
+    #[cfg(feature = "intensive_benchmarking")]
     use std::hint::black_box;
 
     use super::*;
@@ -155,10 +144,10 @@ mod tests {
         );
         let t_prove = start_timer!(|| "Prove");
 
-        #[cfg(feature="intensive_benchmarking")]
+        #[cfg(feature = "intensive_benchmarking")]
         let mut proofs: Vec<RingProof<_, CS>> = vec![];
 
-        #[cfg(feature="intensive_benchmarking")]
+        #[cfg(feature = "intensive_benchmarking")]
         for _ in 0.._repeat - 1 {
             black_box(proofs.push(ring_prover.prove::<CondAddT>(secret)));
         }
@@ -173,15 +162,14 @@ mod tests {
         );
         let t_verify = start_timer!(|| "Verify");
 
-        #[cfg(feature="intensive_benchmarking")]
+        #[cfg(feature = "intensive_benchmarking")]
         for _ in 0.._repeat - 1 {
-            black_box(ring_verifier.verify::<CondAddT::CondAddValT>(
-                proofs.pop().unwrap(),
-                result.into_affine(),
-            ));
+            black_box(
+                ring_verifier
+                    .verify::<CondAddT::CondAddValT>(proofs.pop().unwrap(), result.into_affine()),
+            );
         }
-        let res =
-            ring_verifier.verify::<CondAddT::CondAddValT>(proof, result.into_affine());
+        let res = ring_verifier.verify::<CondAddT::CondAddValT>(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
     }
@@ -280,13 +268,13 @@ mod tests {
         >(2usize.pow(10), 1);
     }
 
-    #[cfg(feature="intensive_benchmarking")]
+    #[cfg(feature = "intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_sw() {
         _test_ring_proof::<KZG<Bls12_381>, SWAffine, SwCondAdd<Fq, SWAffine>>(2usize.pow(14), 10);
     }
 
-    #[cfg(feature="intensive_benchmarking")]
+    #[cfg(feature = "intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_te() {
         _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine, TeCondAdd<Fq, EdwardsAffine>>(

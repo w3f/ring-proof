@@ -36,11 +36,7 @@ const IDLE_ROWS: usize = ZK_ROWS + 1;
 // `VrfCurveConfig` -- inner curve, the curve used by the VRF, in SW form. We instantiate it with Bandersnatch.
 // `F` shared scalar field of the outer and the base field of the inner curves.
 #[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
-pub struct Ring<
-    F: PrimeField,
-    KzgCurve: Pairing<ScalarField = F>,
-    P: AffineRepr<BaseField = F>,
-> {
+pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField = F>> {
     // KZG commitments to the coordinates of the vector described above
     pub cx: KzgCurve::G1Affine,
     pub cy: KzgCurve::G1Affine,
