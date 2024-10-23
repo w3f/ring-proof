@@ -50,3 +50,5 @@ print-trace = [
   "common/print-trace"
 ]
 asm = [ "fflonk/asm" ]
+
+intensive_benchmarking = ["std"]  #benchmarking by running many proofs and verifications to get more accurate timing comparison

@@ -116,6 +116,8 @@ mod tests {
     use common::gadgets::ProverGadget;
     use common::gadgets::VerifierGadget;
 
+    
+    #[cfg(feature="intensive_benchmarking")]
     use std::hint::black_box;
 
     use super::*;
@@ -126,7 +128,7 @@ mod tests {
         CondAddT: CondAdd<Fq, P> + ProverGadget<Fq>,
     >(
         domain_size: usize,
-        repeat: usize,
+        _repeat: usize,
     ) where
         CondAddT::CondAddValT: VerifierGadget<Fq>,
     {
@@ -152,8 +154,12 @@ mod tests {
             ArkTranscript::new(b"ring-vrf-test"),
         );
         let t_prove = start_timer!(|| "Prove");
+
+        #[cfg(feature="intensive_benchmarking")]
         let mut proofs: Vec<RingProof<_, CS>> = vec![];
-        for _ in 0..repeat - 1 {
+
+        #[cfg(feature="intensive_benchmarking")]
+        for _ in 0.._repeat - 1 {
             black_box(proofs.push(ring_prover.prove::<CondAddT>(secret)));
         }
 
@@ -166,14 +172,16 @@ mod tests {
             ArkTranscript::new(b"ring-vrf-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        for _ in 0..repeat - 1 {
-            black_box(ring_verifier.verify_ring_proof::<CondAddT::CondAddValT>(
+
+        #[cfg(feature="intensive_benchmarking")]
+        for _ in 0.._repeat - 1 {
+            black_box(ring_verifier.verify::<CondAddT::CondAddValT>(
                 proofs.pop().unwrap(),
                 result.into_affine(),
             ));
         }
         let res =
-            ring_verifier.verify_ring_proof::<CondAddT::CondAddValT>(proof, result.into_affine());
+            ring_verifier.verify::<CondAddT::CondAddValT>(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
     }
@@ -272,11 +280,13 @@ mod tests {
         >(2usize.pow(10), 1);
     }
 
+    #[cfg(feature="intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_sw() {
         _test_ring_proof::<KZG<Bls12_381>, SWAffine, SwCondAdd<Fq, SWAffine>>(2usize.pow(14), 10);
     }
 
+    #[cfg(feature="intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_te() {
         _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine, TeCondAdd<Fq, EdwardsAffine>>(
