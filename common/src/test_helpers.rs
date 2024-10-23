@@ -41,7 +41,7 @@ pub fn find_random_point<F: PrimeField, P: AffineRepr<BaseField = F>>() -> P {
         if let Some(p) = p {
             let p = p.clear_cofactor();
             if !p.is_zero() {
-                return p
+                return p;
             }
         }
         x = x + 1;

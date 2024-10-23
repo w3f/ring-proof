@@ -50,8 +50,8 @@ pub struct Ring<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr
     pub padding_point: P,
 }
 
-impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<BaseField = F>>
-    fmt::Debug for Ring<F, KzgCurve, VrfAffineT>
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField = F>> fmt::Debug
+    for Ring<F, KzgCurve, P>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -62,8 +62,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<B
     }
 }
 
-impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<BaseField = F>>
-    Ring<F, KzgCurve, VrfAffineT>
+impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField = F>>
+    Ring<F, KzgCurve, P>
 {
     // Builds the commitment to the vector
     // `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
@@ -73,7 +73,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<B
     // The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
     pub fn empty(
         // SNARK parameters
-        piop_params: &PiopParams<F, VrfAffineT>,
+        piop_params: &PiopParams<F, P>,
         // Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
         // generator used in the SRS
@@ -117,7 +117,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<B
 
     pub fn append(
         &mut self,
-        keys: &[VrfAffineT],
+        keys: &[P],
         // Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
     ) {
@@ -147,8 +147,8 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<B
     // In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
     pub fn with_keys(
         // SNARK parameters
-        piop_params: &PiopParams<F, VrfAffineT>,
-        keys: &[VrfAffineT],
+        piop_params: &PiopParams<F, P>,
+        keys: &[P],
         // full-size Lagrangian srs
         srs: &RingBuilderKey<F, KzgCurve>,
     ) -> Self {
@@ -209,10 +209,9 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, VrfAffineT: AffineRepr<B
         cx: KzgCurve::G1Affine,
         cy: KzgCurve::G1Affine,
         selector: KzgCurve::G1Affine,
-        padding_point: VrfAffineT,
+        padding_point: P,
     ) -> Self {
-        let max_keys =
-            domain_size - (VrfAffineT::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
+        let max_keys = domain_size - (P::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
         Self {
             cx,
             cy,
