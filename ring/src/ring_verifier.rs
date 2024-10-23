@@ -42,7 +42,7 @@ impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript
         }
     }
 
-    pub fn verify_ring_proof<CondAddValuesT: CondAddValues<F> + VerifierGadget<F>>(
+    pub fn verify<CondAddValuesT: CondAddValues<F> + VerifierGadget<F>>(
         &self,
         proof: RingProof<F, CS>,
         result: P,
