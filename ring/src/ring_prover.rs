@@ -8,13 +8,13 @@ use common::prover::PlonkProver;
 use common::transcript::PlonkTranscript;
 
 use crate::piop::{FixedColumns, PiopProver, ProverKey, params::PiopParams};
-use crate::RingProof;
+use crate::{ArkTranscript, RingProof};
 
 pub struct RingProver<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS>,
+    T: PlonkTranscript<F, CS> = ArkTranscript,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns: FixedColumns<F, P>,

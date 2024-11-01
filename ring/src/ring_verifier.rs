@@ -10,6 +10,7 @@ use common::piop::VerifierPiop;
 use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
+use crate::ArkTranscript;
 use crate::RingProof;
 use crate::piop::{params::PiopParams, FixedColumnsCommitted, PiopVerifier, VerifierKey};
 
@@ -17,7 +18,7 @@ pub struct RingVerifier<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS>,
+    T: PlonkTranscript<F, CS> = ArkTranscript,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
