@@ -89,7 +89,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         .concat()
     }
 
-    pub fn padding_point(&self) -> Affine<Curve> {
+    pub fn padding_point(&self) -> P {
         self.padding_point
     }
 }
