@@ -4,9 +4,11 @@ use ark_std::{vec, vec::Vec, rand::RngCore};
 use ark_std::rand::Rng;
 use fflonk::pcs::{Commitment, PCS, PcsParams};
 
-use crate::{ColumnsCommited, ColumnsEvaluated, Proof};
 use crate::piop::VerifierPiop;
 use crate::transcript::PlonkTranscript;
+use crate::ColumnsCommited;
+use crate::ColumnsEvaluated;
+use crate::Proof;
 
 pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> {
     // Polynomial commitment scheme verifier's key.
@@ -17,9 +19,11 @@ pub struct PlonkVerifier<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> {
 }
 
 impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, T> {
-    pub fn init(pcs_vk: <CS::Params as PcsParams>::VK,
-                verifier_key: &impl CanonicalSerialize,
-                empty_transcript: T) -> Self {
+    pub fn init(
+        pcs_vk: <CS::Params as PcsParams>::VK,
+        verifier_key: &impl CanonicalSerialize,
+        empty_transcript: T,
+    ) -> Self {
         let mut transcript_prelude = empty_transcript;
         transcript_prelude._add_serializable(b"vk", verifier_key);
 
@@ -36,35 +40,53 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         challenges: Challenges<F>,
         rng: &mut R,
     ) -> bool
-        where
-            Piop: VerifierPiop<F, CS::C>,
-            Commitments: ColumnsCommited<F, CS::C>,
-            Evaluations: ColumnsEvaluated<F>,
+    where
+        Piop: VerifierPiop<F, CS::C>,
+        Commitments: ColumnsCommited<F, CS::C>,
+        Evaluations: ColumnsEvaluated<F>,
     {
-        let eval: F = piop.evaluate_constraints_main().iter().zip(challenges.alphas.iter()).map(|(c, alpha)| *alpha * c).sum();
+        let eval: F = piop
+            .evaluate_constraints_main()
+            .iter()
+            .zip(challenges.alphas.iter())
+            .map(|(c, alpha)| *alpha * c)
+            .sum();
         let zeta = challenges.zeta;
         let domain_evaluated = piop.domain_evaluated();
 
-        let q_zeta = domain_evaluated.divide_by_vanishing_poly_in_zeta(eval + proof.lin_at_zeta_omega);
+        let q_zeta =
+            domain_evaluated.divide_by_vanishing_poly_in_zeta(eval + proof.lin_at_zeta_omega);
 
         let mut columns = [
             piop.precommitted_columns(),
             proof.column_commitments.to_vec(),
-        ].concat();
+        ]
+        .concat();
         columns.push(proof.quotient_commitment.clone());
 
         let mut columns_at_zeta = proof.columns_at_zeta.to_vec();
         columns_at_zeta.push(q_zeta);
 
         let cl = CS::C::combine(&challenges.nus, &columns);
-        let agg_y = columns_at_zeta.into_iter().zip(challenges.nus.iter()).map(|(y, r)| y * r).sum();
+        let agg_y = columns_at_zeta
+            .into_iter()
+            .zip(challenges.nus.iter())
+            .map(|(y, r)| y * r)
+            .sum();
 
         let lin_pices = piop.constraint_polynomials_linearized_commitments();
         let lin_comm = CS::C::combine(&challenges.alphas[..3], &lin_pices);
 
         let zeta_omega = zeta * domain_evaluated.omega();
 
-        CS::batch_verify(&self.pcs_vk, vec![cl, lin_comm], vec![challenges.zeta, zeta_omega], vec![agg_y, proof.lin_at_zeta_omega], vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof], rng)
+        CS::batch_verify(
+            &self.pcs_vk,
+            vec![cl, lin_comm],
+            vec![challenges.zeta, zeta_omega],
+            vec![agg_y, proof.lin_at_zeta_omega],
+            vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof],
+            rng,
+        )
     }
 
     pub fn restore_challenges<Commitments, Evaluations>(
@@ -74,9 +96,9 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         n_polys: usize,
         n_constraints: usize,
     ) -> (Challenges<F>, impl RngCore)
-        where
-            Commitments: ColumnsCommited<F, CS::C>,
-            Evaluations: ColumnsEvaluated<F>,
+    where
+        Commitments: ColumnsCommited<F, CS::C>,
+        Evaluations: ColumnsEvaluated<F>,
     {
         let mut transcript = self.transcript_prelude.clone();
         transcript.add_instance(instance);
@@ -88,11 +110,8 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         let zeta = transcript.get_evaluation_point();
         transcript.add_evaluations(&proof.columns_at_zeta, &proof.lin_at_zeta_omega);
         let nus = transcript.get_kzg_aggregation_challenges(n_polys);
-        let challenges = Challenges {
-            alphas,
-            zeta,
-            nus,
-        };
+        let challenges = Challenges { alphas, zeta, nus };
+
         (challenges, transcript.to_rng())
     }
 }
@@ -102,4 +121,3 @@ pub struct Challenges<F: Field> {
     pub zeta: F,
     pub nus: Vec<F>,
 }
-
