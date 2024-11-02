@@ -7,7 +7,18 @@ use crate::{AffineColumn, FieldColumn};
 
 use super::{ProverGadget, VerifierGadget};
 
-// Conditional affine addition:
+/// Affine point with conditional add implementation.
+///
+/// Currently supported for Arkworks Short Weierstrass and Twisted Edwards affine points.
+pub trait AffineCondAdd: AffineRepr
+where
+    FieldFor<Self>: FftField,
+{
+    /// Conditional addition operation
+    type CondAddT: CondAdd<FieldFor<Self>, Self>;
+}
+
+// Conditional affine addition.
 //
 // If the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
@@ -16,12 +27,12 @@ where
     F: FftField,
     P: AffineRepr<BaseField = F>,
 {
-    type CondAddValT: CondAddValues<F>;
+    type Values: CondAddValues<F>;
 
     fn init(bitmask: BitColumn<F>, points: AffineColumn<F, P>, seed: P, domain: &Domain<F>)
         -> Self;
 
-    fn evaluate_assignment(&self, z: &F) -> Self::CondAddValT;
+    fn evaluate_assignment(&self, z: &F) -> Self::Values;
 
     fn get_acc(&self) -> AffineColumn<F, P>;
 
@@ -58,11 +69,4 @@ pub struct CondAddValuesGen<P: AffineRepr> {
     pub points: (FieldFor<P>, FieldFor<P>),
     pub not_last: FieldFor<P>,
     pub acc: (FieldFor<P>, FieldFor<P>),
-}
-
-pub trait AffineCondAdd: AffineRepr
-where
-    FieldFor<Self>: FftField,
-{
-    type CondAddT: CondAdd<FieldFor<Self>, Self>;
 }

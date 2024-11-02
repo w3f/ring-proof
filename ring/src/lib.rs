@@ -104,7 +104,7 @@ mod tests {
     use crate::ring_verifier::RingVerifier;
     use common::gadgets::cond_add::AffineCondAdd;
 
-    #[cfg(feature = "intensive_benchmarking")]
+    #[cfg(feature = "intensive-benchmarking")]
     use std::hint::black_box;
 
     use super::*;
@@ -137,10 +137,10 @@ mod tests {
         );
         let t_prove = start_timer!(|| "Prove");
 
-        #[cfg(feature = "intensive_benchmarking")]
+        #[cfg(feature = "intensive-benchmarking")]
         let mut proofs: Vec<RingProof<_, CS>> = vec![];
 
-        #[cfg(feature = "intensive_benchmarking")]
+        #[cfg(feature = "intensive-benchmarking")]
         for _ in 0.._repeat - 1 {
             black_box(proofs.push(ring_prover.prove(secret)));
         }
@@ -155,7 +155,7 @@ mod tests {
         );
         let t_verify = start_timer!(|| "Verify");
 
-        #[cfg(feature = "intensive_benchmarking")]
+        #[cfg(feature = "intensive-benchmarking")]
         for _ in 0.._repeat - 1 {
             black_box(ring_verifier.verify(proofs.pop().unwrap(), result.into_affine()));
         }
@@ -248,13 +248,13 @@ mod tests {
         _test_ring_proof::<fflonk::pcs::IdentityCommitment, EdwardsAffine>(2usize.pow(10), 1);
     }
 
-    #[cfg(feature = "intensive_benchmarking")]
+    #[cfg(feature = "intensive-benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_sw() {
         _test_ring_proof::<KZG<Bls12_381>, SWAffine>(2usize.pow(14), 10);
     }
 
-    #[cfg(feature = "intensive_benchmarking")]
+    #[cfg(feature = "intensive-benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_te() {
         _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine>(2usize.pow(14), 10);

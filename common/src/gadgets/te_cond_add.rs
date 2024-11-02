@@ -13,19 +13,22 @@ use crate::{const_evals, AffineColumn, Column};
 
 use super::cond_add::{AffineCondAdd, CondAddGen, CondAddValuesGen};
 
+pub type TECondAdd<C> = CondAddGen<Affine<C>>;
+pub type TECondAddValues<C> = CondAddValuesGen<Affine<C>>;
+
 impl<C: TECurveConfig> AffineCondAdd for Affine<C>
 where
     <Self as AffineRepr>::BaseField: FftField,
 {
-    type CondAddT = CondAddGen<Self>;
+    type CondAddT = TECondAdd<C>;
 }
 
-impl<F, C> CondAdd<F, Affine<C>> for CondAddGen<Affine<C>>
+impl<F, C> CondAdd<F, Affine<C>> for TECondAdd<C>
 where
     F: FftField,
     C: TECurveConfig<BaseField = F>,
 {
-    type CondAddValT = CondAddValuesGen<Affine<C>>;
+    type Values = TECondAddValues<C>;
 
     // Populates the acc column starting from the supplied seed (as 0 doesn't work with the addition formula).
     // As the TE addition formula used is not complete, the seed must be selected in a way that would prevent
@@ -65,8 +68,8 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> CondAddValuesGen<Affine<C>> {
-        CondAddValuesGen {
+    fn evaluate_assignment(&self, z: &F) -> TECondAddValues<C> {
+        TECondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -83,12 +86,12 @@ where
     }
 }
 
-impl<F: Field, C> CondAddValues<F> for CondAddValuesGen<Affine<C>>
+impl<F: Field, C> CondAddValues<F> for TECondAddValues<C>
 where
     C: TECurveConfig<BaseField = F>,
 {
     fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
-        CondAddValuesGen {
+        TECondAddValues {
             bitmask,
             points,
             not_last,
@@ -124,7 +127,7 @@ where
     }
 }
 
-impl<F, C> ProverGadget<F> for CondAddGen<Affine<C>>
+impl<F, C> ProverGadget<F> for TECondAdd<C>
 where
     F: FftField,
     C: TECurveConfig<BaseField = F>,
@@ -212,7 +215,7 @@ where
     }
 }
 
-impl<F: Field, C> VerifierGadget<F> for CondAddValuesGen<Affine<C>>
+impl<F: Field, C> VerifierGadget<F> for TECondAddValues<C>
 where
     C: TECurveConfig<BaseField = F>,
 {

@@ -13,19 +13,22 @@ use crate::{const_evals, AffineColumn, Column};
 
 use super::cond_add::{AffineCondAdd, CondAddGen, CondAddValuesGen};
 
+pub type SWCondAdd<C> = CondAddGen<Affine<C>>;
+pub type SWCondAddValues<C> = CondAddValuesGen<Affine<C>>;
+
 impl<C: SWCurveConfig> AffineCondAdd for Affine<C>
 where
     <Self as AffineRepr>::BaseField: FftField,
 {
-    type CondAddT = CondAddGen<Self>;
+    type CondAddT = SWCondAdd<C>;
 }
 
-impl<F, C> CondAdd<F, Affine<C>> for CondAddGen<Affine<C>>
+impl<F, C> CondAdd<F, Affine<C>> for SWCondAdd<C>
 where
     F: FftField,
     C: SWCurveConfig<BaseField = F>,
 {
-    type CondAddValT = CondAddValuesGen<Affine<C>>;
+    type Values = SWCondAddValues<C>;
 
     // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
     // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
@@ -65,8 +68,8 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> CondAddValuesGen<Affine<C>> {
-        CondAddValuesGen {
+    fn evaluate_assignment(&self, z: &F) -> SWCondAddValues<C> {
+        SWCondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -83,12 +86,12 @@ where
     }
 }
 
-impl<F: Field, C> CondAddValues<F> for CondAddValuesGen<Affine<C>>
+impl<F: Field, C> CondAddValues<F> for SWCondAddValues<C>
 where
     C: SWCurveConfig<BaseField = F>,
 {
     fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
-        CondAddValuesGen::<Affine<C>> {
+        SWCondAddValues {
             bitmask,
             points,
             not_last,
@@ -125,7 +128,7 @@ where
     }
 }
 
-impl<F, C> ProverGadget<F> for CondAddGen<Affine<C>>
+impl<F, C> ProverGadget<F> for SWCondAdd<C>
 where
     F: FftField,
     C: SWCurveConfig<BaseField = F>,
@@ -207,7 +210,7 @@ where
     }
 }
 
-impl<F: Field, C> VerifierGadget<F> for CondAddValuesGen<Affine<C>>
+impl<F: Field, C> VerifierGadget<F> for SWCondAddValues<C>
 where
     C: SWCurveConfig<BaseField = F>,
 {

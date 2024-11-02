@@ -52,4 +52,4 @@ print-trace = [
 asm = [ "fflonk/asm" ]
 test-vectors = [ "common/test-vectors" ]
 # benchmarking by running many proofs and verifications to get more accurate timing comparison
-intensive_benchmarking = ["std"] 
+intensive-benchmarking = ["std"] 

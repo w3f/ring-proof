@@ -48,8 +48,8 @@ where
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
-            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::CondAddValT>::N_COLUMNS + 1,
-            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::CondAddValT>::N_CONSTRAINTS,
+            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::Values>::N_COLUMNS + 1,
+            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::Values>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
@@ -59,7 +59,7 @@ where
             self.piop_params.domain.hiding,
         );
 
-        let piop: PiopVerifier<F, <CS as PCS<F>>::C, <P::CondAddT as CondAdd<F, P>>::CondAddValT> =
+        let piop: PiopVerifier<F, <CS as PCS<F>>::C, <P::CondAddT as CondAdd<F, P>>::Values> =
             PiopVerifier::init(
                 domain_eval,
                 self.fixed_columns_committed.clone(),

@@ -92,7 +92,7 @@ where
     F: PrimeField,
     C: Commitment<F>,
     P: AffineRepr<BaseField = F>,
-    CondAddT: CondAdd<F, P> + ProverGadget<F>,
+    CondAddT: CondAdd<F, P>,
 {
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
