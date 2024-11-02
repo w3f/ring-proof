@@ -4,49 +4,37 @@ use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
-use core::marker::PhantomData;
 
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::cond_add::{CondAdd, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, AffineColumn, Column, FieldColumn};
+use crate::{const_evals, AffineColumn, Column};
 
-// Conditional affine addition:
-// if the bit is set for a point, add the point to the acc and store,
-// otherwise copy the acc value
-pub struct TeCondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    pub(super) bitmask: BitColumn<F>,
-    pub(super) points: AffineColumn<F, P>,
-    // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(super) not_last: FieldColumn<F>,
-    // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
-    pub result: P,
+use super::cond_add::{AffineCondAdd, CondAddGen, CondAddValuesGen};
+
+impl<C: TECurveConfig> AffineCondAdd for Affine<C>
+where
+    <Self as AffineRepr>::BaseField: FftField,
+{
+    type CondAddT = CondAddGen<Self>;
 }
 
-pub struct TeCondAddValues<F: Field, Curve: TECurveConfig<BaseField = F>> {
-    pub bitmask: F,
-    pub points: (F, F),
-    pub not_last: F,
-    pub acc: (F, F),
-    pub _curve: PhantomData<Curve>,
-}
-
-impl<F, Curve> CondAdd<F, Affine<Curve>> for TeCondAdd<F, Affine<Curve>>
+impl<F, C> CondAdd<F, Affine<C>> for CondAddGen<Affine<C>>
 where
     F: FftField,
-    Curve: TECurveConfig<BaseField = F>,
+    C: TECurveConfig<BaseField = F>,
 {
-    type CondAddValT = TeCondAddValues<F, Curve>;
+    type CondAddValT = CondAddValuesGen<Affine<C>>;
+
     // Populates the acc column starting from the supplied seed (as 0 doesn't work with the addition formula).
     // As the TE addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     fn init(
         bitmask: BitColumn<F>,
-        points: AffineColumn<F, Affine<Curve>>,
-        seed: Affine<Curve>,
+        points: AffineColumn<F, Affine<C>>,
+        seed: Affine<C>,
         domain: &Domain<F>,
     ) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
@@ -77,29 +65,69 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> TeCondAddValues<F, Curve> {
-        TeCondAddValues {
+    fn evaluate_assignment(&self, z: &F) -> CondAddValuesGen<Affine<C>> {
+        CondAddValuesGen {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
             acc: self.acc.evaluate(z),
-            _curve: PhantomData,
         }
     }
 
-    fn get_acc(&self) -> AffineColumn<F, Affine<Curve>> {
+    fn get_acc(&self) -> AffineColumn<F, Affine<C>> {
         self.acc.clone()
     }
 
-    fn get_result(&self) -> Affine<Curve> {
+    fn get_result(&self) -> Affine<C> {
         self.result.clone()
     }
 }
 
-impl<F, Curve> ProverGadget<F> for TeCondAdd<F, Affine<Curve>>
+impl<F: Field, C> CondAddValues<F> for CondAddValuesGen<Affine<C>>
+where
+    C: TECurveConfig<BaseField = F>,
+{
+    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
+        CondAddValuesGen {
+            bitmask,
+            points,
+            not_last,
+            acc,
+        }
+    }
+    fn acc_coeffs_1(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
+
+        let mut c_acc_x = b * (y1 * y2 + C::COEFF_A * x1 * x2) + F::one() - b;
+        let mut c_acc_y = F::zero();
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+
+    fn acc_coeffs_2(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
+
+        let mut c_acc_x = F::zero();
+        let mut c_acc_y = b * (x1 * y2 - x2 * y1) + F::one() - b;
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+}
+
+impl<F, C> ProverGadget<F> for CondAddGen<Affine<C>>
 where
     F: FftField,
-    Curve: TECurveConfig<BaseField = F>,
+    C: TECurveConfig<BaseField = F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -109,7 +137,7 @@ where
         let domain = self.bitmask.domain_4x();
         let b = &self.bitmask.col.evals_4x;
         let one = &const_evals(F::one(), domain);
-        let te_a_coeff = &const_evals(Curve::COEFF_A, domain);
+        let te_a_coeff = &const_evals(C::COEFF_A, domain);
         let (x1, y1) = (&self.acc.xs.evals_4x, &self.acc.ys.evals_4x);
         let (x2, y2) = (&self.points.xs.evals_4x, &self.points.ys.evals_4x);
         let (x3, y3) = (&self.acc.xs.shifted_4x(), &self.acc.ys.shifted_4x());
@@ -165,6 +193,7 @@ where
 
     /// Mary-Oana Linearization technique. See: https://hackmd.io/0kdBl3GVSmmcB7QJe1NTuw?view#Linearization
     fn constraints_linearized(&self, z: &F) -> Vec<DensePolynomial<F>> {
+        use super::cond_add::CondAdd;
         let vals = self.evaluate_assignment(z);
         let acc_x = self.acc.xs.as_poly();
         let acc_y = self.acc.ys.as_poly();
@@ -183,8 +212,9 @@ where
     }
 }
 
-impl<F: Field, Curve: TECurveConfig<BaseField = F>> VerifierGadget<F>
-    for TeCondAddValues<F, Curve>
+impl<F: Field, C> VerifierGadget<F> for CondAddValuesGen<Affine<C>>
+where
+    C: TECurveConfig<BaseField = F>,
 {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
@@ -193,7 +223,7 @@ impl<F: Field, Curve: TECurveConfig<BaseField = F>> VerifierGadget<F>
         let (x3, y3) = (F::zero(), F::zero());
 
         //b (x_3 (y_1 y_2 + ax_1 x_2) - x_1 y_1 - y_2 x_2) + (1 - b) (x_3 - x_1) = 0
-        let mut c1 = b * (x3 * (y1 * y2 + Curve::COEFF_A * x1 * x2) - (x1 * y1 + x2 * y2))
+        let mut c1 = b * (x3 * (y1 * y2 + C::COEFF_A * x1 * x2) - (x1 * y1 + x2 * y2))
             + (F::one() - b) * (x3 - x1);
 
         //b (y_3 (x_1 y_2 - x_2 y_1) - x_1 y_1 + x_2 y_2) + (1 - b) (y_3 - y_1) = 0
@@ -204,45 +234,6 @@ impl<F: Field, Curve: TECurveConfig<BaseField = F>> VerifierGadget<F>
         c2 *= self.not_last;
 
         vec![c1, c2]
-    }
-}
-
-impl<F: Field, Curve: TECurveConfig<BaseField = F>> CondAddValues<F> for TeCondAddValues<F, Curve> {
-    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
-        TeCondAddValues::<F, Curve> {
-            bitmask,
-            points,
-            not_last,
-            acc,
-            _curve: PhantomData,
-        }
-    }
-    fn acc_coeffs_1(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, y1) = self.acc;
-        let (x2, y2) = self.points;
-
-        let mut c_acc_x = b * (y1 * y2 + Curve::COEFF_A * x1 * x2) + F::one() - b;
-        let mut c_acc_y = F::zero();
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
-    }
-
-    fn acc_coeffs_2(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, y1) = self.acc;
-        let (x2, y2) = self.points;
-
-        let mut c_acc_x = F::zero();
-        let mut c_acc_y = b * (x1 * y2 - x2 * y1) + F::one() - b;
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
     }
 }
 
@@ -259,11 +250,7 @@ mod tests {
 
     fn _test_te_cond_add_gadget(
         hiding: bool,
-    ) -> (
-        Domain<Fq>,
-        TeCondAdd<Fq, EdwardsAffine>,
-        Vec<Evaluations<Fq>>,
-    ) {
+    ) -> (Domain<Fq>, CondAddGen<EdwardsAffine>, Vec<Evaluations<Fq>>) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -277,7 +264,7 @@ mod tests {
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = TeCondAdd::init(bitmask_col, points_col, seed, &domain);
+        let gadget = CondAddGen::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 

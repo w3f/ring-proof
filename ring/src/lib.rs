@@ -100,26 +100,17 @@ mod tests {
     use crate::ring::{Ring, RingBuilderKey};
     use crate::ring_prover::RingProver;
     use crate::ring_verifier::RingVerifier;
-    use common::gadgets::cond_add::CondAdd;
-    use common::gadgets::sw_cond_add::SwCondAdd;
-    use common::gadgets::te_cond_add::TeCondAdd;
-    use common::gadgets::ProverGadget;
-    use common::gadgets::VerifierGadget;
+    use common::gadgets::cond_add::AffineCondAdd;
 
     #[cfg(feature = "intensive_benchmarking")]
     use std::hint::black_box;
 
     use super::*;
 
-    fn _test_ring_proof<
+    fn _test_ring_proof<CS, P>(domain_size: usize, _repeat: usize)
+    where
         CS: PCS<Fq>,
-        P: AffineRepr<BaseField = Fq, ScalarField = Fr>,
-        CondAddT: CondAdd<Fq, P> + ProverGadget<Fq>,
-    >(
-        domain_size: usize,
-        _repeat: usize,
-    ) where
-        CondAddT::CondAddValT: VerifierGadget<Fq>,
+        P: AffineCondAdd<BaseField = Fq, ScalarField = Fr>,
     {
         let rng = &mut test_rng();
 
@@ -149,10 +140,10 @@ mod tests {
 
         #[cfg(feature = "intensive_benchmarking")]
         for _ in 0.._repeat - 1 {
-            black_box(proofs.push(ring_prover.prove::<CondAddT>(secret)));
+            black_box(proofs.push(ring_prover.prove(secret)));
         }
 
-        let proof = ring_prover.prove::<CondAddT>(secret);
+        let proof = ring_prover.prove(secret);
         end_timer!(t_prove);
 
         let ring_verifier = RingVerifier::init(
@@ -164,12 +155,9 @@ mod tests {
 
         #[cfg(feature = "intensive_benchmarking")]
         for _ in 0.._repeat - 1 {
-            black_box(
-                ring_verifier
-                    .verify::<CondAddT::CondAddValT>(proofs.pop().unwrap(), result.into_affine()),
-            );
+            black_box(ring_verifier.verify(proofs.pop().unwrap(), result.into_affine()));
         }
-        let res = ring_verifier.verify::<CondAddT::CondAddValT>(proof, result.into_affine());
+        let res = ring_verifier.verify(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
     }
@@ -240,46 +228,33 @@ mod tests {
 
     #[test]
     fn test_ring_proof_kzg_sw() {
-        _test_ring_proof::<KZG<Bls12_381>, SWAffine, SwCondAdd<Fq, SWAffine>>(2usize.pow(10), 1);
+        _test_ring_proof::<KZG<Bls12_381>, SWAffine>(2usize.pow(10), 1);
     }
 
     #[test]
     fn test_ring_proof_kzg_te() {
-        _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine, TeCondAdd<Fq, EdwardsAffine>>(
-            2usize.pow(10),
-            1,
-        );
+        _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine>(2usize.pow(10), 1);
     }
 
     #[test]
     fn test_ring_proof_id_sw() {
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment, SWAffine, SwCondAdd<Fq, SWAffine>>(
-            2usize.pow(10),
-            1,
-        );
+        _test_ring_proof::<fflonk::pcs::IdentityCommitment, SWAffine>(2usize.pow(10), 1);
     }
 
     #[test]
     fn test_ring_proof_id_te() {
-        _test_ring_proof::<
-            fflonk::pcs::IdentityCommitment,
-            EdwardsAffine,
-            TeCondAdd<Fq, EdwardsAffine>,
-        >(2usize.pow(10), 1);
+        _test_ring_proof::<fflonk::pcs::IdentityCommitment, EdwardsAffine>(2usize.pow(10), 1);
     }
 
     #[cfg(feature = "intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_sw() {
-        _test_ring_proof::<KZG<Bls12_381>, SWAffine, SwCondAdd<Fq, SWAffine>>(2usize.pow(14), 10);
+        _test_ring_proof::<KZG<Bls12_381>, SWAffine>(2usize.pow(14), 10);
     }
 
     #[cfg(feature = "intensive_benchmarking")]
     #[test]
     fn test_16k_ring_10_proofs_kzg_te() {
-        _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine, TeCondAdd<Fq, EdwardsAffine>>(
-            2usize.pow(14),
-            10,
-        );
+        _test_ring_proof::<KZG<Bls12_381>, EdwardsAffine>(2usize.pow(14), 10);
     }
 }

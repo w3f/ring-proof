@@ -1,8 +1,8 @@
 use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
-use ark_std::{vec::Vec, rand::RngCore};
-use fflonk::pcs::{PCS, PcsParams};
+use ark_std::{rand::RngCore, vec::Vec};
+use fflonk::pcs::{PcsParams, PCS};
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
 

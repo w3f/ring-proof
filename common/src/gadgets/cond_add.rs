@@ -3,32 +3,66 @@ use ark_ff::{FftField, Field};
 
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
-use crate::AffineColumn;
+use crate::{AffineColumn, FieldColumn};
 
-pub trait CondAdd<F, AffinePoint>
+use super::{ProverGadget, VerifierGadget};
+
+// Conditional affine addition:
+//
+// If the bit is set for a point, add the point to the acc and store,
+// otherwise copy the acc value
+pub trait CondAdd<F, P>: ProverGadget<F>
 where
     F: FftField,
-    AffinePoint: AffineRepr<BaseField = F>,
+    P: AffineRepr<BaseField = F>,
 {
     type CondAddValT: CondAddValues<F>;
-    fn init(
-        bitmask: BitColumn<F>,
-        points: AffineColumn<F, AffinePoint>,
-        seed: AffinePoint,
-        domain: &Domain<F>,
-    ) -> Self;
+
+    fn init(bitmask: BitColumn<F>, points: AffineColumn<F, P>, seed: P, domain: &Domain<F>)
+        -> Self;
 
     fn evaluate_assignment(&self, z: &F) -> Self::CondAddValT;
-    fn get_acc(&self) -> AffineColumn<F, AffinePoint>;
-    fn get_result(&self) -> AffinePoint;
+
+    fn get_acc(&self) -> AffineColumn<F, P>;
+
+    fn get_result(&self) -> P;
 }
 
-pub trait CondAddValues<F>
+pub trait CondAddValues<F>: VerifierGadget<F>
 where
     F: Field,
 {
     fn acc_coeffs_1(&self) -> (F, F);
+
     fn acc_coeffs_2(&self) -> (F, F);
 
     fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self;
+}
+
+type FieldFor<P> = <P as AffineRepr>::BaseField;
+
+pub struct CondAddGen<P>
+where
+    P: AffineRepr,
+    <P as AffineRepr>::BaseField: FftField,
+{
+    pub(super) bitmask: BitColumn<FieldFor<P>>,
+    pub(super) points: AffineColumn<FieldFor<P>, P>,
+    pub(super) not_last: FieldColumn<FieldFor<P>>,
+    pub acc: AffineColumn<FieldFor<P>, P>,
+    pub result: P,
+}
+
+pub struct CondAddValuesGen<P: AffineRepr> {
+    pub bitmask: FieldFor<P>,
+    pub points: (FieldFor<P>, FieldFor<P>),
+    pub not_last: FieldFor<P>,
+    pub acc: (FieldFor<P>, FieldFor<P>),
+}
+
+pub trait AffineCondAdd: AffineRepr
+where
+    FieldFor<Self>: FftField,
+{
+    type CondAddT: CondAdd<FieldFor<Self>, Self>;
 }

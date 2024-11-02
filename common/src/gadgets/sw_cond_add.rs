@@ -9,42 +9,32 @@ use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::cond_add::{CondAdd, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, AffineColumn, Column, FieldColumn};
+use crate::{const_evals, AffineColumn, Column};
 
-// Conditional affine addition:
-// if the bit is set for a point, add the point to the acc and store,
-// otherwise copy the acc value
-pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    pub(super) bitmask: BitColumn<F>,
-    pub(super) points: AffineColumn<F, P>,
-    // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(super) not_last: FieldColumn<F>,
-    // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
-    pub result: P,
+use super::cond_add::{AffineCondAdd, CondAddGen, CondAddValuesGen};
+
+impl<C: SWCurveConfig> AffineCondAdd for Affine<C>
+where
+    <Self as AffineRepr>::BaseField: FftField,
+{
+    type CondAddT = CondAddGen<Self>;
 }
 
-pub struct SwCondAddValues<F: Field> {
-    pub bitmask: F,
-    pub points: (F, F),
-    pub not_last: F,
-    pub acc: (F, F),
-}
-
-impl<F, Curve> CondAdd<F, Affine<Curve>> for SwCondAdd<F, Affine<Curve>>
+impl<F, C> CondAdd<F, Affine<C>> for CondAddGen<Affine<C>>
 where
     F: FftField,
-    Curve: SWCurveConfig<BaseField = F>,
+    C: SWCurveConfig<BaseField = F>,
 {
-    type CondAddValT = SwCondAddValues<F>;
+    type CondAddValT = CondAddValuesGen<Affine<C>>;
+
     // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
     // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
     // exceptional cases (doublings or adding the opposite point).
     // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
     fn init(
         bitmask: BitColumn<F>,
-        points: AffineColumn<F, Affine<Curve>>,
-        seed: Affine<Curve>,
+        points: AffineColumn<F, Affine<C>>,
+        seed: Affine<C>,
         domain: &Domain<F>,
     ) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
@@ -75,8 +65,8 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> SwCondAddValues<F> {
-        SwCondAddValues {
+    fn evaluate_assignment(&self, z: &F) -> CondAddValuesGen<Affine<C>> {
+        CondAddValuesGen {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -84,19 +74,61 @@ where
         }
     }
 
-    fn get_acc(&self) -> AffineColumn<F, Affine<Curve>> {
+    fn get_acc(&self) -> AffineColumn<F, Affine<C>> {
         self.acc.clone()
     }
 
-    fn get_result(&self) -> Affine<Curve> {
+    fn get_result(&self) -> Affine<C> {
         self.result.clone()
     }
 }
 
-impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
+impl<F: Field, C> CondAddValues<F> for CondAddValuesGen<Affine<C>>
+where
+    C: SWCurveConfig<BaseField = F>,
+{
+    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
+        CondAddValuesGen::<Affine<C>> {
+            bitmask,
+            points,
+            not_last,
+            acc,
+        }
+    }
+
+    fn acc_coeffs_1(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, _y1) = self.acc;
+        let (x2, _y2) = self.points;
+
+        let mut c_acc_x = b * (x1 - x2) * (x1 - x2);
+        let mut c_acc_y = F::one() - b;
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+
+    fn acc_coeffs_2(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
+
+        let mut c_acc_x = b * (y1 - y2) + F::one() - b;
+        let mut c_acc_y = b * (x1 - x2);
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+}
+
+impl<F, C> ProverGadget<F> for CondAddGen<Affine<C>>
 where
     F: FftField,
-    Curve: SWCurveConfig<BaseField = F>,
+    C: SWCurveConfig<BaseField = F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -175,7 +207,10 @@ where
     }
 }
 
-impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
+impl<F: Field, C> VerifierGadget<F> for CondAddValuesGen<Affine<C>>
+where
+    C: SWCurveConfig<BaseField = F>,
+{
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -195,45 +230,6 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
     }
 }
 
-impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
-    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
-        SwCondAddValues::<F> {
-            bitmask,
-            points,
-            not_last,
-            acc,
-        }
-    }
-
-    fn acc_coeffs_1(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, _y1) = self.acc;
-        let (x2, _y2) = self.points;
-
-        let mut c_acc_x = b * (x1 - x2) * (x1 - x2);
-        let mut c_acc_y = F::one() - b;
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
-    }
-
-    fn acc_coeffs_2(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, y1) = self.acc;
-        let (x2, y2) = self.points;
-
-        let mut c_acc_x = b * (y1 - y2) + F::one() - b;
-        let mut c_acc_y = b * (x1 - x2);
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
@@ -247,7 +243,7 @@ mod tests {
 
     fn _test_sw_cond_add_gadget(
         hiding: bool,
-    ) -> (Domain<Fq>, SwCondAdd<Fq, SWAffine>, Vec<Evaluations<Fq>>) {
+    ) -> (Domain<Fq>, CondAddGen<SWAffine>, Vec<Evaluations<Fq>>) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -261,7 +257,7 @@ mod tests {
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = SwCondAdd::init(bitmask_col, points_col, seed, &domain);
+        let gadget = CondAddGen::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 
