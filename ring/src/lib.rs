@@ -10,6 +10,8 @@ use ark_std::rand::RngCore;
 use fflonk::pcs::PCS;
 
 pub use common::domain::Domain;
+pub use common::gadgets::cond_add::AffineCondAdd;
+
 use common::Proof;
 pub use piop::index;
 
