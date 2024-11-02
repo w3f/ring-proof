@@ -4,11 +4,9 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::vec::Vec;
 
 pub mod booleanity;
-// pub mod inner_prod_pub;
 pub mod cond_add;
 pub mod fixed_cells;
 pub mod inner_prod;
-pub mod powers_of_two_multiples;
 pub mod sw_cond_add;
 pub mod te_cond_add;
 
