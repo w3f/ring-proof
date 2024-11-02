@@ -1,10 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::{
-    short_weierstrass::{Affine, SWCurveConfig},
-    AffineRepr,
-};
-use ark_ff::{One, PrimeField, Zero};
+use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
 use fflonk::pcs::PCS;
@@ -27,42 +23,6 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 
 /// Polynomial Commitment Schemes.
 pub use fflonk::pcs;
-
-/// Find a point not on the prime subgroup.
-///
-/// Calling the method for a prime-order curve results in an infinite loop.
-pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
-    let mut x = Curve::BaseField::zero();
-    loop {
-        let p = Affine::<Curve>::get_point_from_x_unchecked(x, false);
-        if p.is_some() && !p.unwrap().is_in_correct_subgroup_assuming_on_curve() {
-            return p.unwrap();
-        }
-        x = x + Curve::BaseField::one()
-    }
-}
-
-/// Try and increment hash to curve.
-pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message: &[u8]) -> P {
-    use blake2::Digest;
-    let mut seed = message.to_vec();
-    let cnt_offset = seed.len();
-    let mut no_tries: usize = 0;
-
-    seed.push(0);
-    loop {
-        let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
-        if let Some(point) = P::from_random_bytes(&hash) {
-            let point = point.clear_cofactor();
-            if !point.is_zero() {
-                return point;
-            }
-        }
-        seed[cnt_offset] += 1;
-        no_tries += 1;
-        assert!(no_tries < 256);
-    }
-}
 
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
@@ -91,14 +51,13 @@ impl ArkTranscript {
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::Bls12_381;
-    use ark_ec::CurveGroup;
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr, SWAffine};
-    use ark_ff::MontFp;
+    use ark_ec::{AffineRepr, CurveGroup};
+    use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fq, Fr, SWAffine};
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
 
-    use common::test_helpers::{find_random_point, random_vec};
+    use common::test_helpers::random_vec;
 
     use crate::piop::FixedColumnsCommitted;
     use crate::ring::{Ring, RingBuilderKey};
@@ -198,8 +157,9 @@ mod tests {
 
         let domain = Domain::new(domain_size, true);
         let h = P::rand(rng);
-        let seed = find_random_point::<Fq, P>();
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let seed = P::rand(rng);
+        let pad = P::rand(rng);
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         (pcs_params, piop_params)
     }
@@ -212,22 +172,6 @@ mod tests {
     #[test]
     fn test_lagrangian_commitment_te() {
         _test_lagrangian_commitment::<SWAffine>();
-    }
-
-    #[test]
-    fn test_complement_point() {
-        let p = find_complement_point::<BandersnatchConfig>();
-        assert!(p.is_on_curve());
-        assert!(!p.is_in_correct_subgroup_assuming_on_curve());
-        assert_eq!(
-            p,
-            SWAffine::new_unchecked(
-                MontFp!("0"),
-                MontFp!(
-                    "11982629110561008531870698410380659621661946968466267969586599013782997959645"
-                )
-            )
-        )
     }
 
     #[test]

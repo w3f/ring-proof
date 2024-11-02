@@ -272,8 +272,9 @@ mod tests {
         // piop params
         let h = SWAffine::rand(rng);
         let seed = SWAffine::rand(rng);
+        let pad = SWAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &[]);
@@ -312,8 +313,9 @@ mod tests {
         // piop params
         let h = P::rand(rng);
         let seed = P::rand(rng);
+        let pad = P::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         let ring = TestRing::<P>::empty(&piop_params, srs, ring_builder_key.g1);
         let same_ring = TestRing::with_keys(&piop_params, &[], &ring_builder_key);
