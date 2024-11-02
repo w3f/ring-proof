@@ -28,7 +28,9 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 /// Polynomial Commitment Schemes.
 pub use fflonk::pcs;
 
-// Calling the method for a prime-order curve results in an infinite loop.
+/// Find a point not on the prime subgroup.
+///
+/// Calling the method for a prime-order curve results in an infinite loop.
 pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     let mut x = Curve::BaseField::zero();
     loop {
@@ -40,7 +42,7 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
     }
 }
 
-// Try and increment hash to curve.
+/// Try and increment hash to curve.
 pub(crate) fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message: &[u8]) -> P {
     use blake2::Digest;
     let mut seed = message.to_vec();
