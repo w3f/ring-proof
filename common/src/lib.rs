@@ -1,19 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use ark_ec::AffineRepr;
 use ark_ff::{FftField, PrimeField};
-use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::{Commitment, PCS};
 
+use domain::Domain;
+
+pub mod domain;
 pub mod gadgets;
-pub mod test_helpers;
 pub mod piop;
 pub mod prover;
-pub mod verifier;
+pub mod test_helpers;
 pub mod transcript;
-pub mod domain;
+pub mod verifier;
 
 pub trait Column<F: FftField> {
     fn domain(&self) -> GeneralEvaluationDomain<F>;
@@ -62,26 +65,58 @@ impl<F: FftField> Column<F> for FieldColumn<F> {
     }
 }
 
+// A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
+// and its convenience representation as columns of coordinates over the curve's base field.
+#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
+pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField = F>> {
+    pub(crate) points: Vec<P>,
+    pub xs: FieldColumn<F>,
+    pub ys: FieldColumn<F>,
+}
+
+impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
+    fn column(points: Vec<P>, domain: &Domain<F>, hidden: bool) -> Self {
+        assert!(points.iter().all(|p| !p.is_zero()));
+        let (xs, ys) = points.iter().map(|p| p.xy().unwrap()).unzip();
+        let xs = domain.column(xs, hidden);
+        let ys = domain.column(ys, hidden);
+        Self { points, xs, ys }
+    }
+    pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, true)
+    }
+
+    pub fn public_column(points: Vec<P>, domain: &Domain<F>) -> Self {
+        Self::column(points, domain, false)
+    }
+
+    pub fn evaluate(&self, z: &F) -> (F, F) {
+        (self.xs.evaluate(z), self.ys.evaluate(z))
+    }
+}
+
 pub fn const_evals<F: FftField>(c: F, domain: GeneralEvaluationDomain<F>) -> Evaluations<F> {
     Evaluations::from_vec_and_domain(vec![c; domain.size()], domain)
 }
-
 
 pub trait ColumnsEvaluated<F: PrimeField>: CanonicalSerialize + CanonicalDeserialize {
     fn to_vec(self) -> Vec<F>;
 }
 
-pub trait ColumnsCommited<F: PrimeField, C: Commitment<F>>: CanonicalSerialize + CanonicalDeserialize {
+pub trait ColumnsCommited<F: PrimeField, C: Commitment<F>>:
+    CanonicalSerialize + CanonicalDeserialize
+{
     fn to_vec(self) -> Vec<C>;
 }
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Proof<F, CS, Commitments, Evaluations>
-    where
-        F: PrimeField,
-        CS: PCS<F>,
-        Commitments: ColumnsCommited<F, CS::C>,
-        Evaluations: ColumnsEvaluated<F>, {
+where
+    F: PrimeField,
+    CS: PCS<F>,
+    Commitments: ColumnsCommited<F, CS::C>,
+    Evaluations: ColumnsEvaluated<F>,
+{
     pub column_commitments: Commitments,
     pub columns_at_zeta: Evaluations,
     pub quotient_commitment: CS::C,
