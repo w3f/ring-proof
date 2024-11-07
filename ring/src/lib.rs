@@ -1,5 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
@@ -46,6 +47,17 @@ impl ArkTranscript {
     pub fn new(label: &'static [u8]) -> Self {
         Self(ark_transcript::Transcript::new_labeled(label))
     }
+}
+
+/// Simple try and increment hash to curve utility.
+///
+/// This can be used to generage a point within the prime order subgroup
+/// given a seed message.
+pub fn hash_to_curve<F: PrimeField, P: AffineRepr<BaseField = F>>(message: &[u8]) -> P {
+    let mut t = ark_transcript::Transcript::new_blank();
+    t.append_slice(message);
+    let mut rng = t.challenge(b"rng");
+    P::rand(&mut rng)
 }
 
 #[cfg(test)]

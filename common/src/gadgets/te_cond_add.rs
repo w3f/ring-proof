@@ -30,10 +30,15 @@ where
 {
     type Values = TECondAddValues<C>;
 
-    // Populates the acc column starting from the supplied seed (as 0 doesn't work with the addition formula).
-    // As the TE addition formula used is not complete, the seed must be selected in a way that would prevent
-    // exceptional cases (doublings or adding the opposite point).
-    // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
+    /// Populates the `acc` column starting from the provided `seed` which is expected
+    /// to be in the prime order subgroup of the curve.
+    ///
+    /// A `0` seed doesn't work with the addition formula. Additionally, since the TE addition
+    /// formula used is incomplete, the seed should be selected to avoid exceptional cases such
+    /// as doublings or adding the opposite point.
+    ///
+    /// The last point of the input column is ignored, as adding it would made the acc column
+    /// overflow due the initial point.
     fn init(
         bitmask: BitColumn<F>,
         points: AffineColumn<F, Affine<C>>,
