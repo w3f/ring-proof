@@ -12,10 +12,10 @@ use super::{ProverGadget, VerifierGadget};
 /// Currently supported for Arkworks Short Weierstrass and Twisted Edwards affine points.
 pub trait AffineCondAdd: AffineRepr
 where
-    FieldFor<Self>: FftField,
+    BaseFieldOf<Self>: FftField,
 {
     /// Conditional addition operation
-    type CondAddT: CondAdd<FieldFor<Self>, Self>;
+    type CondAddT: CondAdd<BaseFieldOf<Self>, Self>;
 }
 
 // Conditional affine addition.
@@ -50,23 +50,23 @@ where
     fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self;
 }
 
-type FieldFor<P> = <P as AffineRepr>::BaseField;
+type BaseFieldOf<P> = <P as AffineRepr>::BaseField;
 
 pub struct CondAddGen<P>
 where
     P: AffineRepr,
     <P as AffineRepr>::BaseField: FftField,
 {
-    pub(super) bitmask: BitColumn<FieldFor<P>>,
-    pub(super) points: AffineColumn<FieldFor<P>, P>,
-    pub(super) not_last: FieldColumn<FieldFor<P>>,
-    pub acc: AffineColumn<FieldFor<P>, P>,
+    pub(super) bitmask: BitColumn<BaseFieldOf<P>>,
+    pub(super) points: AffineColumn<BaseFieldOf<P>, P>,
+    pub(super) not_last: FieldColumn<BaseFieldOf<P>>,
+    pub acc: AffineColumn<BaseFieldOf<P>, P>,
     pub result: P,
 }
 
 pub struct CondAddValuesGen<P: AffineRepr> {
-    pub bitmask: FieldFor<P>,
-    pub points: (FieldFor<P>, FieldFor<P>),
-    pub not_last: FieldFor<P>,
-    pub acc: (FieldFor<P>, FieldFor<P>),
+    pub bitmask: BaseFieldOf<P>,
+    pub points: (BaseFieldOf<P>, BaseFieldOf<P>),
+    pub not_last: BaseFieldOf<P>,
+    pub acc: (BaseFieldOf<P>, BaseFieldOf<P>),
 }
