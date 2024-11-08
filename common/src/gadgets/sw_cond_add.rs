@@ -32,15 +32,23 @@ where
 
     /// Populates the `acc` column starting from the provided `seed`.
     ///
-    /// As 0 doesn't have an affine SW representation, the `seed` is _suggested_ to be
-    /// chosen outside the prime order subgroup. Additionally, since the SW addition
-    /// formula used is incomplete, the seed should be selected to avoid exceptional
-    /// cases such as doublings or adding the opposite point.
+    /// As `0` lacks an affine SW representation, it is **recommended** that the `seed`
+    /// be chosen outside the curve prime order subgroup to remove the risk of the
+    /// conditional addition result landing on the point at infinity (this also applies
+    /// to intermediate results).
+    ///
+    /// Furthermore, becuase the SW addition formula used is incomplete, the seed should
+    /// be selected with care to avoid exceptional cases such as doublings or adding the
+    /// opposite point.
+    ///
+    /// To mitigate exceptional cases arising from malicious use, it is recommended that
+    /// the `points` be first verified using a PoP (Proof of Ownership).
     ///
     /// The last point of the input column is ignored, as adding it would made the acc column
     /// overflow due the initial point.
     ///
-    /// A valid `seed` can be generated via the `find_complement_point` utility function.
+    /// A valid `seed` outside the prime order subgroup can be generated via the
+    /// [`find_complement_point`] utility function.
     fn init(
         bitmask: BitColumn<F>,
         points: AffineColumn<F, Affine<C>>,

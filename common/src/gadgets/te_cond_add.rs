@@ -30,12 +30,17 @@ where
 {
     type Values = TECondAddValues<C>;
 
-    /// Populates the `acc` column starting from the provided `seed` which is expected
-    /// to be in the prime order subgroup of the curve.
+    /// Populates the `acc` column starting from the provided `seed`.
     ///
-    /// A `0` seed doesn't work with the addition formula. Additionally, since the TE addition
-    /// formula used is incomplete, the seed should be selected to avoid exceptional cases such
-    /// as doublings or adding the opposite point.
+    /// It is **recommended** that the `seed` to be chosen **inside** the curve prime
+    /// order subgroup.
+    ///
+    /// Furthermore, becuase the TE addition formula used is incomplete, the seed should
+    /// be selected with care to avoid exceptional cases such as doublings or adding the
+    /// opposite point.
+    ///
+    /// To mitigate exceptional cases arising from malicious use, it is recommended that
+    /// the `points` be first verified using a PoP (Proof of Ownership).
     ///
     /// The last point of the input column is ignored, as adding it would made the acc column
     /// overflow due the initial point.
