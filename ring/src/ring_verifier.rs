@@ -1,6 +1,7 @@
 use ark_ec::AffineRepr;
 use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
+use common::gadgets::cond_add::CondAddValuesFor;
 use common::gadgets::cond_add::{AffineCondAdd, CondAdd};
 use fflonk::pcs::{RawVerifierKey, PCS};
 
@@ -59,18 +60,17 @@ where
             self.piop_params.domain.hiding,
         );
 
-        let piop: PiopVerifier<F, <CS as PCS<F>>::C, <P::CondAddT as CondAdd<F, P>>::Values> =
-            PiopVerifier::init(
-                domain_eval,
-                self.fixed_columns_committed.clone(),
-                proof.column_commitments.clone(),
-                proof.columns_at_zeta.clone(),
-                (*seed.x().unwrap(), *seed.y().unwrap()),
-                (
-                    *seed_plus_result.x().unwrap(),
-                    *seed_plus_result.y().unwrap(),
-                ),
-            );
+        let piop: PiopVerifier<F, <CS as PCS<F>>::C, CondAddValuesFor<P>> = PiopVerifier::init(
+            domain_eval,
+            self.fixed_columns_committed.clone(),
+            proof.column_commitments.clone(),
+            proof.columns_at_zeta.clone(),
+            (*seed.x().unwrap(), *seed.y().unwrap()),
+            (
+                *seed_plus_result.x().unwrap(),
+                *seed_plus_result.y().unwrap(),
+            ),
+        );
 
         self.plonk_verifier
             .verify(piop, proof, challenges, &mut rng)

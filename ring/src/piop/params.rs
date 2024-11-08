@@ -47,7 +47,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
-        let points = self.points_column(&keys);
+        let points = self.points_column(keys);
         FixedColumns {
             points,
             ring_selector,

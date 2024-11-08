@@ -153,7 +153,7 @@ fn vanishes_on_row<F: FftField>(
 ) -> DensePolynomial<F> {
     assert!(i < domain.size());
     let w = domain.group_gen();
-    let wi = w.pow(&[i as u64]);
+    let wi = w.pow([i as u64]);
     let wi = DensePolynomial::from_coefficients_slice(&[wi]);
     let x = DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]);
     &x - &wi
@@ -163,7 +163,7 @@ fn vanishes_on_row<F: FftField>(
 fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
     let w = domain.group_gen();
     let n3 = (domain.size() - ZK_ROWS) as u64;
-    let w3 = w.pow(&[n3]);
+    let w3 = w.pow([n3]);
     let w2 = w3 * w;
     let w1 = w2 * w;
     assert_eq!(w1, domain.group_gen_inv());

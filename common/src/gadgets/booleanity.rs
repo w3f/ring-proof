@@ -42,7 +42,7 @@ pub struct Booleanity<F: FftField> {
     bits: BitColumn<F>,
 }
 
-impl<'a, F: FftField> Booleanity<F> {
+impl<F: FftField> Booleanity<F> {
     pub fn init(bits: BitColumn<F>) -> Self {
         Self { bits }
     }

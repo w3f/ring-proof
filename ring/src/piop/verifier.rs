@@ -110,7 +110,7 @@ impl<F: PrimeField, C: Commitment<F>, CondAddValuesT: CondAddValues<F>> Verifier
     }
 
     fn evaluate_constraints_main(&self) -> Vec<F> {
-        vec![
+        [
             self.inner_prod.evaluate_constraints_main(),
             self.cond_add.evaluate_constraints_main(),
             self.booleanity.evaluate_constraints_main(),

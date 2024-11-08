@@ -90,7 +90,7 @@ where
     }
 
     fn get_result(&self) -> Affine<C> {
-        self.result.clone()
+        self.result
     }
 }
 
@@ -253,7 +253,7 @@ pub fn find_complement_point<C: SWCurveConfig>() -> Affine<C> {
         {
             return p;
         }
-        x = x + C::BaseField::one();
+        x += C::BaseField::one();
     }
 }
 

@@ -87,7 +87,7 @@ where
     }
 
     fn get_result(&self) -> Affine<C> {
-        self.result.clone()
+        self.result
     }
 }
 

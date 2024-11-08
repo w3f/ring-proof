@@ -50,8 +50,6 @@ where
     fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self;
 }
 
-type BaseFieldOf<P> = <P as AffineRepr>::BaseField;
-
 pub struct CondAddGen<P>
 where
     P: AffineRepr,
@@ -70,3 +68,9 @@ pub struct CondAddValuesGen<P: AffineRepr> {
     pub not_last: BaseFieldOf<P>,
     pub acc: (BaseFieldOf<P>, BaseFieldOf<P>),
 }
+
+pub type BaseFieldOf<P> = <P as AffineRepr>::BaseField;
+
+pub type CondAddFor<P> = <P as AffineCondAdd>::CondAddT;
+
+pub type CondAddValuesFor<P> = <CondAddFor<P> as CondAdd<BaseFieldOf<P>, P>>::Values;
