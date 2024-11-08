@@ -242,10 +242,9 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>> RingBuilderKey<F, KzgCur
 
 #[cfg(test)]
 mod tests {
-    use ark_bls12_381::{Bls12_381, Fr, G1Affine};
-    use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
-    use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
-    use ark_std::{test_rng, UniformRand};
+    use ark_bls12_381::{Bls12_381, Fr as Bls12_381_Fr, G1Affine};
+    use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, SWAffine};
+    use ark_std::test_rng;
     use fflonk::pcs::kzg::urs::URS;
     use fflonk::pcs::kzg::KZG;
     use fflonk::pcs::PCS;
@@ -258,9 +257,9 @@ mod tests {
 
     use super::*;
 
-    type TestRing<P> = Ring<Fr, Bls12_381, P>;
+    type TestRing<P> = Ring<Bls12_381_Fr, Bls12_381, P>;
 
-    fn _test_ring_mgmt<P: AffineRepr<BaseField = Fq>>() {
+    fn _test_ring_mgmt<P: AffineRepr<BaseField = Bls12_381_Fr>>() {
         let rng = &mut test_rng();
 
         let domain_size = 1 << 9;
@@ -270,9 +269,9 @@ mod tests {
         let srs = |range: Range<usize>| Ok(ring_builder_key.lis_in_g1[range].to_vec());
 
         // piop params
-        let h = SWAffine::rand(rng);
-        let seed = SWAffine::rand(rng);
-        let pad = SWAffine::rand(rng);
+        let h = P::rand(rng);
+        let seed = P::rand(rng);
+        let pad = P::rand(rng);
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed, pad);
 
@@ -281,7 +280,7 @@ mod tests {
         assert_eq!(ring.cx, monimial_cx);
         assert_eq!(ring.cy, monimial_cy);
 
-        let keys = random_vec::<SWAffine, _>(ring.max_keys, rng);
+        let keys = random_vec::<P, _>(ring.max_keys, rng);
         ring.append(&keys, srs);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &keys);
         assert_eq!(ring.cx, monimial_cx);
@@ -301,7 +300,7 @@ mod tests {
         _test_ring_mgmt::<EdwardsAffine>();
     }
 
-    fn _test_empty_rings<P: AffineRepr<BaseField = Fq>>() {
+    fn _test_empty_rings<P: AffineRepr<BaseField = Bls12_381_Fr>>() {
         let rng = &mut test_rng();
 
         let domain_size = 1 << 9;
@@ -332,10 +331,10 @@ mod tests {
         _test_empty_rings::<EdwardsAffine>();
     }
 
-    fn get_monomial_commitment(
+    fn get_monomial_commitment<P: AffineRepr<BaseField = Bls12_381_Fr>>(
         pcs_params: &URS<Bls12_381>,
-        piop_params: &PiopParams<Fr, SWAffine>,
-        keys: &[SWAffine],
+        piop_params: &PiopParams<<P as AffineRepr>::BaseField, P>,
+        keys: &[P],
     ) -> (G1Affine, G1Affine) {
         let (_, verifier_key) =
             crate::piop::index::<_, KZG<Bls12_381>, _>(pcs_params, piop_params, keys);

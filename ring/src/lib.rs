@@ -95,7 +95,7 @@ mod tests {
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
         let pks = random_vec::<P, _>(keyset_size, rng);
         let k = rng.gen_range(0..keyset_size); // prover's secret index
-        let pk = pks[k].clone();
+        let pk = pks[k];
 
         let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 
@@ -115,7 +115,8 @@ mod tests {
 
         #[cfg(feature = "intensive-benchmarking")]
         for _ in 0.._repeat - 1 {
-            black_box(proofs.push(ring_prover.prove(secret)));
+            let proof = black_box(ring_prover.prove(secret));
+            proofs.push(proof);
         }
 
         let proof = ring_prover.prove(secret);
@@ -130,7 +131,8 @@ mod tests {
 
         #[cfg(feature = "intensive-benchmarking")]
         for _ in 0.._repeat - 1 {
-            black_box(ring_verifier.verify(proofs.pop().unwrap(), result.into_affine()));
+            let proof = proofs.pop().unwrap();
+            black_box(ring_verifier.verify(proof, result.into_affine()));
         }
         let res = ring_verifier.verify(proof, result.into_affine());
         end_timer!(t_verify);

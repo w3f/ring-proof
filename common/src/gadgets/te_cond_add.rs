@@ -286,7 +286,7 @@ mod tests {
         domain.divide_by_vanishing_poly(&c1);
         domain.divide_by_vanishing_poly(&c2);
 
-        return (domain, gadget, cs);
+        (domain, gadget, cs)
     }
 
     #[test]
