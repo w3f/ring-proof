@@ -1,9 +1,8 @@
 use ark_ff::{Field, PrimeField};
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::Rng;
-use ark_std::{vec, vec::Vec};
+use ark_std::{rand::RngCore, vec, vec::Vec};
 use fflonk::pcs::{Commitment, PcsParams, PCS};
-use rand_core::RngCore;
 
 use crate::piop::VerifierPiop;
 use crate::transcript::PlonkTranscript;

@@ -30,8 +30,7 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
 }
 
 impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
-    pub fn setup(domain: Domain<F>, h: P, seed: P) -> Self {
-        let padding_point = crate::hash_to_curve::<F, P>(b"w3f/ring-proof/padding");
+    pub fn setup(domain: Domain<F>, h: P, seed: P, padding_point: P) -> Self {
         let scalar_bitlen = P::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
@@ -48,7 +47,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
-        let points = self.points_column(&keys);
+        let points = self.points_column(keys);
         FixedColumns {
             points,
             ring_selector,
@@ -88,6 +87,10 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         ]
         .concat()
     }
+
+    pub fn padding_point(&self) -> P {
+        self.padding_point
+    }
 }
 
 #[cfg(test)]
@@ -105,8 +108,9 @@ mod tests {
         let rng = &mut test_rng();
         let h = P::rand(rng);
         let seed = P::rand(rng);
+        let pad = P::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, P>::setup(domain, h, seed);
+        let params = PiopParams::<Fq, P>::setup(domain, h, seed, pad);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());

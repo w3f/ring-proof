@@ -1,6 +1,6 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::{AffineRepr, CurveGroup};
-use ark_ff::{FftField, Field};
+use ark_ff::{FftField, Field, One, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
@@ -9,46 +9,55 @@ use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::cond_add::{CondAdd, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, AffineColumn, Column, FieldColumn};
+use crate::{const_evals, AffineColumn, Column};
 
-// Conditional affine addition:
-// if the bit is set for a point, add the point to the acc and store,
-// otherwise copy the acc value
-pub struct SwCondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    pub(super) bitmask: BitColumn<F>,
-    pub(super) points: AffineColumn<F, P>,
-    // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(super) not_last: FieldColumn<F>,
-    // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
-    pub result: P,
+use super::cond_add::{AffineCondAdd, CondAddGen, CondAddValuesGen};
+
+pub type SWCondAdd<C> = CondAddGen<Affine<C>>;
+pub type SWCondAddValues<C> = CondAddValuesGen<Affine<C>>;
+
+impl<C: SWCurveConfig> AffineCondAdd for Affine<C>
+where
+    <Self as AffineRepr>::BaseField: FftField,
+{
+    type CondAddT = SWCondAdd<C>;
 }
 
-pub struct SwCondAddValues<F: Field> {
-    pub bitmask: F,
-    pub points: (F, F),
-    pub not_last: F,
-    pub acc: (F, F),
-}
-
-impl<F, Curve> CondAdd<F, Affine<Curve>> for SwCondAdd<F, Affine<Curve>>
+impl<F, C> CondAdd<F, Affine<C>> for SWCondAdd<C>
 where
     F: FftField,
-    Curve: SWCurveConfig<BaseField = F>,
+    C: SWCurveConfig<BaseField = F>,
 {
-    type CondAddValT = SwCondAddValues<F>;
-    // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
-    // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
-    // exceptional cases (doublings or adding the opposite point).
-    // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
+    type Values = SWCondAddValues<C>;
+
+    /// Populates the `acc` column starting from the provided `seed`.
+    ///
+    /// As `0` lacks an affine SW representation, it is **recommended** that the `seed`
+    /// be chosen outside the curve prime order subgroup to remove the risk of the
+    /// conditional addition result landing on the point at infinity (this also applies
+    /// to intermediate results).
+    ///
+    /// Furthermore, becuase the SW addition formula used is incomplete, the seed should
+    /// be selected with care to avoid exceptional cases such as doublings or adding the
+    /// opposite point.
+    ///
+    /// To mitigate exceptional cases arising from malicious use, it is recommended that
+    /// the `points` be first verified using a PoP (Proof of Ownership).
+    ///
+    /// The last point of the input column is ignored, as adding it would made the acc column
+    /// overflow due the initial point.
+    ///
+    /// A valid `seed` outside the prime order subgroup can be generated via the
+    /// [`find_complement_point`] utility function.
     fn init(
         bitmask: BitColumn<F>,
-        points: AffineColumn<F, Affine<Curve>>,
-        seed: Affine<Curve>,
+        points: AffineColumn<F, Affine<C>>,
+        seed: Affine<C>,
         domain: &Domain<F>,
     ) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
         assert_eq!(points.points.len(), domain.capacity - 1);
+
         let not_last = domain.not_last_row.clone();
         let acc = bitmask
             .bits
@@ -75,8 +84,8 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> SwCondAddValues<F> {
-        SwCondAddValues {
+    fn evaluate_assignment(&self, z: &F) -> SWCondAddValues<C> {
+        SWCondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
@@ -84,19 +93,61 @@ where
         }
     }
 
-    fn get_acc(&self) -> AffineColumn<F, Affine<Curve>> {
+    fn get_acc(&self) -> AffineColumn<F, Affine<C>> {
         self.acc.clone()
     }
 
-    fn get_result(&self) -> Affine<Curve> {
-        self.result.clone()
+    fn get_result(&self) -> Affine<C> {
+        self.result
     }
 }
 
-impl<F, Curve> ProverGadget<F> for SwCondAdd<F, Affine<Curve>>
+impl<F: Field, C> CondAddValues<F> for SWCondAddValues<C>
+where
+    C: SWCurveConfig<BaseField = F>,
+{
+    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
+        SWCondAddValues {
+            bitmask,
+            points,
+            not_last,
+            acc,
+        }
+    }
+
+    fn acc_coeffs_1(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, _y1) = self.acc;
+        let (x2, _y2) = self.points;
+
+        let mut c_acc_x = b * (x1 - x2) * (x1 - x2);
+        let mut c_acc_y = F::one() - b;
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+
+    fn acc_coeffs_2(&self) -> (F, F) {
+        let b = self.bitmask;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
+
+        let mut c_acc_x = b * (y1 - y2) + F::one() - b;
+        let mut c_acc_y = b * (x1 - x2);
+
+        c_acc_x *= self.not_last;
+        c_acc_y *= self.not_last;
+
+        (c_acc_x, c_acc_y)
+    }
+}
+
+impl<F, C> ProverGadget<F> for SWCondAdd<C>
 where
     F: FftField,
-    Curve: SWCurveConfig<BaseField = F>,
+    C: SWCurveConfig<BaseField = F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -175,7 +226,10 @@ where
     }
 }
 
-impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
+impl<F: Field, C> VerifierGadget<F> for SWCondAddValues<C>
+where
+    C: SWCurveConfig<BaseField = F>,
+{
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -195,48 +249,26 @@ impl<F: Field> VerifierGadget<F> for SwCondAddValues<F> {
     }
 }
 
-impl<F: Field> CondAddValues<F> for SwCondAddValues<F> {
-    fn init(bitmask: F, points: (F, F), not_last: F, acc: (F, F)) -> Self {
-        SwCondAddValues::<F> {
-            bitmask,
-            points,
-            not_last,
-            acc,
+/// Finds first point outside the prime order subgroup of the curve.
+///
+/// Panics if the curve group has prime order (cofactor = 1).
+pub fn find_complement_point<C: SWCurveConfig>() -> Affine<C> {
+    assert!(!C::cofactor_is_one());
+    let mut x = C::BaseField::zero();
+    loop {
+        if let Some(p) = Affine::<C>::get_point_from_x_unchecked(x, false)
+            .filter(|p| !p.is_in_correct_subgroup_assuming_on_curve())
+        {
+            return p;
         }
-    }
-
-    fn acc_coeffs_1(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, _y1) = self.acc;
-        let (x2, _y2) = self.points;
-
-        let mut c_acc_x = b * (x1 - x2) * (x1 - x2);
-        let mut c_acc_y = F::one() - b;
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
-    }
-
-    fn acc_coeffs_2(&self) -> (F, F) {
-        let b = self.bitmask;
-        let (x1, y1) = self.acc;
-        let (x2, y2) = self.points;
-
-        let mut c_acc_x = b * (y1 - y2) + F::one() - b;
-        let mut c_acc_y = b * (x1 - x2);
-
-        c_acc_x *= self.not_last;
-        c_acc_y *= self.not_last;
-
-        (c_acc_x, c_acc_y)
+        x += C::BaseField::one();
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{Fq, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, SWAffine};
+    use ark_ff::MontFp;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
 
@@ -247,7 +279,7 @@ mod tests {
 
     fn _test_sw_cond_add_gadget(
         hiding: bool,
-    ) -> (Domain<Fq>, SwCondAdd<Fq, SWAffine>, Vec<Evaluations<Fq>>) {
+    ) -> (Domain<Fq>, CondAddGen<SWAffine>, Vec<Evaluations<Fq>>) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -261,7 +293,7 @@ mod tests {
 
         let bitmask_col = BitColumn::init(bitmask, &domain);
         let points_col = AffineColumn::private_column(points, &domain);
-        let gadget = SwCondAdd::init(bitmask_col, points_col, seed, &domain);
+        let gadget = CondAddGen::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);
 
@@ -275,7 +307,7 @@ mod tests {
         domain.divide_by_vanishing_poly(&c1);
         domain.divide_by_vanishing_poly(&c2);
 
-        return (domain, gadget, cs);
+        (domain, gadget, cs)
     }
 
     #[test]
@@ -300,5 +332,21 @@ mod tests {
             let constrain_poly = constrains[i].interpolate_by_ref();
             assert_eq!(constrain_poly.evaluate(&random_point), result);
         }
+    }
+
+    #[test]
+    fn test_complement_point() {
+        let p = find_complement_point::<BandersnatchConfig>();
+        assert!(p.is_on_curve());
+        assert!(!p.is_in_correct_subgroup_assuming_on_curve());
+        assert_eq!(
+            p,
+            SWAffine::new_unchecked(
+                MontFp!("0"),
+                MontFp!(
+                    "11982629110561008531870698410380659621661946968466267969586599013782997959645"
+                )
+            )
+        )
     }
 }

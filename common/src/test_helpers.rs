@@ -11,10 +11,7 @@ pub fn random_vec<X: UniformRand, R: Rng>(n: usize, rng: &mut R) -> Vec<X> {
     (0..n).map(|_| X::rand(rng)).collect()
 }
 
-pub fn cond_sum<P>(bitmask: &[bool], points: &[P]) -> P
-where
-    P: AffineRepr,
-{
+pub fn cond_sum<P: AffineRepr>(bitmask: &[bool], points: &[P]) -> P {
     assert_eq!(bitmask.len(), points.len());
     bitmask
         .iter()
@@ -32,6 +29,5 @@ where
     for _ in 1..power {
         point_multiple.double_in_place();
     }
-
     point_multiple.into()
 }

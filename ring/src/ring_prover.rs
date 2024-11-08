@@ -2,20 +2,18 @@ use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use fflonk::pcs::PCS;
 
-use common::gadgets::cond_add::CondAdd;
-use common::gadgets::ProverGadget;
+use common::gadgets::cond_add::AffineCondAdd;
 use common::prover::PlonkProver;
 use common::transcript::PlonkTranscript;
 
-use crate::piop::params::PiopParams;
-use crate::piop::{FixedColumns, PiopProver, ProverKey};
-use crate::RingProof;
+use crate::piop::{params::PiopParams, FixedColumns, PiopProver, ProverKey};
+use crate::{ArkTranscript, RingProof};
 
 pub struct RingProver<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS>,
+    T: PlonkTranscript<F, CS> = ArkTranscript,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns: FixedColumns<F, P>,
@@ -23,8 +21,9 @@ pub struct RingProver<
     plonk_prover: PlonkProver<F, CS, T>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript<F, CS>>
-    RingProver<F, CS, P, T>
+impl<F: PrimeField, CS: PCS<F>, P, T: PlonkTranscript<F, CS>> RingProver<F, CS, P, T>
+where
+    P: AffineCondAdd<BaseField = F>,
 {
     pub fn init(
         prover_key: ProverKey<F, CS, P>,
@@ -48,11 +47,8 @@ impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript
         }
     }
 
-    pub fn prove<CondAddT: CondAdd<F, P> + ProverGadget<F>>(
-        &self,
-        t: P::ScalarField,
-    ) -> RingProof<F, CS> {
-        let piop: PiopProver<F, P, CondAddT> =
+    pub fn prove(&self, t: P::ScalarField) -> RingProof<F, CS> {
+        let piop: PiopProver<F, P, P::CondAddT> =
             PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, t);
         self.plonk_prover.prove(piop)
     }

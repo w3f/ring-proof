@@ -16,7 +16,6 @@ ark-serialize.workspace = true
 fflonk.workspace = true
 rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
-blake2 = { version = "0.10", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
 ark-transcript = { version = "0.0.2", default-features = false }
 
@@ -50,3 +49,6 @@ print-trace = [
   "common/print-trace"
 ]
 asm = [ "fflonk/asm" ]
+test-vectors = [ "common/test-vectors" ]
+# benchmarking by running many proofs and verifications to get more accurate timing comparison
+intensive-benchmarking = ["std"] 

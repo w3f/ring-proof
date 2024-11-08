@@ -238,7 +238,7 @@ pub fn index<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>>(
 ) -> (ProverKey<F, CS, P>, VerifierKey<F, CS>) {
     let pcs_ck = pcs_params.ck();
     let pcs_raw_vk = pcs_params.raw_vk();
-    let fixed_columns = piop_params.fixed_columns(&keys);
+    let fixed_columns = piop_params.fixed_columns(keys);
     let fixed_columns_committed = fixed_columns.commit::<CS>(&pcs_ck);
     let verifier_key = VerifierKey {
         pcs_raw_vk: pcs_raw_vk.clone(),

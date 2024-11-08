@@ -99,8 +99,8 @@ impl<F: PrimeField, C: Commitment<F>, CondAddValuesT: CondAddValues<F>>
     }
 }
 
-impl<F: PrimeField, C: Commitment<F>, CondAddValuesT: CondAddValues<F> + VerifierGadget<F>>
-    VerifierPiop<F, C> for PiopVerifier<F, C, CondAddValuesT>
+impl<F: PrimeField, C: Commitment<F>, CondAddValuesT: CondAddValues<F>> VerifierPiop<F, C>
+    for PiopVerifier<F, C, CondAddValuesT>
 {
     const N_CONSTRAINTS: usize = 7;
     const N_COLUMNS: usize = 7;
@@ -110,7 +110,7 @@ impl<F: PrimeField, C: Commitment<F>, CondAddValuesT: CondAddValues<F> + Verifie
     }
 
     fn evaluate_constraints_main(&self) -> Vec<F> {
-        vec![
+        [
             self.inner_prod.evaluate_constraints_main(),
             self.cond_add.evaluate_constraints_main(),
             self.booleanity.evaluate_constraints_main(),

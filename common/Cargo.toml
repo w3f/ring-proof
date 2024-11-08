@@ -16,7 +16,6 @@ ark-serialize.workspace = true
 fflonk.workspace = true
 rayon = { workspace = true, optional = true }
 getrandom_or_panic = { version = "0.0.3", default-features = false }
-rand_core = "0.6"
 
 [dev-dependencies]
 ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
@@ -31,7 +30,6 @@ std = [
   "ark-serialize/std",
   "fflonk/std",
   "getrandom_or_panic/std",
-  "rand_core/std"
 ]
 parallel = [
   "std",
@@ -44,3 +42,4 @@ parallel = [
 ]
 print-trace = ["ark-std/print-trace"]
 asm = ["fflonk/asm"]
+test-vectors = []

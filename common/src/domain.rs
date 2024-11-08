@@ -111,7 +111,7 @@ impl<F: FftField> Domain<F> {
     pub(crate) fn column(&self, mut evals: Vec<F>, hidden: bool) -> FieldColumn<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
-        if self.hiding && hidden {
+        if self.hiding && hidden && !cfg!(feature = "test-vectors") {
             evals.resize(self.capacity, F::zero());
             evals.resize_with(self.domains.x1.size(), || {
                 F::rand(&mut getrandom_or_panic::getrandom_or_panic())
@@ -153,7 +153,7 @@ fn vanishes_on_row<F: FftField>(
 ) -> DensePolynomial<F> {
     assert!(i < domain.size());
     let w = domain.group_gen();
-    let wi = w.pow(&[i as u64]);
+    let wi = w.pow([i as u64]);
     let wi = DensePolynomial::from_coefficients_slice(&[wi]);
     let x = DensePolynomial::from_coefficients_slice(&[F::zero(), F::one()]);
     &x - &wi
@@ -163,7 +163,7 @@ fn vanishes_on_row<F: FftField>(
 fn vanishes_on_last_3_rows<F: FftField>(domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
     let w = domain.group_gen();
     let n3 = (domain.size() - ZK_ROWS) as u64;
-    let w3 = w.pow(&[n3]);
+    let w3 = w.pow([n3]);
     let w2 = w3 * w;
     let w1 = w2 * w;
     assert_eq!(w1, domain.group_gen_inv());

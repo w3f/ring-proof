@@ -1,24 +1,24 @@
 use ark_ec::AffineRepr;
 use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
+use common::gadgets::cond_add::CondAddValuesFor;
+use common::gadgets::cond_add::{AffineCondAdd, CondAdd};
 use fflonk::pcs::{RawVerifierKey, PCS};
 
 use common::domain::EvaluatedDomain;
-use common::gadgets::cond_add::CondAddValues;
-use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
 use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
-use crate::piop::params::PiopParams;
-use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
+use crate::piop::{params::PiopParams, FixedColumnsCommitted, PiopVerifier, VerifierKey};
+use crate::ArkTranscript;
 use crate::RingProof;
 
 pub struct RingVerifier<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS>,
+    T: PlonkTranscript<F, CS> = ArkTranscript,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
@@ -27,6 +27,8 @@ pub struct RingVerifier<
 
 impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript<F, CS>>
     RingVerifier<F, CS, P, T>
+where
+    P: AffineCondAdd,
 {
     pub fn init(
         verifier_key: VerifierKey<F, CS>,
@@ -42,17 +44,13 @@ impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript
         }
     }
 
-    pub fn verify_ring_proof<CondAddValuesT: CondAddValues<F> + VerifierGadget<F>>(
-        &self,
-        proof: RingProof<F, CS>,
-        result: P,
-    ) -> bool {
+    pub fn verify(&self, proof: RingProof<F, CS>, result: P) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
-            PiopVerifier::<F, CS::C, CondAddValuesT>::N_COLUMNS + 1,
-            PiopVerifier::<F, CS::C, CondAddValuesT>::N_CONSTRAINTS,
+            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::Values>::N_COLUMNS + 1,
+            PiopVerifier::<F, CS::C, <P::CondAddT as CondAdd<F, P>>::Values>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
@@ -62,7 +60,7 @@ impl<F: PrimeField, CS: PCS<F>, P: AffineRepr<BaseField = F>, T: PlonkTranscript
             self.piop_params.domain.hiding,
         );
 
-        let piop: PiopVerifier<F, <CS as PCS<F>>::C, CondAddValuesT> = PiopVerifier::init(
+        let piop: PiopVerifier<F, <CS as PCS<F>>::C, CondAddValuesFor<P>> = PiopVerifier::init(
             domain_eval,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),

@@ -51,7 +51,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
             points,
             ring_selector,
         } = fixed_columns;
-        let bits = Self::bits_column(&params, prover_index_in_keys, secret);
+        let bits = Self::bits_column(params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAddT::init(bits.clone(), points.clone(), params.seed, &domain);
         let booleanity = Booleanity::init(bits.clone());
@@ -92,7 +92,7 @@ where
     F: PrimeField,
     C: Commitment<F>,
     P: AffineRepr<BaseField = F>,
-    CondAddT: CondAdd<F, P> + ProverGadget<F>,
+    CondAddT: CondAdd<F, P>,
 {
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
@@ -150,7 +150,7 @@ where
     }
 
     fn constraints(&self) -> Vec<Evaluations<F>> {
-        vec![
+        [
             self.inner_prod.constraints(),
             self.cond_add.constraints(),
             self.booleanity.constraints(),
@@ -162,7 +162,7 @@ where
     }
 
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>> {
-        vec![
+        [
             self.inner_prod.constraints_linearized(zeta),
             self.cond_add.constraints_linearized(zeta),
             self.booleanity.constraints_linearized(zeta),
