@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "common",
-    "ring",
+    "w3f-plonk-common",
+    "ring-proof",
 ]
 
 [workspace.dependencies]

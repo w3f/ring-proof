@@ -1,3 +1,4 @@
+
 [package]
 name = "ring"
 version = "0.1.0"
@@ -15,7 +16,7 @@ ark-poly.workspace = true
 ark-serialize.workspace = true
 fflonk.workspace = true
 rayon = { workspace = true, optional = true }
-common = { path = "../common", default-features = false }
+common = { path = "../w3f-plonk-common", default-features = false }
 arrayvec = { version = "0.7", default-features = false }
 ark-transcript = { version = "0.0.2", default-features = false }
 
