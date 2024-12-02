@@ -80,10 +80,10 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let powers_of_h = piop_params.power_of_2_multiples_of_h();
         let (mut xs, mut ys): (Vec<F>, Vec<F>) = powers_of_h.iter()
             .map(|p| p.xy().unwrap())
-            .map(|(&x, &y)| (x - padding_x, y - padding_y))
+            .map(|(x, y)| (x - padding_x, y - padding_y))
             .unzip();
-        xs.resize(xs.len() + IDLE_ROWS, -*padding_x);
-        ys.resize(ys.len() + IDLE_ROWS, -*padding_y);
+        xs.resize(xs.len() + IDLE_ROWS, -padding_x);
+        ys.resize(ys.len() + IDLE_ROWS, -padding_y);
         let domain_size = piop_params.domain.domain().size();
         let srs_segment = &srs(piop_params.keyset_part_size..domain_size).unwrap();
         let c2x = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
@@ -118,7 +118,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let (padding_x, padding_y) = self.padding_point.xy().unwrap();
         let (xs, ys): (Vec<F>, Vec<F>) = keys.iter()
             .map(|p| p.xy().unwrap())
-            .map(|(&x, &y)| (x - padding_x, y - padding_y))
+            .map(|(x, y)| (x - padding_x, y - padding_y))
             .unzip();
         let srs_segment = &srs(self.curr_keys..self.curr_keys + keys.len()).unwrap();
         let cx_delta = KzgCurve::G1::msm(srs_segment, &xs).unwrap();
@@ -144,7 +144,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         srs: &RingBuilderKey<F, KzgCurve>,
     ) -> Self {
         let padding_point = piop_params.padding_point;
-        let (&padding_x, &padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
+        let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
         let powers_of_h = piop_params.power_of_2_multiples_of_h();
 
         // Computes
@@ -155,7 +155,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField=F>, VrfCurveConfig: SWCurveCon
         let (xs, ys): (Vec<F>, Vec<F>) = keys.iter()
             .chain(&powers_of_h)
             .map(|p| p.xy().unwrap())
-            .map(|(&x, &y)| (x - padding_x, y - padding_y))
+            .map(|(x, y)| (x - padding_x, y - padding_y))
             .chain(iter::repeat((-padding_x, -padding_y)).take(4))
             .chain(iter::once((padding_x, padding_y)))
             .unzip();

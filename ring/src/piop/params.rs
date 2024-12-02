@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AffineRepr, CurveGroup, AdditiveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};

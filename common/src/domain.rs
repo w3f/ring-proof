@@ -87,9 +87,9 @@ impl<F: FftField> Domain<F> {
     ) -> DensePolynomial<F> {
         let (quotient, remainder) = if self.hiding {
             let exclude_zk_rows = poly * self.zk_rows_vanishing_poly.as_ref().unwrap();
-            exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+            exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1)
         } else {
-            poly.divide_by_vanishing_poly(self.domains.x1).unwrap() //TODO error-handling
+            poly.divide_by_vanishing_poly(self.domains.x1)
         };
         assert!(remainder.is_zero()); //TODO error-handling
         quotient
