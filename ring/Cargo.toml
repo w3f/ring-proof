@@ -17,7 +17,6 @@ fflonk.workspace = true
 rayon = { workspace = true, optional = true }
 common = { path = "../common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
-arrayvec = { version = "0.7", default-features = false }
 ark-transcript = { git = "https://github.com/w3f/ark-transcript", default-features = false }
 
 [dev-dependencies]
