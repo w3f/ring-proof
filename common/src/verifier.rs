@@ -89,6 +89,7 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         let zeta = transcript.get_evaluation_point();
         transcript.add_evaluations(&proof.columns_at_zeta, &proof.lin_at_zeta_omega);
         let nus = transcript.get_kzg_aggregation_challenges(n_polys);
+        transcript.add_kzg_proofs(&proof.agg_at_zeta_proof, &proof.lin_at_zeta_omega_proof);
         let challenges = Challenges {
             alphas,
             zeta,

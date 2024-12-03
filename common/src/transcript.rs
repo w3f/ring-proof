@@ -33,6 +33,11 @@ pub trait PlonkTranscript<F: PrimeField, CS: PCS<F>>: Clone {
         self._add_serializable(b"quotient", point);
     }
 
+    fn add_kzg_proofs(&mut self, in_zeta: &CS::Proof, in_zeta_omega: &CS::Proof) {
+        self._add_serializable(b"kzg_proof_zeta", in_zeta);
+        self._add_serializable(b"kzg_proof_zeta_omega", in_zeta_omega);
+    }
+
     fn get_evaluation_point(&mut self) -> F {
         self._128_bit_point(b"evaluation_point")
     }
