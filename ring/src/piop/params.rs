@@ -1,5 +1,5 @@
-use ark_ec::{AffineRepr, CurveGroup, AdditiveGroup};
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -9,7 +9,7 @@ use common::gadgets::sw_cond_add::AffineColumn;
 use crate::piop::FixedColumns;
 
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
+pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> {
     // Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
 
@@ -30,7 +30,7 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> {
     pub(crate) padding_point: Affine<Curve>,
 }
 
-impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
+impl<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> PiopParams<F, Curve> {
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
         let padding_point = crate::hash_to_curve(b"/w3f/ring-proof/padding");
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
@@ -50,23 +50,22 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
         let points = self.points_column(&keys);
-        FixedColumns { points, ring_selector }
+        FixedColumns {
+            points,
+            ring_selector,
+        }
     }
 
     pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
         assert!(keys.len() <= self.keyset_part_size);
         let padding_len = self.keyset_part_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
-        let points = [
-            keys,
-            &padding,
-            &self.power_of_2_multiples_of_h(),
-        ].concat();
+        let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }
 
-    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine::<Curve>> {
+    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine<Curve>> {
         let mut h = self.h.into_group();
         let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
@@ -86,16 +85,17 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField=F>> PiopParams<F, Curve> {
     pub fn keyset_part_selector(&self) -> Vec<F> {
         [
             vec![F::one(); self.keyset_part_size],
-            vec![F::zero(); self.scalar_bitlen]
-        ].concat()
+            vec![F::zero(); self.scalar_bitlen],
+        ]
+        .concat()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
-    use ark_std::{test_rng, UniformRand};
     use ark_std::ops::Mul;
+    use ark_std::{test_rng, UniformRand};
 
     use common::domain::Domain;
     use common::test_helpers::cond_sum;

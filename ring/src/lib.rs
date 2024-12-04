@@ -1,6 +1,9 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::{short_weierstrass::{Affine, SWCurveConfig}, AffineRepr};
+use ark_ec::{
+    short_weierstrass::{Affine, SWCurveConfig},
+    AffineRepr,
+};
 use ark_ff::{One, PrimeField, Zero};
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
@@ -10,8 +13,8 @@ pub use common::domain::Domain;
 use common::Proof;
 pub use piop::index;
 
+pub use crate::piop::{params::PiopParams, FixedColumnsCommitted, ProverKey, VerifierKey};
 use crate::piop::{RingCommitments, RingEvaluations};
-pub use crate::piop::{params::PiopParams, ProverKey, VerifierKey, FixedColumnsCommitted};
 
 mod piop;
 pub mod ring;
@@ -36,7 +39,9 @@ pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
 }
 
 // Try and increment hash to curve.
-pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(message: &[u8]) -> Affine<Curve> {
+pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
+    message: &[u8],
+) -> Affine<Curve> {
     use blake2::Digest;
     let mut seed = message.to_vec();
     let cnt_offset = seed.len();
@@ -47,7 +52,7 @@ pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
         if let Some(point) = Affine::<Curve>::get_point_from_x_unchecked(x, false) {
             let point = point.clear_cofactor();
             assert!(point.is_in_correct_subgroup_assuming_on_curve());
-            return point
+            return point;
         }
         seed[cnt_offset] += 1;
     }
@@ -83,9 +88,9 @@ mod tests {
     use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
     use ark_ff::MontFp;
-    use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
+    use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use fflonk::pcs::kzg::KZG;
 
     use common::test_helpers::random_vec;
@@ -113,12 +118,21 @@ mod tests {
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
         let result = piop_params.h.mul(secret) + pk;
-        let ring_prover = RingProver::init(prover_key, piop_params.clone(), k, ArkTranscript::new(b"ring-vrf-test"));
+        let ring_prover = RingProver::init(
+            prover_key,
+            piop_params.clone(),
+            k,
+            ArkTranscript::new(b"ring-vrf-test"),
+        );
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
         end_timer!(t_prove);
 
-        let ring_verifier = RingVerifier::init(verifier_key, piop_params, ArkTranscript::new(b"ring-vrf-test"));
+        let ring_verifier = RingVerifier::init(
+            verifier_key,
+            piop_params,
+            ArkTranscript::new(b"ring-vrf-test"),
+        );
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
         end_timer!(t_verify);
@@ -138,15 +152,21 @@ mod tests {
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
         let pks = random_vec::<SWAffine, _>(keyset_size, rng);
 
-        let (_, verifier_key) = index::<_, KZG::<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
+        let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
 
         let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
 
         let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
-        assert_eq!(fixed_columns_committed, verifier_key.fixed_columns_committed);
+        assert_eq!(
+            fixed_columns_committed,
+            verifier_key.fixed_columns_committed
+        );
     }
 
-    fn setup<R: Rng, CS: PCS<Fq>>(rng: &mut R, domain_size: usize) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
+    fn setup<R: Rng, CS: PCS<Fq>>(
+        rng: &mut R,
+        domain_size: usize,
+    ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
 
@@ -163,7 +183,15 @@ mod tests {
         let p = find_complement_point::<BandersnatchConfig>();
         assert!(p.is_on_curve());
         assert!(!p.is_in_correct_subgroup_assuming_on_curve());
-        assert_eq!(p, SWAffine::new_unchecked(MontFp!("0"), MontFp!("11982629110561008531870698410380659621661946968466267969586599013782997959645")))
+        assert_eq!(
+            p,
+            SWAffine::new_unchecked(
+                MontFp!("0"),
+                MontFp!(
+                    "11982629110561008531870698410380659621661946968466267969586599013782997959645"
+                )
+            )
+        )
     }
 
     #[test]
