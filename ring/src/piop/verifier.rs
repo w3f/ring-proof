@@ -3,7 +3,7 @@ use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::Commitment;
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
 
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
