@@ -103,10 +103,10 @@ where
         commit: Fun,
     ) -> Self::Commitments {
         let bits = commit(self.bits.as_poly());
-        let cond_add_acc = super::ArrayWrap([
+        let cond_add_acc = [
             commit(self.cond_add.get_acc().xs.as_poly()),
             commit(self.cond_add.get_acc().ys.as_poly()),
-        ]);
+        ];
         let inn_prod_acc = commit(self.inner_prod.acc.as_poly());
         Self::Commitments {
             bits,
@@ -131,15 +131,14 @@ where
     }
 
     fn columns_evaluated(&self, zeta: &F) -> Self::Evaluations {
-        let points =
-            super::ArrayWrap([self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)]);
+        let points = [self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)];
         let ring_selector = self.ring_selector.evaluate(zeta);
         let bits = self.bits.evaluate(zeta);
         let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
-        let cond_add_acc = super::ArrayWrap([
+        let cond_add_acc = [
             self.cond_add.get_acc().xs.evaluate(zeta),
             self.cond_add.get_acc().ys.evaluate(zeta),
-        ]);
+        ];
         Self::Evaluations {
             points,
             ring_selector,

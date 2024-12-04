@@ -5,6 +5,7 @@ use ark_std::vec::Vec;
 
 pub mod booleanity;
 pub mod cond_add;
+// pub mod inner_prod_pub;
 pub mod fixed_cells;
 pub mod inner_prod;
 pub mod powers_of_two_multiples;

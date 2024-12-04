@@ -1,10 +1,16 @@
 name: Rust
 
 on:
+  # Run CI on push only for 'main' branch
   push:
-    branches: [ "**" ]
+    branches: [master]
+  # Run CI on pull request for all branches
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
@@ -12,8 +18,23 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          components: rustfmt
+      - name: Format
+        run: cargo fmt --all --check
+
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
@@ -26,6 +47,7 @@ jobs:
 
   build-wasm32:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
@@ -39,6 +61,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
@@ -48,3 +71,4 @@ jobs:
           toolchain: stable
       - name: Run tests
         run: cargo test --release
+    

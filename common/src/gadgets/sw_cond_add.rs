@@ -239,6 +239,7 @@ where
         let mut c1 = b * ((x1 - x2) * (x1 - x2) * (x1 + x2 + x3) - (y2 - y1) * (y2 - y1))
             + (F::one() - b) * (y3 - y1);
 
+        #[rustfmt::skip]
         let mut c2 =
             b * ((x1 - x2) * (y3 + y1) - (y2 - y1) * (x3 - x1)) + (F::one() - b) * (x3 - x1);
 
