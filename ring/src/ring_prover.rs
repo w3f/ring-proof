@@ -1,4 +1,4 @@
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use fflonk::pcs::PCS;
 
@@ -13,7 +13,7 @@ pub struct RingProver<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField = F>,
+    Curve: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Curve>,
@@ -26,7 +26,7 @@ impl<F, CS, Curve, T> RingProver<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField = F>,
+    Curve: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     pub fn init(

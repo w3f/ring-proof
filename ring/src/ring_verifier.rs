@@ -1,5 +1,5 @@
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::CurveGroup;
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use fflonk::pcs::{RawVerifierKey, PCS};
 
@@ -16,7 +16,7 @@ pub struct RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: SWCurveConfig<BaseField = F>,
+    Jubjub: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Jubjub>,
@@ -28,7 +28,7 @@ impl<F, CS, Jubjub, T> RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: SWCurveConfig<BaseField = F>,
+    Jubjub: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     pub fn init(

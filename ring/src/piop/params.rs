@@ -1,5 +1,5 @@
-use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -9,7 +9,7 @@ use common::gadgets::ec::AffineColumn;
 use crate::piop::FixedColumns;
 
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> {
+pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     // Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
 
@@ -30,7 +30,7 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> {
     pub(crate) padding_point: Affine<Curve>,
 }
 
-impl<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> PiopParams<F, Curve> {
+impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
         let padding_point = crate::hash_to_curve(b"/w3f/ring-proof/padding");
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
@@ -93,7 +93,7 @@ impl<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, EdwardsAffine};
     use ark_std::ops::Mul;
     use ark_std::{test_rng, UniformRand};
 
@@ -105,8 +105,8 @@ mod tests {
     #[test]
     fn test_powers_of_h() {
         let rng = &mut test_rng();
-        let h = SWAffine::rand(rng);
-        let seed = SWAffine::rand(rng);
+        let h = EdwardsAffine::rand(rng);
+        let seed = EdwardsAffine::rand(rng);
         let domain = Domain::new(1024, false);
         let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed);
         let t = Fr::rand(rng);
