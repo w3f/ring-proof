@@ -1,5 +1,5 @@
-use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -93,7 +93,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
 
 #[cfg(test)]
 mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, EdwardsAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::{test_rng, UniformRand};
 

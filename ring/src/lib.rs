@@ -1,9 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::{
-    AffineRepr,
-};
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
@@ -74,7 +72,7 @@ impl ArkTranscript {
 mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_ec::CurveGroup;
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, EdwardsAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};

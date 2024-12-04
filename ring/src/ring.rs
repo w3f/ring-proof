@@ -1,6 +1,6 @@
 use ark_ec::pairing::Pairing;
-use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::{AffineRepr, CurveGroup, VariableBaseMSM};
 use ark_ff::PrimeField;
 use ark_poly::EvaluationDomain;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};

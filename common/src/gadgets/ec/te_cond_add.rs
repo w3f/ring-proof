@@ -11,7 +11,7 @@ use crate::{const_evals, Column};
 impl<F, Curve> ProverGadget<F> for CondAdd<F, Affine<Curve>>
 where
     F: FftField,
-    Curve: TECurveConfig<BaseField=F>,
+    Curve: TECurveConfig<BaseField = F>,
 {
     fn witness_columns(&self) -> Vec<DensePolynomial<F>> {
         vec![self.acc.xs.poly.clone(), self.acc.ys.poly.clone()]
@@ -95,7 +95,7 @@ where
     }
 }
 
-impl<F: Field, C: TECurveConfig<BaseField=F>> CondAddValues<F, Affine<C>> {
+impl<F: Field, C: TECurveConfig<BaseField = F>> CondAddValues<F, Affine<C>> {
     pub fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -125,7 +125,9 @@ impl<F: Field, C: TECurveConfig<BaseField=F>> CondAddValues<F, Affine<C>> {
     }
 }
 
-impl<F: FftField, C: TECurveConfig<BaseField=F>> VerifierGadget<F> for CondAddValues<F, Affine<C>> {
+impl<F: FftField, C: TECurveConfig<BaseField = F>> VerifierGadget<F>
+    for CondAddValues<F, Affine<C>>
+{
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
@@ -151,11 +153,11 @@ impl<F: FftField, C: TECurveConfig<BaseField=F>> VerifierGadget<F> for CondAddVa
 mod tests {
     use crate::gadgets::ec::AffineColumn;
     use crate::gadgets::ec::BitColumn;
+    use crate::gadgets::ec::Domain;
     use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
-    use crate::gadgets::ec::Domain;
 
     use crate::test_helpers::cond_sum;
     use crate::test_helpers::*;
@@ -199,4 +201,3 @@ mod tests {
         _test_te_cond_add_gadget(true);
     }
 }
-

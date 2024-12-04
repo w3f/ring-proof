@@ -1,6 +1,6 @@
 use ark_ec::pairing::Pairing;
-use ark_ec::AffineRepr;
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;

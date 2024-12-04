@@ -1,5 +1,5 @@
-use ark_ec::CurveGroup;
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
 use fflonk::pcs::{RawVerifierKey, PCS};
 

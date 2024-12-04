@@ -1,10 +1,10 @@
-use std::marker::PhantomData;
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_ff::{FftField, Field};
-use ark_ec::{AffineRepr, CurveGroup};
 use crate::domain::Domain;
-use crate::{Column, FieldColumn};
 use crate::gadgets::booleanity::BitColumn;
+use crate::{Column, FieldColumn};
+use ark_ec::{AffineRepr, CurveGroup};
+use ark_ff::{FftField, Field};
+use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use std::marker::PhantomData;
 
 pub mod sw_cond_add;
 pub mod te_cond_add;
@@ -100,7 +100,7 @@ where
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
             acc: self.acc.evaluate(z),
-            _phantom: PhantomData
+            _phantom: PhantomData,
         }
     }
 }
@@ -110,5 +110,5 @@ pub struct CondAddValues<F: Field, P: AffineRepr<BaseField = F>> {
     pub points: (F, F),
     pub not_last: F,
     pub acc: (F, F),
-    pub _phantom: PhantomData<P>
+    pub _phantom: PhantomData<P>,
 }
