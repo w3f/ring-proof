@@ -6,7 +6,7 @@ use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
 use common::gadgets::fixed_cells::FixedCellsValues;
 use common::gadgets::inner_prod::InnerProdValues;
-use common::gadgets::sw_cond_add::CondAddValues;
+use common::gadgets::ec::sw_cond_add::CondAddValues;
 use common::gadgets::VerifierGadget;
 use common::piop::VerifierPiop;
 

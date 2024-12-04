@@ -7,7 +7,7 @@ pub mod booleanity;
 // pub mod inner_prod_pub;
 pub mod fixed_cells;
 pub mod inner_prod;
-pub mod sw_cond_add;
+pub mod ec;
 
 pub trait ProverGadget<F: FftField> {
     // Columns populated by the gadget.
