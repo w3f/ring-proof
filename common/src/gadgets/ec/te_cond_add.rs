@@ -96,7 +96,7 @@ where
 }
 
 impl<F: Field, C: TECurveConfig<BaseField=F>> CondAddValues<F, Affine<C>> {
-    fn acc_coeffs_1(&self) -> (F, F) {
+    pub fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
@@ -110,7 +110,7 @@ impl<F: Field, C: TECurveConfig<BaseField=F>> CondAddValues<F, Affine<C>> {
         (c_acc_x, c_acc_y)
     }
 
-    fn acc_coeffs_2(&self) -> (F, F) {
+    pub fn acc_coeffs_2(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, y1) = self.acc;
         let (x2, y2) = self.points;
