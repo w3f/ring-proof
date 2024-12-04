@@ -37,9 +37,15 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
     ) -> Self {
         let cond_add = CondAddValues {
             bitmask: all_columns_evaluated.bits,
-            points: (all_columns_evaluated.points[0], all_columns_evaluated.points[1]),
+            points: (
+                all_columns_evaluated.points[0],
+                all_columns_evaluated.points[1],
+            ),
             not_last: domain_evals.not_last_row,
-            acc: (all_columns_evaluated.cond_add_acc[0], all_columns_evaluated.cond_add_acc[1]),
+            acc: (
+                all_columns_evaluated.cond_add_acc[0],
+                all_columns_evaluated.cond_add_acc[1],
+            ),
         };
 
         let inner_prod = InnerProdValues {
@@ -107,11 +113,15 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
             self.cond_add_acc_x.evaluate_constraints_main(),
             self.cond_add_acc_y.evaluate_constraints_main(),
             self.inner_prod_acc.evaluate_constraints_main(),
-        ].concat()
+        ]
+        .concat()
     }
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
-        let inner_prod_acc = self.witness_columns_committed.inn_prod_acc.mul(self.inner_prod.not_last);
+        let inner_prod_acc = self
+            .witness_columns_committed
+            .inn_prod_acc
+            .mul(self.inner_prod.not_last);
         let acc_x = &self.witness_columns_committed.cond_add_acc[0];
         let acc_y = &self.witness_columns_committed.cond_add_acc[1];
 
@@ -121,11 +131,7 @@ impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> 
         let (c_acc_x, c_acc_y) = self.cond_add.acc_coeffs_2();
         let c2_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
 
-        vec![
-            inner_prod_acc,
-            c1_lin,
-            c2_lin,
-        ]
+        vec![inner_prod_acc, c1_lin, c2_lin]
     }
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F> {

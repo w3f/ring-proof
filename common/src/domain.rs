@@ -1,6 +1,8 @@
 use ark_ff::{batch_inversion, FftField, Zero};
-use ark_poly::{DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_poly::univariate::DensePolynomial;
+use ark_poly::{
+    DenseUVPolynomial, EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial,
+};
 use ark_std::{vec, vec::Vec};
 
 use crate::FieldColumn;
@@ -16,8 +18,10 @@ struct Domains<F: FftField> {
 
 impl<F: FftField> Domains<F> {
     fn new(n: usize) -> Self {
-        let x1 = GeneralEvaluationDomain::<F>::new(n).unwrap_or_else(|| panic!("No domain of size {}", n));
-        let x4 = GeneralEvaluationDomain::<F>::new(4 * n).unwrap_or_else(|| panic!("No domain of size {}", 4 * n));
+        let x1 = GeneralEvaluationDomain::<F>::new(n)
+            .unwrap_or_else(|| panic!("No domain of size {}", n));
+        let x4 = GeneralEvaluationDomain::<F>::new(4 * n)
+            .unwrap_or_else(|| panic!("No domain of size {}", 4 * n));
         Self { x1, x4 }
     }
 
@@ -26,7 +30,12 @@ impl<F: FftField> Domains<F> {
         let evals = Evaluations::from_vec_and_domain(evals, self.x1);
         let poly = evals.interpolate_by_ref();
         let evals_4x = poly.evaluate_over_domain_by_ref(self.x4);
-        FieldColumn { len, poly, evals, evals_4x }
+        FieldColumn {
+            len,
+            poly,
+            evals,
+            evals_4x,
+        }
     }
 
     fn column_from_poly(&self, poly: DensePolynomial<F>, len: usize) -> FieldColumn<F> {
@@ -34,7 +43,12 @@ impl<F: FftField> Domains<F> {
         let evals_4x = self.amplify(&poly);
         let evals = evals_4x.evals.iter().step_by(4).cloned().collect();
         let evals = Evaluations::from_vec_and_domain(evals, self.x1);
-        FieldColumn { len, poly, evals, evals_4x }
+        FieldColumn {
+            len,
+            poly,
+            evals,
+            evals_4x,
+        }
     }
 
     // Amplifies the number of the evaluations of the polynomial so it can be multiplied in linear time.
@@ -81,10 +95,7 @@ impl<F: FftField> Domain<F> {
         }
     }
 
-    pub(crate) fn divide_by_vanishing_poly<>(
-        &self,
-        poly: &DensePolynomial<F>,
-    ) -> DensePolynomial<F> {
+    pub(crate) fn divide_by_vanishing_poly(&self, poly: &DensePolynomial<F>) -> DensePolynomial<F> {
         let (quotient, remainder) = if self.hiding {
             let exclude_zk_rows = poly * self.zk_rows_vanishing_poly.as_ref().unwrap();
             exclude_zk_rows.divide_by_vanishing_poly(self.domains.x1)
@@ -100,7 +111,9 @@ impl<F: FftField> Domain<F> {
         assert!(len <= self.capacity);
         if self.hiding && hidden {
             evals.resize(self.capacity, F::zero());
-            evals.resize_with(self.domains.x1.size(), || F::rand(&mut getrandom_or_panic::getrandom_or_panic()));
+            evals.resize_with(self.domains.x1.size(), || {
+                F::rand(&mut getrandom_or_panic::getrandom_or_panic())
+            });
         } else {
             evals.resize(self.domains.x1.size(), F::zero());
         }
@@ -132,7 +145,10 @@ fn l_i<F: FftField>(i: usize, n: usize) -> Vec<F> {
 }
 
 // (x - w^i)
-fn vanishes_on_row<F: FftField>(i: usize, domain: GeneralEvaluationDomain<F>) -> DensePolynomial<F> {
+fn vanishes_on_row<F: FftField>(
+    i: usize,
+    domain: GeneralEvaluationDomain<F>,
+) -> DensePolynomial<F> {
     assert!(i < domain.size());
     let w = domain.group_gen();
     let wi = w.pow(&[i as u64]);
@@ -202,10 +218,7 @@ impl<F: FftField> EvaluatedDomain<F> {
         }
     }
 
-    pub(crate) fn divide_by_vanishing_poly_in_zeta<>(
-        &self,
-        poly_in_zeta: F,
-    ) -> F {
+    pub(crate) fn divide_by_vanishing_poly_in_zeta(&self, poly_in_zeta: F) -> F {
         poly_in_zeta * self.vanishing_polynomial_inv
     }
 
@@ -232,7 +245,10 @@ mod tests {
         let domain_eval = EvaluatedDomain::new(domain.domain(), z, hiding);
         assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
         assert_eq!(domain.l_last.poly.evaluate(&z), domain_eval.l_last);
-        assert_eq!(domain.not_last_row.poly.evaluate(&z), domain_eval.not_last_row);
+        assert_eq!(
+            domain.not_last_row.poly.evaluate(&z),
+            domain_eval.not_last_row
+        );
     }
 
     #[test]

@@ -5,15 +5,15 @@ use fflonk::pcs::PCS;
 use common::prover::PlonkProver;
 use common::transcript::PlonkTranscript;
 
-use crate::piop::{FixedColumns, PiopProver, ProverKey};
 use crate::piop::params::PiopParams;
+use crate::piop::{FixedColumns, PiopProver, ProverKey};
 use crate::RingProof;
 
 pub struct RingProver<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Curve>,
@@ -22,20 +22,24 @@ where
     plonk_prover: PlonkProver<F, CS, T>,
 }
 
-
 impl<F, CS, Curve, T> RingProver<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
-    pub fn init(prover_key: ProverKey<F, CS, Affine<Curve>>,
-                piop_params: PiopParams<F, Curve>,
-                k: usize,
-                empty_transcript: T,
+    pub fn init(
+        prover_key: ProverKey<F, CS, Affine<Curve>>,
+        piop_params: PiopParams<F, Curve>,
+        k: usize,
+        empty_transcript: T,
     ) -> Self {
-        let ProverKey { pcs_ck, fixed_columns, verifier_key } = prover_key;
+        let ProverKey {
+            pcs_ck,
+            fixed_columns,
+            verifier_key,
+        } = prover_key;
 
         let plonk_prover = PlonkProver::init(pcs_ck, verifier_key, empty_transcript);
 
@@ -56,4 +60,3 @@ where
         &self.piop_params
     }
 }
-

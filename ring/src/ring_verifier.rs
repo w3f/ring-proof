@@ -1,22 +1,22 @@
-use ark_ec::CurveGroup;
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
-use fflonk::pcs::{PCS, RawVerifierKey};
+use fflonk::pcs::{RawVerifierKey, PCS};
 
 use common::domain::EvaluatedDomain;
 use common::piop::VerifierPiop;
 use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
-use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::piop::params::PiopParams;
+use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::RingProof;
 
 pub struct RingVerifier<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Curve>,
@@ -28,12 +28,13 @@ impl<F, CS, Curve, T> RingVerifier<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField=F>,
+    Curve: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
-    pub fn init(verifier_key: VerifierKey<F, CS>,
-                piop_params: PiopParams<F, Curve>,
-                empty_transcript: T,
+    pub fn init(
+        verifier_key: VerifierKey<F, CS>,
+        piop_params: PiopParams<F, Curve>,
+        empty_transcript: T,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
         let plonk_verifier = PlonkVerifier::init(pcs_vk, &verifier_key, empty_transcript);
@@ -54,7 +55,11 @@ where
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
-        let domain_eval = EvaluatedDomain::new(self.piop_params.domain.domain(), challenges.zeta, self.piop_params.domain.hiding);
+        let domain_eval = EvaluatedDomain::new(
+            self.piop_params.domain.domain(),
+            challenges.zeta,
+            self.piop_params.domain.hiding,
+        );
 
         let piop = PiopVerifier::init(
             domain_eval,
@@ -65,11 +70,11 @@ where
             (seed_plus_result.x, seed_plus_result.y),
         );
 
-        self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
+        self.plonk_verifier
+            .verify(piop, proof, challenges, &mut rng)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Curve> {
         &self.piop_params
     }
 }
-
