@@ -113,10 +113,10 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
 impl<F: PrimeField, G: AffineRepr<BaseField = F>> FixedColumns<F, G> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [
-            CS::commit(ck, self.points.xs.as_poly()),
-            CS::commit(ck, self.points.ys.as_poly()),
+            CS::commit(ck, self.points.xs.as_poly()).unwrap(),
+            CS::commit(ck, self.points.ys.as_poly()).unwrap(),
         ];
-        let ring_selector = CS::commit(ck, self.ring_selector.as_poly());
+        let ring_selector = CS::commit(ck, self.ring_selector.as_poly()).unwrap();
         FixedColumnsCommitted {
             points,
             ring_selector,
