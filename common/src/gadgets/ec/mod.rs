@@ -1,12 +1,14 @@
+use std::marker::PhantomData;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_ff::{FftField, Field};
-use ark_ec::{AffineRepr, CurveGroup};
+use ark_ec::{AffineRepr, CurveConfig, CurveGroup};
 use crate::domain::Domain;
 use crate::{Column, FieldColumn};
 use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::VerifierGadget;
 
 pub mod sw_cond_add;
+// pub mod te_cond_add;
 
 // A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
 // and its convenience representation as columns of coordinates over the curve's base field.
@@ -93,19 +95,21 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F> {
+    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F, P::Config> {
         CondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
             not_last: self.not_last.evaluate(z),
             acc: self.acc.evaluate(z),
+            _phantom: PhantomData
         }
     }
 }
 
-pub struct CondAddValues<F: Field> {
+pub struct CondAddValues<F: Field, C: CurveConfig> {
     pub bitmask: F,
     pub points: (F, F),
     pub not_last: F,
     pub acc: (F, F),
+    pub _phantom: PhantomData<C>
 }
