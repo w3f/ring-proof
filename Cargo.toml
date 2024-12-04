@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "w3f-plonk-common",
     "ring-proof",
+    "snarkified-ring-vrf",
 ]
 
 [workspace.dependencies]

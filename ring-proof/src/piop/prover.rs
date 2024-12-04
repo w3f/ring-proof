@@ -25,9 +25,9 @@ pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: Con
     domain: Domain<F>,
     // Fixed (public input) columns:
     points: AffineColumn<F, P>,
-    ring_selector: FieldColumn<F>,
+    ring_selector: FieldColumn<F>, //TODO: what is ring selector?
     // Private input column.
-    bits: BitColumn<F>,
+    bits: BitColumn<F>, // this is the 
     // Gadgets:
     booleanity: Booleanity<F>,
     inner_prod: InnerProd<F>,
