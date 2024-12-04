@@ -4,8 +4,8 @@ use crate::{Column, FieldColumn};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::vec::Vec;
 use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 
 pub mod sw_cond_add;
 pub mod te_cond_add;

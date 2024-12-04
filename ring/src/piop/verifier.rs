@@ -1,9 +1,9 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
+use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::Commitment;
-use ark_std::marker::PhantomData;
 
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;
