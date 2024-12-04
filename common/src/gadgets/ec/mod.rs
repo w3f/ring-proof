@@ -95,7 +95,7 @@ where
         }
     }
 
-    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F, P::Config> {
+    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F, P> {
         CondAddValues {
             bitmask: self.bitmask.evaluate(z),
             points: self.points.evaluate(z),
@@ -106,10 +106,10 @@ where
     }
 }
 
-pub struct CondAddValues<F: Field, C: CurveConfig> {
+pub struct CondAddValues<F: Field, P: AffineRepr<BaseField = F>> {
     pub bitmask: F,
     pub points: (F, F),
     pub not_last: F,
     pub acc: (F, F),
-    pub _phantom: PhantomData<C>
+    pub _phantom: PhantomData<P>
 }

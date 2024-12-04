@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
-use ark_ec::short_weierstrass::SWCurveConfig;
+use ark_ec::AffineRepr;
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
 use ark_std::{vec, vec::Vec};
 use fflonk::pcs::Commitment;
@@ -15,7 +16,7 @@ use common::piop::VerifierPiop;
 use crate::piop::{FixedColumnsCommitted, RingCommitments};
 use crate::RingEvaluations;
 
-pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> {
+pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> {
     domain_evals: EvaluatedDomain<F>,
     fixed_columns_committed: FixedColumnsCommitted<F, C>,
     witness_columns_committed: RingCommitments<F, C>,
@@ -23,12 +24,12 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<B
     booleanity: BooleanityValues<F>,
     inner_prod: InnerProdValues<F>,
     inner_prod_acc: FixedCellsValues<F>,
-    cond_add: CondAddValues<F, Jubjub>,
+    cond_add: CondAddValues<F, P>,
     cond_add_acc_x: FixedCellsValues<F>,
     cond_add_acc_y: FixedCellsValues<F>,
 }
 
-impl<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> PiopVerifier<F, C, Jubjub> {
+impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
     pub fn init(
         domain_evals: EvaluatedDomain<F>,
         fixed_columns_committed: FixedColumnsCommitted<F, C>,
@@ -100,7 +101,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> Piop
     }
 }
 
-impl<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> VerifierPiop<F, C> for PiopVerifier<F, C, Jubjub> {
+impl<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> VerifierPiop<F, C> for PiopVerifier<F, C, Affine<Jubjub>> {
     const N_CONSTRAINTS: usize = 7;
     const N_COLUMNS: usize = 7;
 

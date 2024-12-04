@@ -93,7 +93,7 @@ where
     }
 }
 
-impl<F: Field, C: SWCurveConfig<BaseField = F>> CondAddValues<F, C> {
+impl<F: Field, C: SWCurveConfig<BaseField = F>> CondAddValues<F, Affine<C>> {
     pub fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, _y1) = self.acc;
@@ -123,7 +123,7 @@ impl<F: Field, C: SWCurveConfig<BaseField = F>> CondAddValues<F, C> {
     }
 }
 
-impl<F: Field, C: SWCurveConfig<BaseField = F>> VerifierGadget<F> for CondAddValues<F, C> {
+impl<F: Field, C: SWCurveConfig<BaseField = F>> VerifierGadget<F> for CondAddValues<F, Affine<C>> {
     fn evaluate_constraints_main(&self) -> Vec<F> {
         let b = self.bitmask;
         let (x1, y1) = self.acc;

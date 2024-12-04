@@ -50,8 +50,8 @@ where
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
-            PiopVerifier::<F, CS::C, Jubjub>::N_COLUMNS + 1,
-            PiopVerifier::<F, CS::C, Jubjub>::N_CONSTRAINTS,
+            PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
+            PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
@@ -61,7 +61,7 @@ where
             self.piop_params.domain.hiding,
         );
 
-        let piop = PiopVerifier::<_, _, Jubjub>::init(
+        let piop = PiopVerifier::<_, _, Affine<Jubjub>>::init(
             domain_eval,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
