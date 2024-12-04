@@ -10,7 +10,7 @@ use fflonk::pcs::kzg::params::RawKzgVerifierKey;
 use fflonk::pcs::kzg::KZG;
 use fflonk::pcs::{Commitment, PcsParams, PCS};
 
-use common::gadgets::ec::sw_cond_add::AffineColumn;
+use common::gadgets::ec::AffineColumn;
 use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
