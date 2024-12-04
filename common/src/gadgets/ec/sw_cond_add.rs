@@ -199,4 +199,3 @@ mod tests {
         _test_sw_cond_add_gadget(true);
     }
 }
-
