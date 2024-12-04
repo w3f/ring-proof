@@ -40,7 +40,7 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T>
         transcript.add_instance(&piop.result());
         // ROUND 1
         // The prover commits to the columns.
-        let column_commitments = piop.committed_columns(|p| CS::commit(&self.pcs_ck, p));
+        let column_commitments = piop.committed_columns(|p| CS::commit(&self.pcs_ck, p).unwrap());
         transcript.add_committed_cols(&column_commitments);
 
         // ROUND 2
@@ -52,7 +52,7 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T>
         let agg_constraint_poly = agg_constraint_poly.interpolate();
         let quotient_poly = piop.domain().divide_by_vanishing_poly(&agg_constraint_poly);
         // The prover commits to the quotient polynomial...
-        let quotient_commitment = CS::commit(&self.pcs_ck, &quotient_poly);
+        let quotient_commitment = CS::commit(&self.pcs_ck, &quotient_poly).unwrap();
         transcript.add_quotient_commitment(&quotient_commitment);
 
         // and receives the evaluation point in response
@@ -71,8 +71,8 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T>
         let polys_at_zeta = [columns_to_open, vec![quotient_poly]].concat();
         let nus = transcript.get_kzg_aggregation_challenges(polys_at_zeta.len());
         let agg_at_zeta = aggregate_polys(&polys_at_zeta, &nus);
-        let agg_at_zeta_proof = CS::open(&self.pcs_ck, &agg_at_zeta, zeta);
-        let lin_at_zeta_omega_proof = CS::open(&self.pcs_ck, &lin, zeta_omega);
+        let agg_at_zeta_proof = CS::open(&self.pcs_ck, &agg_at_zeta, zeta).unwrap();
+        let lin_at_zeta_omega_proof = CS::open(&self.pcs_ck, &lin, zeta_omega).unwrap();
         Proof {
             column_commitments,
             quotient_commitment,
