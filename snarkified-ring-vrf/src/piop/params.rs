@@ -7,6 +7,15 @@ use common::AffineColumn;
 
 use crate::piop::FixedColumns;
 
+///
+/// | 1              | 2           | 3           | 4              | 5              | 6                        | 7&8      | 9&10            | 11&12    | 13&14           |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | $k$            | $pk_x$      | $pk_y$      | $acc_{pk_x}$   | $acc_{pk_y}$   | $sk$                     | $2^iG$x2 | $acc_{sk}$x2    | $2^iH$x2 | $acc_{out}$x2   |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
+///
+/// We do not have key selector part so I assume that I we are going to generate two different polynomials for essentially two different table.
+///
 #[derive(Clone)]
 pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
     // Domain over which the piop is represented.
@@ -27,6 +36,7 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
 
     // The point used to pad the actual list of public keys. Should be of an unknown dlog.
     pub(crate) padding_point: P,
+
 }
 
 impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
@@ -45,12 +55,16 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     }
 
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
-        let ring_selector = self.keyset_part_selector();
-        let ring_selector = self.domain.public_column(ring_selector);
-        let points = self.points_column(keys);
+        //let ring_selector = self.keyset_part_selector();
+        //let ring_selector = self.domain.public_column(ring_selector);
+        let pubkey_points = self.points_column(keys);
+	let prime_subgroup_gen = P::Config::generator();
+	let power_of_2_multiples_of_gen = power_of_2_multiples_of(&self, prime_subgroup_gen);
+	let power_of_2_multiples_of_gen = self.points_column(power_of_2_multiples_of_gen);
+
         FixedColumns {
-            points,
-            ring_selector,
+            pubkey_points,
+	    power_of_2_multiples_of_gen,
         }
     }
 
@@ -63,8 +77,8 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         AffineColumn::public_column(points, &self.domain)
     }
 
-    pub fn power_of_2_multiples_of_h(&self) -> Vec<P> {
-        let mut h = self.h.into_group();
+    pub fn power_of_2_multiples_of(&self, base_point: P) -> Vec<P> {
+        let mut h = base_point.into_group();
         let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
         for _ in 1..self.scalar_bitlen {
@@ -78,14 +92,6 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
         significant_bits.to_vec()
-    }
-
-    pub fn keyset_part_selector(&self) -> Vec<F> {
-        [
-            vec![F::one(); self.keyset_part_size],
-            vec![F::zero(); self.scalar_bitlen],
-        ]
-        .concat()
     }
 
     pub fn padding_point(&self) -> P {
