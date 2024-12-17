@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup,};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -58,9 +58,9 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         //let ring_selector = self.keyset_part_selector();
         //let ring_selector = self.domain.public_column(ring_selector);
         let pubkey_points = self.points_column(keys);
-	let prime_subgroup_gen = P::Config::generator();
-	let power_of_2_multiples_of_gen = power_of_2_multiples_of(&self, prime_subgroup_gen);
-	let power_of_2_multiples_of_gen = self.points_column(power_of_2_multiples_of_gen);
+	let prime_subgroup_gen = P::generator(); //TODO: should this be fed as an input param of the ring?
+	let power_of_2_multiples_of_gen = self.power_of_2_multiples_of(prime_subgroup_gen);
+	let power_of_2_multiples_of_gen = self.points_column(power_of_2_multiples_of_gen.as_slice());
 
         FixedColumns {
             pubkey_points,
@@ -69,10 +69,10 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     }
 
     pub fn points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
-        assert!(keys.len() <= self.keyset_part_size);
-        let padding_len = self.keyset_part_size - keys.len();
+        assert!(keys.len() <= self.padded_keyset_size);
+        let padding_len = self.padded_keyset_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
-        let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
+        let points = [keys, &padding, &self.power_of_2_multiples_of(self.h)].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }

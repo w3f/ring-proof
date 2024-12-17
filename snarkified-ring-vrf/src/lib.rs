@@ -16,9 +16,9 @@ pub use crate::piop::{params::PiopParams, FixedColumnsCommitted, ProverKey, Veri
 use crate::piop::{RingCommitments, RingEvaluations};
 
 mod piop;
-pub mod ring;
-pub mod ring_prover;
-pub mod ring_verifier;
+pub mod ring_vrf;
+pub mod ring_vrf_prover;
+pub mod ring_vrf_verifier;
 
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 

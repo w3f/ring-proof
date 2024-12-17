@@ -4,6 +4,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
+use ark_std::cmp::max;
 use fflonk::pcs::Commitment;
 
 use common::domain::Domain;
@@ -24,17 +25,14 @@ use crate::piop::{RingCommitments, RingEvaluations};
 pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>> {
     domain: Domain<F>,
     // Fixed (public input) columns:
-    points: AffineColumn<F, P>,
-    ring_selector: FieldColumn<F>, //Skalman TODO: why?
-    // Private input column.
+    points: AffineColumn<F, P>,    // Private input column.
     signer_index: BitColumn<F>,
     // Gadgets:
-    booleanity: Booleanity<F>, //Skalman TODO: and  this?
-
+    booleanity: Booleanity<F>, //this to prove the bit column is actually holding bits (which column? signer index why another column above then?)
     inner_prod: InnerProd<F>,
     inner_prod_acc: FixedCells<F>,
-
-    signer_secret_key_bits: BitColumn
+ 
+    signer_secret_key_bits: BitColumn<F>,
 
     cond_add_pubkey: CondAddT,
     cond_add_pubkey_acc_x: FixedCells<F>,
@@ -57,10 +55,10 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
     ) -> Self {
         let domain = params.domain.clone();
         let FixedColumns {
-            points,
-            ring_selector,
+            pubkey_points,
+            power_of_2_multiples_of_gen,
         } = fixed_columns;
-        let bits = Self::bits_column(params, prover_index_in_keys, secret);
+        let bits = Self::bits_columns64;1;2;6;9;15;18;21;22c(params, prover_index_in_keys, secret);
         let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAddT::init(bits.clone(), points.clone(), params.seed, &domain);
         let booleanity = Booleanity::init(bits.clone());
@@ -86,7 +84,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
         params: &PiopParams<F, P>,
         index_in_keys: usize,
         secret: P::ScalarField,
-    ) -> (BitColumn<F>, BitColumns) {
+    ) -> (BitColumn<F>, BitColumn<F>) {
         let mut signer_selector_bit_vector = vec![false; params.ring_size];
         signer_selector_bit_vector[index_in_keys] = true;
         let secret_key_bit_vector = params.scalar_part(secret);
@@ -112,10 +110,10 @@ where
         commit: Fun,
     ) -> Self::Commitments {
         let bits = commit(self.bits.as_poly());
-        let cond_add_acc = super::ArrayWrap([
+        let cond_add_acc = [
             commit(self.cond_add.get_acc().xs.as_poly()),
             commit(self.cond_add.get_acc().ys.as_poly()),
-        ]);
+        ];
         let inn_prod_acc = commit(self.inner_prod.acc.as_poly());
         Self::Commitments {
             bits,
@@ -140,15 +138,14 @@ where
     }
 
     fn columns_evaluated(&self, zeta: &F) -> Self::Evaluations {
-        let points =
-            super::ArrayWrap([self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)]);
+        let points = [self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)];
         let ring_selector = self.ring_selector.evaluate(zeta);
         let bits = self.bits.evaluate(zeta);
         let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
-        let cond_add_acc = super::ArrayWrap([
+        let cond_add_acc = [
             self.cond_add.get_acc().xs.evaluate(zeta),
             self.cond_add.get_acc().ys.evaluate(zeta),
-        ]);
+        ];
         Self::Evaluations {
             points,
             ring_selector,

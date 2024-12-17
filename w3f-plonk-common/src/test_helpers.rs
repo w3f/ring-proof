@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_std::rand::Rng;
 use ark_std::vec::Vec;
 use ark_std::UniformRand;

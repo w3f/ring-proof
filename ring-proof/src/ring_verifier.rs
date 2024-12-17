@@ -10,15 +10,15 @@ use common::piop::VerifierPiop;
 use common::transcript::PlonkTranscript;
 use common::verifier::PlonkVerifier;
 
-use crate::piop::{params::PiopParams, FixedColumnsCommitted, PiopVerifier, VerifierKey};
-use crate::ArkTranscript;
+use crate::piop::params::PiopParams;
+use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::RingProof;
 
 pub struct RingVerifier<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS> = ArkTranscript,
+    T: PlonkTranscript<F, CS>,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
@@ -65,11 +65,8 @@ where
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
-            (*seed.x().unwrap(), *seed.y().unwrap()),
-            (
-                *seed_plus_result.x().unwrap(),
-                *seed_plus_result.y().unwrap(),
-            ),
+            (seed.x().unwrap(), seed.y().unwrap()),
+            (seed_plus_result.x().unwrap(), seed_plus_result.y().unwrap()),
         );
 
         self.plonk_verifier

@@ -6,7 +6,7 @@ edition = "2021"
 authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "zk-proof of knowledge of the blinding factor for a Pedersen commitment"
-keywords = ["crypto", "cryptography", "zk-proof"]
+keywords = ["cryptography", "ring-vrf"]
 
 [dependencies]
 ark-std.workspace = true
@@ -17,12 +17,14 @@ ark-serialize.workspace = true
 fflonk.workspace = true
 rayon = { workspace = true, optional = true }
 common = { path = "../w3f-plonk-common", default-features = false }
-arrayvec = { version = "0.7", default-features = false }
-ark-transcript = { version = "0.0.2", default-features = false }
+blake2 = { version = "0.10", default-features = false }
+# arrayvec = { version = "0.10", default-features = false }
+ark-transcript = { version = "0.0.3", default-features = false }
+
 
 [dev-dependencies]
-ark-bls12-381 = { version = "0.4", default-features = false, features = ["curve"] }
-ark-ed-on-bls12-381-bandersnatch = { version = "0.4", default-features = false }
+ark-bls12-381 = { version = "0.5", default-features = false, features = ["curve"] }
+ark-ed-on-bls12-381-bandersnatch = { version = "0.5", default-features = false }
 
 [features]
 default = [ "std" ]

@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
@@ -47,7 +47,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
-        let points = self.points_column(keys);
+        let points = self.points_column(&keys);
         FixedColumns {
             points,
             ring_selector,
@@ -86,10 +86,6 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
             vec![F::zero(); self.scalar_bitlen],
         ]
         .concat()
-    }
-
-    pub fn padding_point(&self) -> P {
-        self.padding_point
     }
 }
 

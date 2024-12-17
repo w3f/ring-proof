@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use ark_ec::{AffineRepr, CurveGroup, Group};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
@@ -73,7 +73,7 @@ where
 
     fn evaluate_assignment(&self, z: &F) -> PowersOfTwoMultipleValuesTE<F, Curve> {
         PowersOfTwoMultipleValuesTE {
-            point: (*self.point.x().unwrap(), *self.point.y().unwrap()),
+            point: (self.point.x().unwrap(), self.point.y().unwrap()),
             not_last: self.not_last.evaluate(z),
             multiples: self.multiples.evaluate(z),
             _curve: PhantomData,

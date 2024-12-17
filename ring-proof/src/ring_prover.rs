@@ -6,14 +6,15 @@ use common::gadgets::cond_add::AffineCondAdd;
 use common::prover::PlonkProver;
 use common::transcript::PlonkTranscript;
 
-use crate::piop::{params::PiopParams, FixedColumns, PiopProver, ProverKey};
-use crate::{ArkTranscript, RingProof};
+use crate::piop::params::PiopParams;
+use crate::piop::{FixedColumns, PiopProver, ProverKey};
+use crate::RingProof;
 
 pub struct RingProver<
     F: PrimeField,
     CS: PCS<F>,
     P: AffineRepr<BaseField = F>,
-    T: PlonkTranscript<F, CS> = ArkTranscript,
+    T: PlonkTranscript<F, CS>,
 > {
     piop_params: PiopParams<F, P>,
     fixed_columns: FixedColumns<F, P>,

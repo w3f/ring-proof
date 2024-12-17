@@ -1,5 +1,5 @@
 use ark_ec::pairing::Pairing;
-use ark_ec::AffineRepr;
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;
@@ -14,88 +14,18 @@ use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 
-use crate::ring::Ring;
+use crate::ring_vrf::Ring;
 use crate::PiopParams;
 
 pub mod params;
 mod prover;
 mod verifier;
 
-// Workaround while waiting for https://github.com/arkworks-rs/algebra/pull/837
-// to be on [crates.io](https://crates.io/crates/ark-serialize) (allegedly ark-serialize 0.4.3 )
-mod ark_serialize_837 {
-    use ark_serialize::{
-        CanonicalDeserialize, CanonicalSerialize, Compress, Read, SerializationError, Valid,
-        Validate,
-    };
-
-    #[derive(Clone, CanonicalSerialize)]
-    #[repr(transparent)]
-    pub struct ArrayWrap<T: CanonicalSerialize, const N: usize>(pub [T; N]);
-
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> Valid for ArrayWrap<T, N> {
-        fn check(&self) -> Result<(), SerializationError> {
-            self.0.check()
-        }
-    }
-
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> CanonicalDeserialize
-        for ArrayWrap<T, N>
-    {
-        fn deserialize_with_mode<R: Read>(
-            mut reader: R,
-            compress: Compress,
-            validate: Validate,
-        ) -> Result<Self, SerializationError> {
-            let mut array = arrayvec::ArrayVec::<T, N>::new();
-            for _ in 0..N {
-                array.push(T::deserialize_with_mode(
-                    &mut reader,
-                    compress,
-                    Validate::No,
-                )?);
-            }
-            if let ark_serialize::Validate::Yes = validate {
-                T::batch_check(array.iter())?
-            }
-            Ok(ArrayWrap(array.into_inner().ok().unwrap()))
-        }
-    }
-
-    impl<T: CanonicalDeserialize + CanonicalSerialize, const N: usize> core::ops::Deref
-        for ArrayWrap<T, N>
-    {
-        type Target = [T; N];
-
-        fn deref(&self) -> &Self::Target {
-            &self.0
-        }
-    }
-
-    // This is expected to panic until https://github.com/arkworks-rs/algebra/pull/837
-    // doesn't land on crates.io
-    #[test]
-    #[should_panic]
-    fn panics_without_ark_serialize_827() {
-        let buf = [0u8; 96];
-        let res = <[ark_bls12_381::G1Affine; 2]>::deserialize_compressed(&buf[..]);
-        assert!(res.is_err());
-    }
-
-    #[test]
-    fn workaround_waiting_for_ark_serialize_837() {
-        let buf = [0u8; 96];
-        let res = <ArrayWrap<ark_bls12_381::G1Affine, 2>>::deserialize_compressed(&buf[..]);
-        assert!(res.is_err());
-    }
-}
-use ark_serialize_837::*;
-
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
     pub(crate) bits: C,
     pub(crate) inn_prod_acc: C,
-    pub(crate) cond_add_acc: ArrayWrap<C, 2>,
+    pub(crate) cond_add_acc: [C; 2],
     pub(crate) phantom: PhantomData<F>,
 }
 
@@ -112,11 +42,11 @@ impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingEvaluations<F: PrimeField> {
-    pub(crate) points: ArrayWrap<F, 2>,
+    pub(crate) points: [F; 2],
     pub(crate) ring_selector: F,
     pub(crate) bits: F,
     pub(crate) inn_prod_acc: F,
-    pub(crate) cond_add_acc: ArrayWrap<F, 2>,
+    pub(crate) cond_add_acc: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
@@ -137,14 +67,11 @@ impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField = F>> {
     // Public keys of the ring participants in order,
-    // followed by the powers-of-2 multiples of the second Pedersen base.
     // pk_1, ..., pk_n, H, 2H, 4H, ..., 2^sH
+    pubkey_points: AffineColumn<F, G>,
+    // the powers-of-2 multiples of the prime subgroup generator
     // 1          n                     n+s+1
-    points: AffineColumn<F, G>,
-    // Binary column that highlights which rows of the table correspond to the ring.
-    // 1, 1, ..., 1, 0, 0, ..., 0
-    // 1          n
-    ring_selector: FieldColumn<F>,
+    power_of_2_multiples_of_gen: AffineColumn<F, G>,
 }
 
 // Commitments to the fixed columns (see above).
