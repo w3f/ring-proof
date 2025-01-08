@@ -14,7 +14,7 @@ use crate::piop::FixedColumns;
 /// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
 /// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
 ///
-/// We do not have key selector part so I assume that I we are going to generate two different polynomials for essentially two different table.
+/// We do not have ring selector part so I assume that I we are going to generate two different polynomials for essentially two different table.
 ///
 #[derive(Clone)]
 pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {

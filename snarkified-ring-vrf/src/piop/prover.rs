@@ -25,12 +25,12 @@ use crate::piop::{RingCommitments, RingEvaluations};
 pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>> {
     domain: Domain<F>,
     // Fixed (public input) columns:
-    points: AffineColumn<F, P>,    // Private input column.
+    pubkey_points: AffineColumn<F, P>,    // Private input column.
     signer_index: BitColumn<F>,
     // Gadgets:
-    booleanity: Booleanity<F>, //this to prove the bit column is actually holding bits (which column? signer index why another column above then?)
-    inner_prod: InnerProd<F>,
-    inner_prod_acc: FixedCells<F>,
+    booleanity: Booleanity<F>, //this to prove the bit column is actually holding bits 
+    //inner_prod: InnerProd<F>, TODO chcek! skalman: we do not have a ring selector anymore. We alreday kan check that cond add result in Pubkey but we don't know which pub key but is one of the pubkeys. So I assume we don't need the inner product test of k.<pubkeys>
+    //inner_prod_acc: FixedCells<F>,
  
     signer_secret_key_bits: BitColumn<F>,
 
@@ -58,25 +58,20 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
             pubkey_points,
             power_of_2_multiples_of_gen,
         } = fixed_columns;
-        let bits = Self::bits_columns64;1;2;6;9;15;18;21;22c(params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
-        let cond_add = CondAddT::init(bits.clone(), points.clone(), params.seed, &domain);
+        let bits = Self::bits_columns(params, prover_index_in_keys, secret);
+        let cond_add_pubkey = CondAddT::init(bits.clone(), pubkey_points.clone(), params.seed, &domain);
         let booleanity = Booleanity::init(bits.clone());
-        let acc = cond_add.get_acc();
-        let cond_add_acc_x = FixedCells::init(acc.xs.clone(), &domain);
-        let cond_add_acc_y = FixedCells::init(acc.ys.clone(), &domain);
-        let inner_prod_acc = FixedCells::init(inner_prod.acc.clone(), &domain);
+        let pubkey_acc = cond_add_pubkey.get_acc();
+        let cond_add_acc_x = FixedCells::init(pubkey_acc.xs.clone(), &domain);
+        let cond_add_acc_y = FixedCells::init(pubkey_acc.ys.clone(), &domain);
         Self {
             domain,
-            points,
-            ring_selector,
+            pubkey_points,
             bits,
-            inner_prod_acc,
             cond_add_acc_x,
             cond_add_acc_y,
             booleanity,
-            inner_prod,
-            cond_add,
+            cond_add_pubkey,
         }
     }
 
