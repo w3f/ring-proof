@@ -59,7 +59,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         //let ring_selector = self.domain.public_column(ring_selector);
         let pubkey_points = self.points_column(keys);
 	let prime_subgroup_gen = P::generator(); //TODO: should this be fed as an input param of the ring?
-	let power_of_2_multiples_of_gen = self.power_of_2_multiples_of(prime_subgroup_gen);
+	let power_of_2_multiples_of_gen = Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
 	let power_of_2_multiples_of_gen = self.points_column(power_of_2_multiples_of_gen.as_slice());
 
         FixedColumns {
@@ -72,16 +72,16 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         assert!(keys.len() <= self.padded_keyset_size);
         let padding_len = self.padded_keyset_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
-        let points = [keys, &padding, &self.power_of_2_multiples_of(self.h)].concat();
+        let points = [keys, &padding, &Self::power_of_2_multiples_of(self.h, self.scalar_bitlen)].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }
 
-    pub fn power_of_2_multiples_of(&self, base_point: P) -> Vec<P> {
+    pub fn power_of_2_multiples_of(base_point: P, scalar_bitlen: usize) -> Vec<P> {
         let mut h = base_point.into_group();
-        let mut multiples = Vec::with_capacity(self.scalar_bitlen);
+        let mut multiples = Vec::with_capacity(scalar_bitlen);
         multiples.push(h);
-        for _ in 1..self.scalar_bitlen {
+        for _ in 1..scalar_bitlen {
             h.double_in_place();
             multiples.push(h);
         }

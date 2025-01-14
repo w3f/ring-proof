@@ -23,9 +23,12 @@ mod verifier;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
-    pub(crate) bits: C,
-    pub(crate) inn_prod_acc: C,
-    pub(crate) cond_add_acc: [C; 2],
+    pub(crate) signer_index: C,
+    pub(crate) signer_secret_key_bits: C,
+    pub(crate) sole_signer_inn_prod_acc: C,
+    pub(crate) cond_add_pubkey_acc: [C; 2],
+    pub(crate) cond_add_gen_multiples_acc: [C; 2],
+    pub(crate) cond_add_vrfout_acc: [C; 2],
     pub(crate) phantom: PhantomData<F>,
 }
 
@@ -42,11 +45,14 @@ impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingEvaluations<F: PrimeField> {
-    pub(crate) points: [F; 2],
+    pub(crate) pubkey_points: [F; 2],
     pub(crate) ring_selector: F,
-    pub(crate) bits: F,
-    pub(crate) inn_prod_acc: F,
-    pub(crate) cond_add_acc: [F; 2],
+    pub(crate) signer_index: F,
+    pub(crate) signer_secret_key_bits: F,
+    pub(crate) sole_signer_inn_prod_acc: F,
+    pub(crate) cond_add_pubkey_acc: [F; 2],
+    pub(crate) cond_add_gen_multiples_acc: [F; 2],
+    pub(crate) cond_add_vrfout_acc: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
