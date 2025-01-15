@@ -65,10 +65,10 @@ where
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
-            (*seed.x().unwrap(), *seed.y().unwrap()),
+            (seed.x().unwrap(), seed.y().unwrap()),
             (
-                *seed_plus_result.x().unwrap(),
-                *seed_plus_result.y().unwrap(),
+                seed_plus_result.x().unwrap(),
+                seed_plus_result.y().unwrap(),
             ),
         );
 

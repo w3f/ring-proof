@@ -25,6 +25,7 @@ mod verifier;
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
     pub(crate) signer_index: C,
     pub(crate) signer_secret_key_bits: C,
+    pub(crate) ring_selector: C,
     pub(crate) sole_signer_inn_prod_acc: C,
     pub(crate) cond_add_pubkey_acc: [C; 2],
     pub(crate) cond_add_gen_multiples_acc: [C; 2],
@@ -35,10 +36,15 @@ pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
 impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<F, C> {
     fn to_vec(self) -> Vec<C> {
         vec![
-            self.bits,
-            self.inn_prod_acc,
-            self.cond_add_acc[0].clone(),
-            self.cond_add_acc[1].clone(),
+            self.signer_index,
+            self.signer_secret_key_bits,
+            self.sole_signer_inn_prod_acc,
+            self.cond_add_pubkey_acc[0].clone(),
+            self.cond_add_pubkey_acc[1].clone(),
+            self.cond_add_gen_multiples_acc[0].clone(),
+            self.cond_add_gen_multiples_acc[1].clone(),
+            self.cond_add_vrfout_acc[0].clone(),
+            self.cond_add_vrfout_acc[1].clone(),
         ]
     }
 }
@@ -58,13 +64,18 @@ pub struct RingEvaluations<F: PrimeField> {
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
     fn to_vec(self) -> Vec<F> {
         vec![
-            self.points[0],
-            self.points[1],
+            self.pubkey_points[0],
+            self.pubkey_points[1],
             self.ring_selector,
-            self.bits,
-            self.inn_prod_acc,
-            self.cond_add_acc[0],
-            self.cond_add_acc[1],
+            self.signer_index,
+            self.signer_secret_key_bits,
+            self.sole_signer_inn_prod_acc,
+            self.cond_add_pubkey_acc[0],
+            self.cond_add_pubkey_acc[1],
+            self.cond_add_gen_multiples_acc[0],
+            self.cond_add_gen_multiples_acc[1],
+            self.cond_add_vrfout_acc[0],
+            self.cond_add_vrfout_acc[1],
         ]
     }
 }
@@ -78,12 +89,13 @@ pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField = F>> {
     // the powers-of-2 multiples of the prime subgroup generator
     // 1          n                     n+s+1
     power_of_2_multiples_of_gen: AffineColumn<F, G>,
+    ring_selector: FieldColumn<F>,
 }
 
 // Commitments to the fixed columns (see above).
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, PartialEq, Eq, Debug)]
 pub struct FixedColumnsCommitted<F: PrimeField, C: Commitment<F>> {
-    pub points: [C; 2],
+    pub pubkey_points: [C; 2],
     ring_selector: C,
     phantom: PhantomData<F>,
 }
@@ -91,8 +103,8 @@ pub struct FixedColumnsCommitted<F: PrimeField, C: Commitment<F>> {
 impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
     fn as_vec(&self) -> Vec<C> {
         vec![
-            self.points[0].clone(),
-            self.points[1].clone(),
+            self.pubkey_points[0].clone(),
+            self.pubkey_points[1].clone(),
             self.ring_selector.clone(),
         ]
     }
@@ -105,7 +117,7 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
         let cx = KzgCommitment(ring.cx);
         let cy = KzgCommitment(ring.cy);
         Self {
-            points: [cx, cy],
+            pubkey_points: [cx, cy],
             ring_selector: KzgCommitment(ring.selector),
             phantom: Default::default(),
         }
@@ -114,13 +126,13 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
 
 impl<F: PrimeField, P: AffineRepr<BaseField = F>> FixedColumns<F, P> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
-        let points = [
-            CS::commit(ck, self.points.xs.as_poly()),
-            CS::commit(ck, self.points.ys.as_poly()),
+        let pubkey_points = [
+            CS::commit(ck, self.pubkey_points.xs.as_poly()),
+            CS::commit(ck, self.pubkey_points.ys.as_poly()),
         ];
         let ring_selector = CS::commit(ck, self.ring_selector.as_poly());
         FixedColumnsCommitted {
-            points,
+            pubkey_points,
             ring_selector,
             phantom: Default::default(),
         }

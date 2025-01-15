@@ -47,9 +47,9 @@ where
         }
     }
 
-    pub fn prove(&self, t: P::ScalarField) -> RingProof<F, CS> {
+    pub fn prove(&self, secret_key: P::ScalarField, vrf_input: P) -> RingProof<F, CS> {
         let piop: PiopProver<F, P, P::CondAddT> =
-            PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, t);
+            PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, secret_key, vrf_input);
         self.plonk_prover.prove(piop)
     }
 

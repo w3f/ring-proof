@@ -27,7 +27,7 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
     // size of the padded ring
     pub padded_keyset_size: usize,
 
-    // The VRF base, a point from jubjub.
+    // The VRF input, a point from jubjub.
     pub(crate) h: P,
 
     // The point to start the summation from (as zero doesn't have a SW affine representation),
@@ -55,28 +55,38 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
     }
 
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
-        //let ring_selector = self.keyset_part_selector();
-        //let ring_selector = self.domain.public_column(ring_selector);
-        let pubkey_points = self.points_column(keys);
-	let prime_subgroup_gen = P::generator(); //TODO: should this be fed as an input param of the ring?
-	let power_of_2_multiples_of_gen = Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
-	let power_of_2_multiples_of_gen = self.points_column(power_of_2_multiples_of_gen.as_slice());
+        let ring_selector = self.keyset_part_selector();
+        let ring_selector = self.domain.public_column(ring_selector);
+        let pubkey_points = self.pubkey_points_column(keys);
+        let power_of_2_multiples_of_gen = self.gen_multiples_column();
 
         FixedColumns {
             pubkey_points,
-	    power_of_2_multiples_of_gen,
+	        power_of_2_multiples_of_gen,
+            ring_selector,
         }
     }
 
-    pub fn points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
+    pub fn pubkey_points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
         assert!(keys.len() <= self.padded_keyset_size);
         let padding_len = self.padded_keyset_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
-        let points = [keys, &padding, &Self::power_of_2_multiples_of(self.h, self.scalar_bitlen)].concat();
+        let points = [keys, &padding].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }
 
+    pub fn gen_multiples_column(&self) -> AffineColumn<F, P> {
+	    let prime_subgroup_gen = P::generator(); //TODO: should this be fed as an input param of the ring?
+	    let power_of_2_multiples_of_gen = Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
+        //TODO: we might need different domain for different columns
+        AffineColumn::public_column(power_of_2_multiples_of_gen, &self.domain)
+    }
+
+    pub fn power_of_2_multiples_of_h(&self) -> Vec<P> {
+        Self::power_of_2_multiples_of(self.h, self.scalar_bitlen)
+    }
+    
     pub fn power_of_2_multiples_of(base_point: P, scalar_bitlen: usize) -> Vec<P> {
         let mut h = base_point.into_group();
         let mut multiples = Vec::with_capacity(scalar_bitlen);
@@ -88,6 +98,13 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         CurveGroup::normalize_batch(&multiples)
     }
 
+    pub fn keyset_part_selector(&self) -> Vec<F> {
+        [
+            vec![F::one(); self.padded_keyset_size],
+        ]
+        .concat()
+    }
+    
     pub fn scalar_part(&self, e: P::ScalarField) -> Vec<bool> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];

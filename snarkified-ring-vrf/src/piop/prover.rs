@@ -68,8 +68,9 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
         let FixedColumns {
             pubkey_points,
             power_of_2_multiples_of_gen,
+            ring_selector,
         } = fixed_columns;
-        let (signer_index, signer_secret_key_bits, ring_selector) = Self::bits_columns(params, prover_index_in_keys, secret);
+        let (signer_index, signer_secret_key_bits, ring_selector) = Self::bits_columns(params, prover_index_in_keys, secret); 
         let sole_signer_inner_prod = InnerProd::init(ring_selector.col.clone(), signer_index.col.clone(), &domain);
         
         let cond_add_pubkey = CondAddT::init(signer_index.clone(), pubkey_points.clone(), params.seed, &domain);
@@ -91,7 +92,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
 
         //And also we need compute VRFout in the snark and verify it has been generated using the same secret key.
 	let power_of_2_multiples_of_vrf_in = PiopParams::power_of_2_multiples_of(vrf_input, params.scalar_bitlen);
-	let power_of_2_multiples_of_vrf_in = params.points_column(power_of_2_multiples_of_vrf_in.as_slice());
+	let power_of_2_multiples_of_vrf_in = AffineColumn::public_column(power_of_2_multiples_of_vrf_in, &params.domain);
 
         
         let cond_add_vrfout = CondAddT::init(signer_secret_key_bits.clone(), power_of_2_multiples_of_vrf_in.clone(), params.seed, &domain);
@@ -167,6 +168,7 @@ where
     ) -> Self::Commitments {
         let signer_index = commit(self.signer_index.as_poly());
         let signer_secret_key_bits = commit(self.signer_secret_key_bits.as_poly());
+        let ring_selector = commit(self.ring_selector.as_poly());
 
         let cond_add_pubkey_acc = [
             commit(self.cond_add_pubkey.get_acc().xs.as_poly()),
@@ -187,6 +189,7 @@ where
         Self::Commitments {
             signer_index,
             signer_secret_key_bits,
+            ring_selector,
             sole_signer_inn_prod_acc,
             cond_add_pubkey_acc,
             cond_add_gen_multiples_acc,
