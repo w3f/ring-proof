@@ -1,10 +1,13 @@
-use ark_ec::AffineRepr;
+use ark_ec::twisted_edwards::TECurveConfig;
+use ark_ec::twisted_edwards::{Affine as TEAffine};
+use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::PrimeField;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
 use ark_std::cmp::max;
+use common::gadgets::powers_of_two_multiples::{PowersOfTwoMultipleValuesTE, PowersOfTwoMultiples, PowersOfTwoMultiplesTE};
 use fflonk::pcs::Commitment;
 
 use common::domain::Domain;
@@ -22,16 +25,24 @@ use crate::piop::{RingCommitments, RingEvaluations};
 
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
-pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>> {
+
+///
+/// | 1              | 2           | 3           | 4              | 5              | 6                        | 7&8      | 9&10            | 11&12    | 13&14           |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | $k$            | $pk_x$      | $pk_y$      | $acc_{pk_x}$   | $acc_{pk_y}$   | $sk$                     | $2^iG$x2 | $acc_{sk}$x2    | $2^iH$x2 | $acc_{out}$x2   |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
+///
+pub struct PiopProver<F: PrimeField, P: TECurveConfig<BaseField = F>, CondAddT: CondAdd<F, TEAffine<P>>>
+{
     domain: Domain<F>,
     // Fixed (public input) columns:
     signer_index: BitColumn<F>,
     ring_selector: BitColumn<F>, //all one vector
     
-    pubkey_points: AffineColumn<F, P>,    // Private input column.
+    pubkey_points: AffineColumn<F, TEAffine<P>>,    // Private input column.
     signer_secret_key_bits: BitColumn<F>,
-    power_of_2_multiples_of_gen: AffineColumn<F, P>,
-    power_of_2_multiples_of_vrf_in: AffineColumn<F, P>,
+    power_of_2_multiples_of_gen: AffineColumn<F, TEAffine<P>>,
     // Gadgets:
     booleanity_of_signer_index: Booleanity<F>, //this to prove the bit column is actually holding bits
     booleanity_of_secret_key_bits: Booleanity<F>,
@@ -47,21 +58,25 @@ pub struct PiopProver<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: Con
     cond_add_gen_multiples_acc_x: FixedCells<F>,
     cond_add_gen_multiples_acc_y: FixedCells<F>,
 
+    power_of_2_multiples_of_vrf_in: PowersOfTwoMultiplesTE<F,P>,
+    power_of_2_multiples_of_vrf_in_x: FixedCells<F>,
+    power_of_2_multiples_of_vrf_in_y: FixedCells<F>,    
+    
     cond_add_vrfout: CondAddT,
     cond_add_vrfout_acc_x: FixedCells<F>,
     cond_add_vrfout_acc_y: FixedCells<F>,
 
 }
 
-impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
+impl<F: PrimeField, P: TECurveConfig<BaseField = F>, CondAddT: CondAdd<F, TEAffine<P>>>
     PiopProver<F, P, CondAddT>
 {
     pub fn build(
-        params: &PiopParams<F, P>,
-        fixed_columns: FixedColumns<F, P>,
+        params: &PiopParams<F, TEAffine<P>>,
+        fixed_columns: FixedColumns<F, TEAffine<P>>,
         prover_index_in_keys: usize,
         secret: P::ScalarField,
-        vrf_input: P,
+        vrf_input: TEAffine<P>,
         
     ) -> Self {
         let domain = params.domain.clone();
@@ -91,11 +106,12 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
         let cond_add_gen_multiples_acc_y = FixedCells::init(gen_multiples_acc.ys.clone(), &domain);
 
         //And also we need compute VRFout in the snark and verify it has been generated using the same secret key.
-	let power_of_2_multiples_of_vrf_in = PiopParams::power_of_2_multiples_of(vrf_input, params.scalar_bitlen);
-	let power_of_2_multiples_of_vrf_in = AffineColumn::public_column(power_of_2_multiples_of_vrf_in, &params.domain);
-
+	    let power_of_2_multiples_of_vrf_in = PowersOfTwoMultiplesTE::init(vrf_input, &domain);
+        let power_of_2_multiples_of_vrf_in_x = FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.xs.clone(), &domain);
+        let power_of_2_multiples_of_vrf_in_y = FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.ys.clone(), &domain);
         
-        let cond_add_vrfout = CondAddT::init(signer_secret_key_bits.clone(), power_of_2_multiples_of_vrf_in.clone(), params.seed, &domain);
+        let power_of_2_multiples_of_vrf_in_multiples = AffineColumn::public_column(PiopParams::power_of_2_multiples_of(vrf_input, params.scalar_bitlen), &domain);
+        let cond_add_vrfout = CondAddT::init(signer_secret_key_bits.clone(), power_of_2_multiples_of_vrf_in.multiples.clone(), params.seed, &domain);
         let vrfout_acc = cond_add_vrfout.get_acc();
         let cond_add_vrfout_acc_x = FixedCells::init(vrfout_acc.xs.clone(), &domain);
         let cond_add_vrfout_acc_y = FixedCells::init(vrfout_acc.ys.clone(), &domain);
@@ -109,7 +125,6 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
             signer_secret_key_bits,            
 
             power_of_2_multiples_of_gen,
-            power_of_2_multiples_of_vrf_in,
             
             booleanity_of_signer_index,
             booleanity_of_secret_key_bits,
@@ -121,6 +136,10 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
             cond_add_pubkey_acc_y,
             cond_add_pubkey,
 
+            power_of_2_multiples_of_vrf_in,
+            power_of_2_multiples_of_vrf_in_x,
+            power_of_2_multiples_of_vrf_in_y,
+            
             cond_add_gen_multiples_acc_x,
             cond_add_gen_multiples_acc_y,
             cond_add_gen_multiples,
@@ -132,7 +151,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
     }
 
     fn bits_columns(
-        params: &PiopParams<F, P>,
+        params: &PiopParams<F, TEAffine<P>>,
         index_in_keys: usize,
         secret: P::ScalarField,
     ) -> (BitColumn<F>, BitColumn<F>, BitColumn<F>) {
@@ -142,7 +161,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>, CondAddT: CondAdd<F, P>>
 
         let select_all_bit_vector = vec![true; params.padded_keyset_size];
 
-        let secret_key_bit_vector = params.scalar_part(secret);
+        let secret_key_bit_vector = params.scalar_to_bitvec(secret);
         assert_eq!(max(signer_selector_bit_vector.len(), secret_key_bit_vector.len()), params.domain.capacity - 1);
         (BitColumn::init(signer_selector_bit_vector, &params.domain),
          BitColumn::init(secret_key_bit_vector, &params.domain),
@@ -155,12 +174,13 @@ impl<F, C, P, CondAddT> ProverPiop<F, C> for PiopProver<F, P, CondAddT>
 where
     F: PrimeField,
     C: Commitment<F>,
-    P: AffineRepr<BaseField = F>,
-    CondAddT: CondAdd<F, P>,
+    P: TECurveConfig<BaseField = F>,
+    CondAddT: CondAdd<F, TEAffine<P>>,
+    P: TECurveConfig<BaseField = F>,
 {
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
-    type Instance = P;
+    type Instance = TEAffine<P>;
 
     fn committed_columns<Fun: Fn(&DensePolynomial<F>) -> C>(
         &self,

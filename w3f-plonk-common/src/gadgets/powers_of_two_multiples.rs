@@ -38,11 +38,11 @@ use ark_ec::twisted_edwards::{Affine as TEAffine, TECurveConfig};
 // otherwise copy the acc value
 pub struct PowersOfTwoMultiplesTE<F: FftField, Curve: TECurveConfig<BaseField = F>> {
     // The  Base point we are computing its multiples
-    pub(crate) point: TEAffine<Curve>,
+    pub point: TEAffine<Curve>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
-    pub(crate) not_last: FieldColumn<F>,
+    pub not_last: FieldColumn<F>,
     // 2^i * point
-    pub(crate) multiples: AffineColumn<F, TEAffine<Curve>>,
+    pub multiples: AffineColumn<F, TEAffine<Curve>>,
 }
 
 impl<F, Curve> PowersOfTwoMultiples<F, TEAffine<Curve>> for PowersOfTwoMultiplesTE<F, Curve>

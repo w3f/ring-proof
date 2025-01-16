@@ -15,6 +15,8 @@ use crate::piop::FixedColumns;
 /// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
 ///
 /// We do not have ring selector part so I assume that I we are going to generate two different polynomials for essentially two different table.
+/// TODO: But for now we use a fake selector so we can use the inner product gadget.
+/// Later with we will add a bit vector sum gadget and get rid of selector
 ///
 #[derive(Clone)]
 pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
@@ -27,9 +29,6 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
     // size of the padded ring
     pub padded_keyset_size: usize,
 
-    // The VRF input, a point from jubjub.
-    pub(crate) h: P,
-
     // The point to start the summation from (as zero doesn't have a SW affine representation),
     // should be from the jubjub prime-order subgroup complement.
     pub(crate) seed: P,
@@ -40,23 +39,24 @@ pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
 }
 
 impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
-    pub fn setup(domain: Domain<F>, h: P, seed: P, padding_point: P) -> Self {
+    pub fn setup(domain: Domain<F>, seed: P, padding_point: P) -> Self {        
         let scalar_bitlen = P::ScalarField::MODULUS_BIT_SIZE as usize;
+        //make sure the domain size is big enough to at least deal with VRF SNARK
+        //We will later check if the domain is big enough to accomodate the ring
+        assert!(domain.capacity > scalar_bitlen);
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
-        let padded_keyset_size = domain.capacity - scalar_bitlen - 1;
+        let padded_keyset_size = domain.capacity - 1;
         Self {
             domain,
             scalar_bitlen,
             padded_keyset_size,
-            h,
             seed,
             padding_point,
         }
     }
 
     pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
-        let ring_selector = self.keyset_part_selector();
-        let ring_selector = self.domain.public_column(ring_selector);
+        let ring_selector = self.domain.public_column(self.keyset_part_selector());
         let pubkey_points = self.pubkey_points_column(keys);
         let power_of_2_multiples_of_gen = self.gen_multiples_column();
 
@@ -72,7 +72,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         let padding_len = self.padded_keyset_size - keys.len();
         let padding = vec![self.padding_point; padding_len];
         let points = [keys, &padding].concat();
-        assert_eq!(points.len(), self.domain.capacity - 1);
+        assert!(points.len() < self.domain.capacity); //check if it fits the domain.
         AffineColumn::public_column(points, &self.domain)
     }
 
@@ -81,10 +81,6 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
 	    let power_of_2_multiples_of_gen = Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
         //TODO: we might need different domain for different columns
         AffineColumn::public_column(power_of_2_multiples_of_gen, &self.domain)
-    }
-
-    pub fn power_of_2_multiples_of_h(&self) -> Vec<P> {
-        Self::power_of_2_multiples_of(self.h, self.scalar_bitlen)
     }
     
     pub fn power_of_2_multiples_of(base_point: P, scalar_bitlen: usize) -> Vec<P> {
@@ -98,6 +94,9 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         CurveGroup::normalize_batch(&multiples)
     }
 
+    pub fn power_of_2_multiples_of_h(&self) {
+        
+    }
     pub fn keyset_part_selector(&self) -> Vec<F> {
         [
             vec![F::one(); self.padded_keyset_size],
@@ -105,7 +104,7 @@ impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
         .concat()
     }
     
-    pub fn scalar_part(&self, e: P::ScalarField) -> Vec<bool> {
+    pub fn scalar_to_bitvec(&self, e: P::ScalarField) -> Vec<bool> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
         significant_bits.to_vec()

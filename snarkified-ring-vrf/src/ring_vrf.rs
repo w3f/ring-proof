@@ -66,7 +66,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField 
     Ring<F, KzgCurve, P>
 {
     // Builds the commitment to the vector
-    // `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
+    // `padding, ..., padding, 0, 0, 0, 0`.
     // We compute it as a sum of commitments of 2 vectors:
     // `padding, ..., padding`, and
     // `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
@@ -84,12 +84,7 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField 
         let c1x = g * padding_x;
         let c1y = g * padding_y;
 
-        let powers_of_h = piop_params.power_of_2_multiples_of_h();
-        let (mut xs, mut ys): (Vec<F>, Vec<F>) = powers_of_h
-            .iter()
-            .map(|p| p.xy().unwrap())
-            .map(|(x, y)| (x - padding_x, y - padding_y))
-            .unzip();
+        let (mut xs, mut ys): (Vec<F>, Vec<F>) = (vec![], vec![]);
         xs.resize(xs.len() + IDLE_ROWS, -padding_x);
         ys.resize(ys.len() + IDLE_ROWS, -padding_y);
         let domain_size = piop_params.domain.domain().size();
@@ -154,16 +149,16 @@ impl<F: PrimeField, KzgCurve: Pairing<ScalarField = F>, P: AffineRepr<BaseField 
     ) -> Self {
         let padding_point = piop_params.padding_point;
         let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
-        let powers_of_h = piop_params.power_of_2_multiples_of_h();
+        //let powers_of_h = piop_params.power_of_2_multiples_of_h();
 
         // Computes
         // [(pk1 - padding), ..., (pkn - padding),
-        //  (H - padding), ..., (2^(s-1)HH - padding),
         //  -padding, -padding, -padding, -padding,
         //  padding].
+        // where subtraction is vector coordinate-wise one
         let (xs, ys): (Vec<F>, Vec<F>) = keys
             .iter()
-            .chain(&powers_of_h)
+            //.chain(&powers_of_h)  //no blinding factor for snarkified ring vrf
             .map(|p| p.xy().unwrap())
             .map(|(x, y)| (x - padding_x, y - padding_y))
             .chain(iter::repeat((-padding_x, -padding_y)).take(4))

@@ -1,3 +1,4 @@
+use ark_ec::twisted_edwards::{TECurveConfig, Affine as TEAffine};
 use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use fflonk::pcs::PCS;
@@ -12,22 +13,22 @@ use crate::{ArkTranscript, RingProof};
 pub struct RingProver<
     F: PrimeField,
     CS: PCS<F>,
-    P: AffineRepr<BaseField = F>,
+    P: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS> = ArkTranscript,
 > {
-    piop_params: PiopParams<F, P>,
-    fixed_columns: FixedColumns<F, P>,
+    piop_params: PiopParams<F, TEAffine<P>>,
+    fixed_columns: FixedColumns<F, TEAffine<P>>,
     k: usize,
     plonk_prover: PlonkProver<F, CS, T>,
 }
 
 impl<F: PrimeField, CS: PCS<F>, P, T: PlonkTranscript<F, CS>> RingProver<F, CS, P, T>
 where
-    P: AffineCondAdd<BaseField = F>,
+    P: TECurveConfig<BaseField = F>,
 {
     pub fn init(
-        prover_key: ProverKey<F, CS, P>,
-        piop_params: PiopParams<F, P>,
+        prover_key: ProverKey<F, CS, TEAffine<P>>,
+        piop_params: PiopParams<F, TEAffine<P>>,
         k: usize,
         empty_transcript: T,
     ) -> Self {
@@ -47,13 +48,13 @@ where
         }
     }
 
-    pub fn prove(&self, secret_key: P::ScalarField, vrf_input: P) -> RingProof<F, CS> {
-        let piop: PiopProver<F, P, P::CondAddT> =
+    pub fn prove(&self, secret_key: P::ScalarField, vrf_input: TEAffine<P>) -> RingProof<F, CS> {
+        let piop: PiopProver<F, P, <TEAffine<P> as AffineCondAdd>::CondAddT> =
             PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, secret_key, vrf_input);
         self.plonk_prover.prove(piop)
     }
 
-    pub fn piop_params(&self) -> &PiopParams<F, P> {
+    pub fn piop_params(&self) -> &PiopParams<F, TEAffine<P>> {
         &self.piop_params
     }
 }
