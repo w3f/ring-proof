@@ -1,39 +1,39 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
-use fflonk::pcs::{RawVerifierKey, PCS};
+use w3f_pcs::pcs::{RawVerifierKey, PCS};
 
-use common::domain::EvaluatedDomain;
-use common::piop::VerifierPiop;
-use common::transcript::PlonkTranscript;
-use common::verifier::PlonkVerifier;
+use w3f_plonk_common::domain::EvaluatedDomain;
+use w3f_plonk_common::piop::VerifierPiop;
+use w3f_plonk_common::transcript::PlonkTranscript;
+use w3f_plonk_common::verifier::PlonkVerifier;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
 use crate::RingProof;
 
-pub struct RingVerifier<F, CS, Curve, T>
+pub struct RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField = F>,
+    Jubjub: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
-    piop_params: PiopParams<F, Curve>,
+    piop_params: PiopParams<F, Jubjub>,
     fixed_columns_committed: FixedColumnsCommitted<F, CS::C>,
     plonk_verifier: PlonkVerifier<F, CS, T>,
 }
 
-impl<F, CS, Curve, T> RingVerifier<F, CS, Curve, T>
+impl<F, CS, Jubjub, T> RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Curve: SWCurveConfig<BaseField = F>,
+    Jubjub: SWCurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     pub fn init(
         verifier_key: VerifierKey<F, CS>,
-        piop_params: PiopParams<F, Curve>,
+        piop_params: PiopParams<F, Jubjub>,
         empty_transcript: T,
     ) -> Self {
         let pcs_vk = verifier_key.pcs_raw_vk.prepare();
@@ -45,13 +45,13 @@ where
         }
     }
 
-    pub fn verify_ring_proof(&self, proof: RingProof<F, CS>, result: Affine<Curve>) -> bool {
+    pub fn verify_ring_proof(&self, proof: RingProof<F, CS>, result: Affine<Jubjub>) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &result,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
-            PiopVerifier::<F, CS::C>::N_COLUMNS + 1,
-            PiopVerifier::<F, CS::C>::N_CONSTRAINTS,
+            PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
+            PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
         let seed_plus_result = (seed + result).into_affine();
@@ -61,7 +61,7 @@ where
             self.piop_params.domain.hiding,
         );
 
-        let piop = PiopVerifier::init(
+        let piop = PiopVerifier::<_, _, Affine<Jubjub>>::init(
             domain_eval,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
@@ -74,7 +74,7 @@ where
             .verify(piop, proof, challenges, &mut rng)
     }
 
-    pub fn piop_params(&self) -> &PiopParams<F, Curve> {
+    pub fn piop_params(&self) -> &PiopParams<F, Jubjub> {
         &self.piop_params
     }
 }

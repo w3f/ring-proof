@@ -4,20 +4,20 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::Commitment;
-
-use common::domain::Domain;
-use common::gadgets::booleanity::{BitColumn, Booleanity};
-use common::gadgets::fixed_cells::FixedCells;
-use common::gadgets::inner_prod::InnerProd;
-use common::gadgets::sw_cond_add::{AffineColumn, CondAdd};
-use common::gadgets::ProverGadget;
-use common::piop::ProverPiop;
-use common::{Column, FieldColumn};
+use w3f_pcs::pcs::Commitment;
 
 use crate::piop::params::PiopParams;
 use crate::piop::FixedColumns;
 use crate::piop::{RingCommitments, RingEvaluations};
+use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
+use w3f_plonk_common::gadgets::ec::AffineColumn;
+use w3f_plonk_common::gadgets::ec::CondAdd;
+use w3f_plonk_common::gadgets::fixed_cells::FixedCells;
+use w3f_plonk_common::gadgets::inner_prod::InnerProd;
+use w3f_plonk_common::gadgets::ProverGadget;
+use w3f_plonk_common::piop::ProverPiop;
+use w3f_plonk_common::{Column, FieldColumn};
 
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.

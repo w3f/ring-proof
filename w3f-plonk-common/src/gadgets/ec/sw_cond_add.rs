@@ -1,118 +1,12 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
-use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec, vec::Vec};
 
-use crate::domain::Domain;
-use crate::gadgets::booleanity::BitColumn;
+use crate::gadgets::ec::{CondAdd, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, Column, FieldColumn};
-
-// A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
-// and its convenience representation as columns of coordinates over the curve's base field.
-#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
-pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField = F>> {
-    points: Vec<P>,
-    pub xs: FieldColumn<F>,
-    pub ys: FieldColumn<F>,
-}
-
-impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
-    fn column(points: Vec<P>, domain: &Domain<F>, hidden: bool) -> Self {
-        assert!(points.iter().all(|p| !p.is_zero()));
-        let (xs, ys) = points.iter().map(|p| p.xy().unwrap()).unzip();
-        let xs = domain.column(xs, hidden);
-        let ys = domain.column(ys, hidden);
-        Self { points, xs, ys }
-    }
-    pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
-        Self::column(points, domain, true)
-    }
-
-    pub fn public_column(points: Vec<P>, domain: &Domain<F>) -> Self {
-        Self::column(points, domain, false)
-    }
-
-    pub fn evaluate(&self, z: &F) -> (F, F) {
-        (self.xs.evaluate(z), self.ys.evaluate(z))
-    }
-}
-
-// Conditional affine addition:
-// if the bit is set for a point, add the point to the acc and store,
-// otherwise copy the acc value
-pub struct CondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    bitmask: BitColumn<F>,
-    points: AffineColumn<F, P>,
-    // The polynomial `X - w^{n-1}` in the Lagrange basis
-    not_last: FieldColumn<F>,
-    // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
-    pub result: P,
-}
-
-pub struct CondAddValues<F: Field> {
-    pub bitmask: F,
-    pub points: (F, F),
-    pub not_last: F,
-    pub acc: (F, F),
-}
-
-impl<F, Curve> CondAdd<F, Affine<Curve>>
-where
-    F: FftField,
-    Curve: SWCurveConfig<BaseField = F>,
-{
-    // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
-    // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
-    // exceptional cases (doublings or adding the opposite point).
-    // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
-    pub fn init(
-        bitmask: BitColumn<F>,
-        points: AffineColumn<F, Affine<Curve>>,
-        seed: Affine<Curve>,
-        domain: &Domain<F>,
-    ) -> Self {
-        assert_eq!(bitmask.bits.len(), domain.capacity - 1);
-        assert_eq!(points.points.len(), domain.capacity - 1);
-        let not_last = domain.not_last_row.clone();
-        let acc = bitmask
-            .bits
-            .iter()
-            .zip(points.points.iter())
-            .scan(seed, |acc, (&b, point)| {
-                if b {
-                    *acc = (*acc + point).into_affine();
-                }
-                Some(*acc)
-            });
-        let acc: Vec<_> = ark_std::iter::once(seed).chain(acc).collect();
-        let init_plus_result = acc.last().unwrap();
-        let result = init_plus_result.into_group() - seed.into_group();
-        let result = result.into_affine();
-        let acc = AffineColumn::private_column(acc, domain);
-
-        Self {
-            bitmask,
-            points,
-            acc,
-            not_last,
-            result,
-        }
-    }
-
-    fn evaluate_assignment(&self, z: &F) -> CondAddValues<F> {
-        CondAddValues {
-            bitmask: self.bitmask.evaluate(z),
-            points: self.points.evaluate(z),
-            not_last: self.not_last.evaluate(z),
-            acc: self.acc.evaluate(z),
-        }
-    }
-}
+use crate::{const_evals, Column};
 
 impl<F, Curve> ProverGadget<F> for CondAdd<F, Affine<Curve>>
 where
@@ -196,35 +90,7 @@ where
     }
 }
 
-impl<F: Field> VerifierGadget<F> for CondAddValues<F> {
-    fn evaluate_constraints_main(&self) -> Vec<F> {
-        let b = self.bitmask;
-        let (x1, y1) = self.acc;
-        let (x2, y2) = self.points;
-        let (x3, y3) = (F::zero(), F::zero());
-
-        #[rustfmt::skip]
-        let mut c1 =
-            b * (
-                (x1 - x2) * (x1 - x2) * (x1 + x2 + x3)
-                    - (y2 - y1) * (y2 - y1)
-            ) + (F::one() - b) * (y3 - y1);
-
-        #[rustfmt::skip]
-        let mut c2 =
-            b * (
-                (x1 - x2) * (y3 + y1)
-                    - (y2 - y1) * (x3 - x1)
-            ) + (F::one() - b) * (x3 - x1);
-
-        c1 *= self.not_last;
-        c2 *= self.not_last;
-
-        vec![c1, c2]
-    }
-}
-
-impl<F: Field> CondAddValues<F> {
+impl<F: Field, C: SWCurveConfig<BaseField = F>> CondAddValues<F, Affine<C>> {
     pub fn acc_coeffs_1(&self) -> (F, F) {
         let b = self.bitmask;
         let (x1, _y1) = self.acc;
@@ -254,14 +120,45 @@ impl<F: Field> CondAddValues<F> {
     }
 }
 
+impl<F: Field, C: SWCurveConfig<BaseField = F>> VerifierGadget<F> for CondAddValues<F, Affine<C>> {
+    fn evaluate_constraints_main(&self) -> Vec<F> {
+        let b = self.bitmask;
+        let (x1, y1) = self.acc;
+        let (x2, y2) = self.points;
+        let (x3, y3) = (F::zero(), F::zero());
+
+        #[rustfmt::skip]
+        let mut c1 =
+            b * (
+                (x1 - x2) * (x1 - x2) * (x1 + x2 + x3)
+                    - (y2 - y1) * (y2 - y1)
+            ) + (F::one() - b) * (y3 - y1);
+
+        #[rustfmt::skip]
+        let mut c2 =
+            b * (
+                (x1 - x2) * (y3 + y1)
+                    - (y2 - y1) * (x3 - x1)
+            ) + (F::one() - b) * (x3 - x1);
+
+        c1 *= self.not_last;
+        c2 *= self.not_last;
+
+        vec![c1, c2]
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::domain::Domain;
+    use crate::gadgets::booleanity::BitColumn;
+    use crate::gadgets::ec::AffineColumn;
+    use crate::test_helpers::cond_sum;
+    use crate::test_helpers::*;
+    use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::SWAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
-
-    use crate::test_helpers::cond_sum;
-    use crate::test_helpers::*;
 
     use super::*;
 

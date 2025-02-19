@@ -1,19 +1,22 @@
+use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
+use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
+use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::Commitment;
+use w3f_pcs::pcs::Commitment;
 
-use common::domain::EvaluatedDomain;
-use common::gadgets::booleanity::BooleanityValues;
-use common::gadgets::fixed_cells::FixedCellsValues;
-use common::gadgets::inner_prod::InnerProdValues;
-use common::gadgets::sw_cond_add::CondAddValues;
-use common::gadgets::VerifierGadget;
-use common::piop::VerifierPiop;
+use w3f_plonk_common::domain::EvaluatedDomain;
+use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
+use w3f_plonk_common::gadgets::ec::CondAddValues;
+use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
+use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
+use w3f_plonk_common::gadgets::VerifierGadget;
+use w3f_plonk_common::piop::VerifierPiop;
 
 use crate::piop::{FixedColumnsCommitted, RingCommitments};
 use crate::RingEvaluations;
 
-pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
+pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> {
     domain_evals: EvaluatedDomain<F>,
     fixed_columns_committed: FixedColumnsCommitted<F, C>,
     witness_columns_committed: RingCommitments<F, C>,
@@ -21,12 +24,12 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>> {
     booleanity: BooleanityValues<F>,
     inner_prod: InnerProdValues<F>,
     inner_prod_acc: FixedCellsValues<F>,
-    cond_add: CondAddValues<F>,
+    cond_add: CondAddValues<F, P>,
     cond_add_acc_x: FixedCellsValues<F>,
     cond_add_acc_y: FixedCellsValues<F>,
 }
 
-impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
+impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
     pub fn init(
         domain_evals: EvaluatedDomain<F>,
         fixed_columns_committed: FixedColumnsCommitted<F, C>,
@@ -46,6 +49,7 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
                 all_columns_evaluated.cond_add_acc[0],
                 all_columns_evaluated.cond_add_acc[1],
             ),
+            _phantom: PhantomData,
         };
 
         let inner_prod = InnerProdValues {
@@ -97,7 +101,9 @@ impl<F: PrimeField, C: Commitment<F>> PiopVerifier<F, C> {
     }
 }
 
-impl<F: PrimeField, C: Commitment<F>> VerifierPiop<F, C> for PiopVerifier<F, C> {
+impl<F: PrimeField, C: Commitment<F>, Jubjub: SWCurveConfig<BaseField = F>> VerifierPiop<F, C>
+    for PiopVerifier<F, C, Affine<Jubjub>>
+{
     const N_CONSTRAINTS: usize = 7;
     const N_COLUMNS: usize = 7;
 
