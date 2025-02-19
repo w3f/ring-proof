@@ -1,12 +1,12 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
-use fflonk::pcs::{RawVerifierKey, PCS};
+use w3f_pcs::pcs::{RawVerifierKey, PCS};
 
-use common::domain::EvaluatedDomain;
-use common::piop::VerifierPiop;
-use common::transcript::PlonkTranscript;
-use common::verifier::PlonkVerifier;
+use w3f_plonk_common::domain::EvaluatedDomain;
+use w3f_plonk_common::piop::VerifierPiop;
+use w3f_plonk_common::transcript::PlonkTranscript;
+use w3f_plonk_common::verifier::PlonkVerifier;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};

@@ -1,9 +1,9 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ff::PrimeField;
-use fflonk::pcs::PCS;
+use w3f_pcs::pcs::PCS;
 
-use common::prover::PlonkProver;
-use common::transcript::PlonkTranscript;
+use w3f_plonk_common::prover::PlonkProver;
+use w3f_plonk_common::transcript::PlonkTranscript;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumns, PiopProver, ProverKey};

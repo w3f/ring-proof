@@ -3,7 +3,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::vec::Vec;
-use fflonk::pcs::Commitment;
+use w3f_pcs::pcs::Commitment;
 
 use crate::domain::{Domain, EvaluatedDomain};
 use crate::{ColumnsCommited, ColumnsEvaluated};

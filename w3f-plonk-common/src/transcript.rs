@@ -2,7 +2,7 @@ use ark_ff::PrimeField;
 use ark_poly::GeneralEvaluationDomain;
 use ark_serialize::CanonicalSerialize;
 use ark_std::vec::Vec;
-use fflonk::pcs::{PcsParams, PCS};
+use w3f_pcs::pcs::{PcsParams, PCS};
 use rand_core::RngCore;
 
 use crate::{ColumnsCommited, ColumnsEvaluated};
