@@ -10,10 +10,10 @@ use w3f_pcs::pcs::kzg::params::RawKzgVerifierKey;
 use w3f_pcs::pcs::kzg::KZG;
 use w3f_pcs::pcs::{Commitment, PcsParams, PCS};
 
-use w3f_plonk_common::gadgets::ec::AffineColumn;
-use w3f_plonk_common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
+use w3f_plonk_common::gadgets::ec::AffineColumn;
+use w3f_plonk_common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 
 use crate::ring::Ring;
 use crate::PiopParams;
