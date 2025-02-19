@@ -7,7 +7,7 @@ use ark_ec::{
 use ark_ff::{One, PrimeField, Zero};
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
-use fflonk::pcs::PCS;
+use w3f_pcs::pcs::PCS;
 
 pub use common::domain::Domain;
 use common::Proof;
@@ -24,7 +24,7 @@ pub mod ring_verifier;
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 /// Polynomial Commitment Schemes.
-pub use fflonk::pcs;
+pub use w3f_pcs::pcs;
 
 // Calling the method for a prime-order curve results in an infinite loop.
 pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
@@ -91,7 +91,7 @@ mod tests {
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
-    use fflonk::pcs::kzg::KZG;
+    use w3f_pcs::pcs::kzg::KZG;
 
     use common::test_helpers::random_vec;
 
@@ -201,6 +201,6 @@ mod tests {
 
     #[test]
     fn test_ring_proof_id() {
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment>(2usize.pow(10));
+        _test_ring_proof::<w3f_pcs::pcs::IdentityCommitment>(2usize.pow(10));
     }
 }

@@ -1,7 +1,7 @@
 use ark_ec::short_weierstrass::{Affine, SWCurveConfig};
 use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
-use fflonk::pcs::{RawVerifierKey, PCS};
+use w3f_pcs::pcs::{RawVerifierKey, PCS};
 
 use common::domain::EvaluatedDomain;
 use common::piop::VerifierPiop;

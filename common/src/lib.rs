@@ -5,7 +5,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly::{EvaluationDomain, Evaluations, GeneralEvaluationDomain, Polynomial};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::{Commitment, PCS};
+use w3f_pcs::pcs::{Commitment, PCS};
 
 pub mod domain;
 pub mod gadgets;

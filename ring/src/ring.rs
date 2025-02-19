@@ -8,8 +8,8 @@ use ark_std::fmt;
 use ark_std::iter;
 use ark_std::ops::Range;
 use ark_std::vec::Vec;
-use fflonk::pcs::kzg::urs::URS;
-use fflonk::pcs::PcsParams;
+use w3f_pcs::pcs::kzg::urs::URS;
+use w3f_pcs::pcs::PcsParams;
 
 use common::domain::ZK_ROWS;
 
@@ -257,9 +257,9 @@ mod tests {
     use ark_bls12_381::{Bls12_381, Fr, G1Affine};
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, SWAffine};
     use ark_std::{test_rng, UniformRand};
-    use fflonk::pcs::kzg::urs::URS;
-    use fflonk::pcs::kzg::KZG;
-    use fflonk::pcs::PCS;
+    use w3f_pcs::pcs::kzg::urs::URS;
+    use w3f_pcs::pcs::kzg::KZG;
+    use w3f_pcs::pcs::PCS;
 
     use common::domain::Domain;
     use common::test_helpers::random_vec;

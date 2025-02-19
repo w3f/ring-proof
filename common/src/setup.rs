@@ -1,7 +1,7 @@
 use ark_ff::PrimeField;
 use ark_poly::{EvaluationDomain, GeneralEvaluationDomain};
 use ark_std::rand::Rng;
-use fflonk::pcs::{PCS, PcsParams};
+use w3f_pcs::pcs::{PCS, PcsParams};
 
 use crate::{Column, FieldColumn};
 

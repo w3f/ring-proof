@@ -1,6 +1,6 @@
 use ark_ff::PrimeField;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::Commitment;
+use w3f_pcs::pcs::Commitment;
 
 use common::domain::EvaluatedDomain;
 use common::gadgets::booleanity::BooleanityValues;

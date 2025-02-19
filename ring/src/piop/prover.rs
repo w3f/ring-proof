@@ -4,7 +4,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::Commitment;
+use w3f_pcs::pcs::Commitment;
 
 use common::domain::Domain;
 use common::gadgets::booleanity::{BitColumn, Booleanity};
