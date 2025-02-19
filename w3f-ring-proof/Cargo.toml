@@ -1,6 +1,6 @@
 [package]
-name = "ring"
-version = "0.1.0"
+name = "w3f-ring-proof"
+version = "0.0.1"
 edition = "2021"
 authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
 license = "MIT/Apache-2.0"
@@ -15,7 +15,7 @@ ark-poly.workspace = true
 ark-serialize.workspace = true
 w3f-pcs.workspace = true
 rayon = { workspace = true, optional = true }
-common = { path = "../common", default-features = false }
+w3f-plonk-common = { path = "../w3f-plonk-common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 ark-transcript = { git = "https://github.com/w3f/ark-transcript", default-features = false }
 
@@ -32,7 +32,7 @@ std = [
   "ark-poly/std",
   "ark-serialize/std",
   "w3f-pcs/std",
-  "common/std"
+  "w3f-plonk-common/std"
 ]
 parallel = [
   "std",
@@ -41,11 +41,11 @@ parallel = [
   "ark-ff/parallel",
   "ark-ec/parallel",
   "ark-poly/parallel",
-  "common/parallel",
+  "w3f-plonk-common/parallel",
   "w3f-pcs/parallel"
 ]
 print-trace = [
   "ark-std/print-trace",
-  "common/print-trace"
+  "w3f-plonk-common/print-trace"
 ]
 asm = [ "w3f-pcs/asm" ]

@@ -11,7 +11,7 @@ use ark_std::vec::Vec;
 use w3f_pcs::pcs::kzg::urs::URS;
 use w3f_pcs::pcs::PcsParams;
 
-use common::domain::ZK_ROWS;
+use w3f_plonk_common::domain::ZK_ROWS;
 
 use crate::PiopParams;
 
@@ -261,8 +261,8 @@ mod tests {
     use w3f_pcs::pcs::kzg::KZG;
     use w3f_pcs::pcs::PCS;
 
-    use common::domain::Domain;
-    use common::test_helpers::random_vec;
+    use w3f_plonk_common::domain::Domain;
+    use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::ring::Ring;
     use crate::PiopParams;

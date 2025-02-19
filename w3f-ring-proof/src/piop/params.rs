@@ -3,8 +3,8 @@ use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
-use common::domain::Domain;
-use common::gadgets::sw_cond_add::AffineColumn;
+use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::gadgets::sw_cond_add::AffineColumn;
 
 use crate::piop::FixedColumns;
 
@@ -32,7 +32,7 @@ pub struct PiopParams<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> {
 
 impl<F: PrimeField, Curve: SWCurveConfig<BaseField = F>> PiopParams<F, Curve> {
     pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
-        let padding_point = crate::hash_to_curve(b"/w3f/ring-proof/padding");
+        let padding_point = crate::hash_to_curve(b"/w3f/w3f-ring-proof/padding");
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
@@ -97,8 +97,8 @@ mod tests {
     use ark_std::ops::Mul;
     use ark_std::{test_rng, UniformRand};
 
-    use common::domain::Domain;
-    use common::test_helpers::cond_sum;
+    use w3f_plonk_common::domain::Domain;
+    use w3f_plonk_common::test_helpers::cond_sum;
 
     use crate::piop::params::PiopParams;
 

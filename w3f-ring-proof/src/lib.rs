@@ -9,8 +9,8 @@ use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
 use w3f_pcs::pcs::PCS;
 
-pub use common::domain::Domain;
-use common::Proof;
+pub use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::Proof;
 pub use piop::index;
 
 pub use crate::piop::{params::PiopParams, FixedColumnsCommitted, ProverKey, VerifierKey};
@@ -61,7 +61,7 @@ pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
 
-impl<F: PrimeField, CS: PCS<F>> common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
+impl<F: PrimeField, CS: PCS<F>> w3f_plonk_common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         self.0.challenge(label).read_reduce()
     }
@@ -93,7 +93,7 @@ mod tests {
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use w3f_pcs::pcs::kzg::KZG;
 
-    use common::test_helpers::random_vec;
+    use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::piop::FixedColumnsCommitted;
     use crate::ring::{Ring, RingBuilderKey};
@@ -122,7 +122,7 @@ mod tests {
             prover_key,
             piop_params.clone(),
             k,
-            ArkTranscript::new(b"ring-vrf-test"),
+            ArkTranscript::new(b"w3f-ring-proof-test"),
         );
         let t_prove = start_timer!(|| "Prove");
         let proof = ring_prover.prove(secret);
@@ -131,7 +131,7 @@ mod tests {
         let ring_verifier = RingVerifier::init(
             verifier_key,
             piop_params,
-            ArkTranscript::new(b"ring-vrf-test"),
+            ArkTranscript::new(b"w3f-ring-proof-test"),
         );
         let t_verify = start_timer!(|| "Verify");
         let res = ring_verifier.verify_ring_proof(proof, result.into_affine());

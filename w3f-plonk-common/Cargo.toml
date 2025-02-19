@@ -1,6 +1,6 @@
 [package]
-name = "common"
-version = "0.1.0"
+name = "w3f-plonk-common"
+version = "0.0.1"
 edition = "2021"
 authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
 license = "MIT/Apache-2.0"
@@ -31,16 +31,16 @@ std = [
   "ark-serialize/std",
   "w3f-pcs/std",
   "getrandom_or_panic/std",
-  "rand_core/std"
+  "rand_core/std",
 ]
 parallel = [
   "std",
   "rayon",
-  "w3f-pcs/parallel",
   "ark-std/parallel",
   "ark-ff/parallel",
   "ark-ec/parallel",
-  "ark-poly/parallel"
+  "ark-poly/parallel",
+  "w3f-pcs/parallel",
 ]
 print-trace = ["ark-std/print-trace"]
 asm = ["w3f-pcs/asm"]
