@@ -1,17 +1,17 @@
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
+use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::Commitment;
-use std::marker::PhantomData;
+use w3f_pcs::pcs::Commitment;
 
-use common::domain::EvaluatedDomain;
-use common::gadgets::booleanity::BooleanityValues;
-use common::gadgets::ec::CondAddValues;
-use common::gadgets::fixed_cells::FixedCellsValues;
-use common::gadgets::inner_prod::InnerProdValues;
-use common::gadgets::VerifierGadget;
-use common::piop::VerifierPiop;
+use w3f_plonk_common::domain::EvaluatedDomain;
+use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
+use w3f_plonk_common::gadgets::ec::CondAddValues;
+use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
+use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
+use w3f_plonk_common::gadgets::VerifierGadget;
+use w3f_plonk_common::piop::VerifierPiop;
 
 use crate::piop::{FixedColumnsCommitted, RingCommitments};
 use crate::RingEvaluations;

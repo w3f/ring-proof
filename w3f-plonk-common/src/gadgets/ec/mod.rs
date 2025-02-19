@@ -4,7 +4,8 @@ use crate::{Column, FieldColumn};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 
 pub mod sw_cond_add;
 pub mod te_cond_add;
@@ -56,10 +57,10 @@ impl<F, P: AffineRepr<BaseField = F>> CondAdd<F, P>
 where
     F: FftField,
 {
-    // Populates the acc column starting from the supplied seed (as 0 doesn't have an affine SW representation).
-    // As the SW addition formula used is not complete, the seed must be selected in a way that would prevent
-    // exceptional cases (doublings or adding the opposite point).
-    // The last point of the input column is ignored, as adding it would made the acc column overflow due the initial point.
+    // Populates the `acc` column starting from the supplied `seed`.
+    // Both SW and TE gadgets use non-complete formulas, so special cases have to be avoided.
+    // If we assume the proofs of possession have been verified for the ring points,
+    // this can be achieved by setting the seed to a point of unknown dlog from the prime order subgroup.
     pub fn init(
         bitmask: BitColumn<F>,
         points: AffineColumn<F, P>,
