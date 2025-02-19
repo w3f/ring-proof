@@ -9,9 +9,9 @@ use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
 use w3f_pcs::pcs::PCS;
 
+pub use piop::index;
 pub use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::Proof;
-pub use piop::index;
 
 pub use crate::piop::{params::PiopParams, FixedColumnsCommitted, ProverKey, VerifierKey};
 use crate::piop::{RingCommitments, RingEvaluations};
@@ -61,7 +61,9 @@ pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
 
-impl<F: PrimeField, CS: PCS<F>> w3f_plonk_common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
+impl<F: PrimeField, CS: PCS<F>> w3f_plonk_common::transcript::PlonkTranscript<F, CS>
+    for ArkTranscript
+{
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         self.0.challenge(label).read_reduce()
     }

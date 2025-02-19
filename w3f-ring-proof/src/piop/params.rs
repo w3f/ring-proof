@@ -4,7 +4,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
 use w3f_plonk_common::domain::Domain;
-use w3f_plonk_common::gadgets::sw_cond_add::AffineColumn;
+use w3f_plonk_common::gadgets::ec::AffineColumn;
 
 use crate::piop::FixedColumns;
 
