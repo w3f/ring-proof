@@ -51,8 +51,7 @@ impl ArkTranscript {
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::Bls12_381;
-    use ark_ec::twisted_edwards::{Affine, TECurveConfig};
-    use ark_ec::{AffineRepr, CurveGroup};
+    use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
@@ -68,31 +67,6 @@ mod tests {
 
     use super::*;
 
-    // Try and increment hash to curve.
-    fn hash_to_curve<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
-        message: &[u8],
-    ) -> Affine<Curve> {
-        use blake2::Digest;
-        let mut seed = message.to_vec();
-        let cnt_offset = seed.len();
-        seed.push(0);
-        loop {
-            let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
-            let x = F::from_le_bytes_mod_order(&hash);
-            if let Some(point) = Affine::<Curve>::get_point_from_y_unchecked(x, false) {
-                let point = point.clear_cofactor();
-                assert!(point.is_in_correct_subgroup_assuming_on_curve());
-                return point;
-            }
-            seed[cnt_offset] += 1;
-        }
-    }
-
-    pub(crate) fn padding_point<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
-    ) -> Affine<Curve> {
-        hash_to_curve(b"/w3f/w3f-ring-proof/padding")
-    }
-
     fn setup<R: Rng, CS: PCS<Fq>>(
         rng: &mut R,
         domain_size: usize,
@@ -103,7 +77,7 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
-        let pad = padding_point();
+        let pad = EdwardsAffine::rand(rng);
         let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         (pcs_params, piop_params)

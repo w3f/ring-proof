@@ -265,7 +265,6 @@ mod tests {
     use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::ring::Ring;
-    use crate::tests::padding_point;
     use crate::PiopParams;
 
     use super::*;
@@ -285,8 +284,8 @@ mod tests {
         // piop params
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
+        let pad = EdwardsAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let pad = padding_point();
         let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
@@ -317,7 +316,7 @@ mod tests {
         // piop params
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
-        let pad = padding_point();
+        let pad = EdwardsAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
         let piop_params = PiopParams::setup(domain, h, seed, pad);
 

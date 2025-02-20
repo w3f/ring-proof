@@ -105,14 +105,13 @@ mod tests {
     use w3f_plonk_common::test_helpers::cond_sum;
 
     use crate::piop::params::PiopParams;
-    use crate::tests::padding_point;
 
     #[test]
     fn test_powers_of_h() {
         let rng = &mut test_rng();
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
-        let pad = padding_point();
+        let pad = EdwardsAffine::rand(rng);
         let domain = Domain::new(1024, false);
 
         let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed, pad);
