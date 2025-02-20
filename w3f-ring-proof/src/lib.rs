@@ -67,22 +67,6 @@ mod tests {
 
     use super::*;
 
-    fn setup<R: Rng, CS: PCS<Fq>>(
-        rng: &mut R,
-        domain_size: usize,
-    ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
-        let setup_degree = 3 * domain_size;
-        let pcs_params = CS::setup(setup_degree, rng);
-
-        let domain = Domain::new(domain_size, true);
-        let h = EdwardsAffine::rand(rng);
-        let seed = EdwardsAffine::rand(rng);
-        let pad = EdwardsAffine::rand(rng);
-        let piop_params = PiopParams::setup(domain, h, seed, pad);
-
-        (pcs_params, piop_params)
-    }
-
     fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
         let rng = &mut test_rng();
 
@@ -142,6 +126,22 @@ mod tests {
             fixed_columns_committed,
             verifier_key.fixed_columns_committed
         );
+    }
+
+    fn setup<R: Rng, CS: PCS<Fq>>(
+        rng: &mut R,
+        domain_size: usize,
+    ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
+        let setup_degree = 3 * domain_size;
+        let pcs_params = CS::setup(setup_degree, rng);
+
+        let domain = Domain::new(domain_size, true);
+        let h = EdwardsAffine::rand(rng);
+        let seed = EdwardsAffine::rand(rng);
+        let pad = EdwardsAffine::rand(rng);
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
+
+        (pcs_params, piop_params)
     }
 
     #[test]
