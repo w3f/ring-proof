@@ -1,10 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::{
-    short_weierstrass::{Affine, SWCurveConfig},
-    AffineRepr,
-};
-use ark_ff::{One, PrimeField, Zero};
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::AffineRepr;
+use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
 use w3f_pcs::pcs::PCS;
@@ -26,20 +24,8 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 /// Polynomial Commitment Schemes.
 pub use w3f_pcs::pcs;
 
-// Calling the method for a prime-order curve results in an infinite loop.
-pub fn find_complement_point<Curve: SWCurveConfig>() -> Affine<Curve> {
-    let mut x = Curve::BaseField::zero();
-    loop {
-        let p = Affine::<Curve>::get_point_from_x_unchecked(x, false);
-        if p.is_some() && !p.unwrap().is_in_correct_subgroup_assuming_on_curve() {
-            return p.unwrap();
-        }
-        x = x + Curve::BaseField::one()
-    }
-}
-
 // Try and increment hash to curve.
-pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
+pub(crate) fn hash_to_curve<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
     message: &[u8],
 ) -> Affine<Curve> {
     use blake2::Digest;
@@ -49,7 +35,7 @@ pub(crate) fn hash_to_curve<F: PrimeField, Curve: SWCurveConfig<BaseField = F>>(
     loop {
         let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
         let x = F::from_le_bytes_mod_order(&hash);
-        if let Some(point) = Affine::<Curve>::get_point_from_x_unchecked(x, false) {
+        if let Some(point) = Affine::<Curve>::get_point_from_y_unchecked(x, false) {
             let point = point.clear_cofactor();
             assert!(point.is_in_correct_subgroup_assuming_on_curve());
             return point;
@@ -88,8 +74,7 @@ impl ArkTranscript {
 mod tests {
     use ark_bls12_381::Bls12_381;
     use ark_ec::CurveGroup;
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq, Fr, SWAffine};
-    use ark_ff::MontFp;
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
@@ -111,7 +96,7 @@ mod tests {
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<SWAffine, _>(keyset_size, rng);
+        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
         let k = rng.gen_range(0..keyset_size); // prover's secret index
         let pk = pks[k].clone();
 
@@ -152,7 +137,7 @@ mod tests {
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<SWAffine, _>(keyset_size, rng);
+        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
 
         let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
 
@@ -173,27 +158,11 @@ mod tests {
         let pcs_params = CS::setup(setup_degree, rng);
 
         let domain = Domain::new(domain_size, true);
-        let h = SWAffine::rand(rng);
-        let seed = find_complement_point::<BandersnatchConfig>();
+        let h = EdwardsAffine::rand(rng);
+        let seed = EdwardsAffine::rand(rng);
         let piop_params = PiopParams::setup(domain, h, seed);
 
         (pcs_params, piop_params)
-    }
-
-    #[test]
-    fn test_complement_point() {
-        let p = find_complement_point::<BandersnatchConfig>();
-        assert!(p.is_on_curve());
-        assert!(!p.is_in_correct_subgroup_assuming_on_curve());
-        assert_eq!(
-            p,
-            SWAffine::new_unchecked(
-                MontFp!("0"),
-                MontFp!(
-                    "11982629110561008531870698410380659621661946968466267969586599013782997959645"
-                )
-            )
-        )
     }
 
     #[test]
