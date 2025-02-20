@@ -1,7 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use ark_ec::twisted_edwards::{Affine, TECurveConfig};
-use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
@@ -23,26 +21,6 @@ pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, 
 
 /// Polynomial Commitment Schemes.
 pub use w3f_pcs::pcs;
-
-// Try and increment hash to curve.
-pub(crate) fn hash_to_curve<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
-    message: &[u8],
-) -> Affine<Curve> {
-    use blake2::Digest;
-    let mut seed = message.to_vec();
-    let cnt_offset = seed.len();
-    seed.push(0);
-    loop {
-        let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
-        let x = F::from_le_bytes_mod_order(&hash);
-        if let Some(point) = Affine::<Curve>::get_point_from_y_unchecked(x, false) {
-            let point = point.clear_cofactor();
-            assert!(point.is_in_correct_subgroup_assuming_on_curve());
-            return point;
-        }
-        seed[cnt_offset] += 1;
-    }
-}
 
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
@@ -73,7 +51,8 @@ impl ArkTranscript {
 #[cfg(test)]
 mod tests {
     use ark_bls12_381::Bls12_381;
-    use ark_ec::CurveGroup;
+    use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+    use ark_ec::{AffineRepr, CurveGroup};
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
@@ -88,6 +67,47 @@ mod tests {
     use crate::ring_verifier::RingVerifier;
 
     use super::*;
+
+    // Try and increment hash to curve.
+    fn hash_to_curve<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
+        message: &[u8],
+    ) -> Affine<Curve> {
+        use blake2::Digest;
+        let mut seed = message.to_vec();
+        let cnt_offset = seed.len();
+        seed.push(0);
+        loop {
+            let hash: [u8; 64] = blake2::Blake2b::digest(&seed[..]).into();
+            let x = F::from_le_bytes_mod_order(&hash);
+            if let Some(point) = Affine::<Curve>::get_point_from_y_unchecked(x, false) {
+                let point = point.clear_cofactor();
+                assert!(point.is_in_correct_subgroup_assuming_on_curve());
+                return point;
+            }
+            seed[cnt_offset] += 1;
+        }
+    }
+
+    pub(crate) fn padding_point<F: PrimeField, Curve: TECurveConfig<BaseField = F>>(
+    ) -> Affine<Curve> {
+        hash_to_curve(b"/w3f/w3f-ring-proof/padding")
+    }
+
+    fn setup<R: Rng, CS: PCS<Fq>>(
+        rng: &mut R,
+        domain_size: usize,
+    ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
+        let setup_degree = 3 * domain_size;
+        let pcs_params = CS::setup(setup_degree, rng);
+
+        let domain = Domain::new(domain_size, true);
+        let h = EdwardsAffine::rand(rng);
+        let seed = EdwardsAffine::rand(rng);
+        let pad = padding_point();
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
+
+        (pcs_params, piop_params)
+    }
 
     fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
         let rng = &mut test_rng();
@@ -148,21 +168,6 @@ mod tests {
             fixed_columns_committed,
             verifier_key.fixed_columns_committed
         );
-    }
-
-    fn setup<R: Rng, CS: PCS<Fq>>(
-        rng: &mut R,
-        domain_size: usize,
-    ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
-        let setup_degree = 3 * domain_size;
-        let pcs_params = CS::setup(setup_degree, rng);
-
-        let domain = Domain::new(domain_size, true);
-        let h = EdwardsAffine::rand(rng);
-        let seed = EdwardsAffine::rand(rng);
-        let piop_params = PiopParams::setup(domain, h, seed);
-
-        (pcs_params, piop_params)
     }
 
     #[test]

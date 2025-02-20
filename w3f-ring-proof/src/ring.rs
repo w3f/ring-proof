@@ -265,6 +265,7 @@ mod tests {
     use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::ring::Ring;
+    use crate::tests::padding_point;
     use crate::PiopParams;
 
     use super::*;
@@ -285,7 +286,8 @@ mod tests {
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let pad = padding_point();
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &[]);
@@ -315,8 +317,9 @@ mod tests {
         // piop params
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
+        let pad = padding_point();
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let piop_params = PiopParams::setup(domain, h, seed, pad);
 
         let ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let same_ring = TestRing::with_keys(&piop_params, &[], &ring_builder_key);

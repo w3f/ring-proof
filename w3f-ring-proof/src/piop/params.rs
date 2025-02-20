@@ -31,8 +31,12 @@ pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
 }
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
-    pub fn setup(domain: Domain<F>, h: Affine<Curve>, seed: Affine<Curve>) -> Self {
-        let padding_point = crate::hash_to_curve(b"/w3f/w3f-ring-proof/padding");
+    pub fn setup(
+        domain: Domain<F>,
+        h: Affine<Curve>,
+        seed: Affine<Curve>,
+        padding_point: Affine<Curve>,
+    ) -> Self {
         let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
         let keyset_part_size = domain.capacity - scalar_bitlen - 1;
@@ -101,14 +105,17 @@ mod tests {
     use w3f_plonk_common::test_helpers::cond_sum;
 
     use crate::piop::params::PiopParams;
+    use crate::tests::padding_point;
 
     #[test]
     fn test_powers_of_h() {
         let rng = &mut test_rng();
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
+        let pad = padding_point();
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed);
+
+        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed, pad);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
