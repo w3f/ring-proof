@@ -109,7 +109,7 @@ impl<F: FftField> Domain<F> {
     pub(crate) fn column(&self, mut evals: Vec<F>, hidden: bool) -> FieldColumn<F> {
         let len = evals.len();
         assert!(len <= self.capacity);
-        if self.hiding && hidden {
+        if self.hiding && hidden && !cfg!(feature = "test-vectors") {
             evals.resize(self.capacity, F::zero());
             evals.resize_with(self.domains.x1.size(), || {
                 F::rand(&mut getrandom_or_panic::getrandom_or_panic())

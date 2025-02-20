@@ -44,3 +44,4 @@ parallel = [
 ]
 print-trace = ["ark-std/print-trace"]
 asm = ["w3f-pcs/asm"]
+test-vectors = []
