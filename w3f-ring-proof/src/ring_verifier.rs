@@ -10,9 +10,9 @@ use w3f_plonk_common::verifier::PlonkVerifier;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
-use crate::RingProof;
+use crate::{ArkTranscript, RingProof};
 
-pub struct RingVerifier<F, CS, Jubjub, T>
+pub struct RingVerifier<F, CS, Jubjub, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,

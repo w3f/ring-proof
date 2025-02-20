@@ -7,9 +7,9 @@ use w3f_plonk_common::transcript::PlonkTranscript;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumns, PiopProver, ProverKey};
-use crate::RingProof;
+use crate::{ArkTranscript, RingProof};
 
-pub struct RingProver<F, CS, Curve, T>
+pub struct RingProver<F, CS, Curve, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,
