@@ -121,7 +121,7 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-proof-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify_ring_proof(proof, result.into_affine());
+        let res = ring_verifier.verify(proof, result.into_affine());
         end_timer!(t_verify);
         assert!(res);
     }

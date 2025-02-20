@@ -45,7 +45,7 @@ where
         }
     }
 
-    pub fn verify_ring_proof(&self, proof: RingProof<F, CS>, result: Affine<Jubjub>) -> bool {
+    pub fn verify(&self, proof: RingProof<F, CS>, result: Affine<Jubjub>) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &result,
             &proof,
