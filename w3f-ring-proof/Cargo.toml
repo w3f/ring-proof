@@ -49,3 +49,4 @@ print-trace = [
   "w3f-plonk-common/print-trace"
 ]
 asm = [ "w3f-pcs/asm" ]
+test-vectors = []
