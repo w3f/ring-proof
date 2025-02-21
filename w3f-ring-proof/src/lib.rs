@@ -138,8 +138,8 @@ mod tests {
         let domain = Domain::new(domain_size, true);
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
-        let pad = EdwardsAffine::rand(rng);
-        let piop_params = PiopParams::setup(domain, h, seed, pad);
+        let padding = EdwardsAffine::rand(rng);
+        let piop_params = PiopParams::setup(domain, h, seed, padding);
 
         (pcs_params, piop_params)
     }
