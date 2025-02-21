@@ -4,7 +4,7 @@ version = "0.0.2"
 edition = "2021"
 authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "zk-proof of knowledge of the blinding factor for a Pedersen commitment"
+description = "zk-proof of knowledge of the blinding factor of a Pedersen commitment"
 keywords = ["cryptography", "ring-vrf"]
 repository = "https://github.com/w3f/ring-proof"
 
@@ -16,7 +16,7 @@ ark-poly.workspace = true
 ark-serialize.workspace = true
 w3f-pcs.workspace = true
 rayon = { workspace = true, optional = true }
-w3f-plonk-common = { path="../w3f-plonk-common", default-features = false }
+w3f-plonk-common = { version = "0.0.2", default-features = false }
 ark-transcript = { version = "0.0.3", default-features = false }
 
 [dev-dependencies]
