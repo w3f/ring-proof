@@ -1,11 +1,12 @@
 [package]
 name = "w3f-plonk-common"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Infrastructure for creating plonk-like proofs"
 keywords = ["cryptography", "plonk"]
+repository = "https://github.com/w3f/ring-proof"
 
 [dependencies]
 ark-std.workspace = true
@@ -44,3 +45,4 @@ parallel = [
 ]
 print-trace = ["ark-std/print-trace"]
 asm = ["w3f-pcs/asm"]
+test-vectors = []

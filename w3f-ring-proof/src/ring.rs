@@ -18,41 +18,38 @@ use crate::PiopParams;
 const IDLE_ROWS: usize = ZK_ROWS + 1;
 
 /// Commitment to a list of VRF public keys as is used as a public input to the ring proof SNARK verifier.
-
-/// The VRF keys are (inner) curve points that we represent in the affine short Weierstrass coordinates.
+///
+/// The VRF keys are (inner) curve points that we represent in the affine Twisted Edwards coordinates.
 /// We commit to the coordinate vectors independently using KZG on the outer curve. To make the commitment
 /// updatable we use SRS in the Lagrangian form: `L1, ..., Ln`, where `Li = L_i(t)G`.
 /// The commitment to a vector `a1, ..., an` is then `a1L1 + ... + anLn`.
-
+///
 /// We pad the list of keys with a `padding` point with unknown dlog up to a certain size.
 /// Additionally, to make the commitment compatible with the snark,
 /// we append the power-of-2 powers of the VRF blinding Pedersen base
 /// `H, 2H, 4H, ..., 2^(s-1)H`, where `s` is the bitness of the VRF curve scalar field.
 /// The last `IDLE_ROWS = 4` elements are set to `(0, 0)`.
-
+///
 /// Thus, the vector of points we commit to coordinatewise is
 /// `pk1, ..., pkn, padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`
-
-// `KzgCurve` -- outer curve, subgroup of a pairing-friendly curve. We instantiate it with bls12-381 G1.
-// `VrfCurveConfig` -- inner curve, the curve used by the VRF, in SW form. We instantiate it with Bandersnatch.
-// `F` shared scalar field of the outer and the base field of the inner curves.
 #[derive(Clone, PartialEq, Eq, CanonicalSerialize, CanonicalDeserialize)]
 pub struct Ring<
     F: PrimeField,
     KzgCurve: Pairing<ScalarField = F>,
     VrfCurveConfig: TECurveConfig<BaseField = F>,
 > {
-    // KZG commitments to the coordinates of the vector described above
+    /// KZG commitment to the x coordinates of the described vector.
     pub cx: KzgCurve::G1Affine,
+    /// KZG commitment to the y coordinates of the described vector.
     pub cy: KzgCurve::G1Affine,
-    // KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
+    /// KZG commitment to a bitvector highlighting the part of the vector corresponding to the public keys.
     pub selector: KzgCurve::G1Affine,
-    // maximal number of keys the commitment can "store". For domain of size `N` it is `N - (s + IDLE_ROWS)`
+    /// Maximal number of keys the commitment can "store". For domain of size `N` it is `N - (s + IDLE_ROWS)`.
     pub max_keys: usize,
-    // the number of keys "stored" in this commitment
+    /// Number of keys "stored" in this commitment.
     pub curr_keys: usize,
-    // a parameter
-    pub padding_point: Affine<VrfCurveConfig>,
+    // Padding point.
+    pub padding: Affine<VrfCurveConfig>,
 }
 
 impl<
@@ -76,22 +73,23 @@ impl<
         VrfCurveConfig: TECurveConfig<BaseField = F>,
     > Ring<F, KzgCurve, VrfCurveConfig>
 {
-    // Builds the commitment to the vector
-    // `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
-    // We compute it as a sum of commitments of 2 vectors:
-    // `padding, ..., padding`, and
-    // `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
-    // The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
+    /// Builds the commitment to the vector
+    /// `padding, ..., padding, H, 2H, ..., 2^(s-1)H, 0, 0, 0, 0`.
+    ///
+    /// We compute it as a sum of commitments of 2 vectors:
+    /// `padding, ..., padding`, and
+    /// `0, ..., 0, (H - padding), (2H - padding), ..., (2^(s-1)H  - padding), -padding, -padding, -padding, -padding`.
+    /// The first one is `padding * G`, the second requires an `(IDLE_ROWS + s)`-msm to compute.
+    ///
+    /// - `piop_params`: SNARK parameters
+    /// - `srs`: Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
+    /// - `g`: Generator used in the SRS
     pub fn empty(
-        // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
-        // Should return `srs[range]` for `range = (piop_params.keyset_part_size..domain_size)`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
-        // generator used in the SRS
         g: KzgCurve::G1,
     ) -> Self {
-        let padding_point = piop_params.padding_point;
-        let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
+        let (padding_x, padding_y) = piop_params.padding.xy().unwrap(); // panics on inf, never happens
         let c1x = g * padding_x;
         let c1y = g * padding_y;
 
@@ -122,19 +120,22 @@ impl<
             selector,
             max_keys: piop_params.keyset_part_size,
             curr_keys: 0,
-            padding_point,
+            padding: piop_params.padding,
         }
     }
 
+    /// Appends a set key sequence to the ring.
+    ///
+    /// - `keys`: Keys to append.
+    /// - `srs`: Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
     pub fn append(
         &mut self,
         keys: &[Affine<VrfCurveConfig>],
-        // Should return `srs[range]` for `range = (self.curr_keys..self.curr_keys + keys.len())`
         srs: impl Fn(Range<usize>) -> Result<Vec<KzgCurve::G1Affine>, ()>,
     ) {
         let new_size = self.curr_keys + keys.len();
         assert!(new_size <= self.max_keys);
-        let (padding_x, padding_y) = self.padding_point.xy().unwrap();
+        let (padding_x, padding_y) = self.padding.xy().unwrap();
         let (xs, ys): (Vec<F>, Vec<F>) = keys
             .iter()
             .map(|p| p.xy().unwrap())
@@ -154,17 +155,18 @@ impl<
         self.curr_keys = new_size;
     }
 
-    // Builds the ring from the keys provided with 2 MSMs of size `keys.len() + scalar_bitlen + 5`.
-    // In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
+    /// Builds the ring from the keys provided with 2 MSMs of size `keys.len() + scalar_bitlen + 5`.
+    ///
+    /// In some cases it may be beneficial to cash the empty ring, as updating it costs 2 MSMs of size `keys.len()`.
+    ///
+    /// - `piop_params`: SNARK parameters.
+    /// - `srs`: full-size Lagrangian SRS.
     pub fn with_keys(
-        // SNARK parameters
         piop_params: &PiopParams<F, VrfCurveConfig>,
         keys: &[Affine<VrfCurveConfig>],
-        // full-size Lagrangian srs
         srs: &RingBuilderKey<F, KzgCurve>,
     ) -> Self {
-        let padding_point = piop_params.padding_point;
-        let (padding_x, padding_y) = padding_point.xy().unwrap(); // panics on inf, never happens
+        let (padding_x, padding_y) = piop_params.padding.xy().unwrap(); // panics on inf, never happens
         let powers_of_h = piop_params.power_of_2_multiples_of_h();
 
         // Computes
@@ -207,7 +209,7 @@ impl<
             selector,
             max_keys: piop_params.keyset_part_size,
             curr_keys: keys.len(),
-            padding_point,
+            padding: piop_params.padding,
         }
     }
 
@@ -220,7 +222,7 @@ impl<
         cx: KzgCurve::G1Affine,
         cy: KzgCurve::G1Affine,
         selector: KzgCurve::G1Affine,
-        padding_point: Affine<VrfCurveConfig>,
+        padding: Affine<VrfCurveConfig>,
     ) -> Self {
         let max_keys =
             domain_size - (VrfCurveConfig::ScalarField::MODULUS_BIT_SIZE as usize + IDLE_ROWS);
@@ -230,7 +232,7 @@ impl<
             selector,
             max_keys,
             curr_keys: 0,
-            padding_point,
+            padding,
         }
     }
 }
@@ -284,8 +286,9 @@ mod tests {
         // piop params
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
+        let padding = EdwardsAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let piop_params = PiopParams::setup(domain, h, seed, padding);
 
         let mut ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let (monimial_cx, monimial_cy) = get_monomial_commitment(&pcs_params, &piop_params, &[]);
@@ -315,8 +318,9 @@ mod tests {
         // piop params
         let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
+        let padding = EdwardsAffine::rand(rng);
         let domain = Domain::new(domain_size, true);
-        let piop_params = PiopParams::setup(domain, h, seed);
+        let piop_params = PiopParams::setup(domain, h, seed, padding);
 
         let ring = TestRing::empty(&piop_params, srs, ring_builder_key.g1);
         let same_ring = TestRing::with_keys(&piop_params, &[], &ring_builder_key);
