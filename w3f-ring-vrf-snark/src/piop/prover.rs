@@ -11,30 +11,55 @@ use crate::piop::FixedColumns;
 use crate::piop::{RingCommitments, RingEvaluations};
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
+use w3f_plonk_common::gadgets::ec::te_doubling::PowersOfTwoMultiples;
+use w3f_plonk_common::gadgets::ec::te_doubling::PowersOfTwoMultiplesTE;
 use w3f_plonk_common::gadgets::ec::AffineColumn;
 use w3f_plonk_common::gadgets::ec::CondAdd;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCells;
 use w3f_plonk_common::gadgets::inner_prod::InnerProd;
 use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
-use w3f_plonk_common::{Column, FieldColumn};
+use w3f_plonk_common::Column;
 
 // The 'table': columns representing the execution trace of the computation
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
+
+/// | 1              | 2           | 3           | 4              | 5              | 6                        | 7&8      | 9&10            | 11&12    | 13&14           |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | $k$            | $pk_x$      | $pk_y$      | $acc_{pk_x}$   | $acc_{pk_y}$   | $sk$                     | $2^iG$x2 | $acc_{sk}$x2    | $2^iH$x2 | $acc_{out}$x2   |
+/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
+/// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
 pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     domain: Domain<F>,
     // Fixed (public input) columns:
-    points: AffineColumn<F, Affine<Curve>>,
-    ring_selector: FieldColumn<F>,
-    // Private input column.
-    bits: BitColumn<F>,
+    signer_index: BitColumn<F>,
+    ring_selector: BitColumn<F>, //all one vector
+
+    pubkey_points: AffineColumn<F, Affine<Curve>>, // Private input column.
+    signer_secret_key_bits: BitColumn<F>,
+    power_of_2_multiples_of_gen: AffineColumn<F, Affine<Curve>>,
     // Gadgets:
-    booleanity: Booleanity<F>,
-    inner_prod: InnerProd<F>,
-    inner_prod_acc: FixedCells<F>,
-    cond_add: CondAdd<F, Affine<Curve>>,
-    cond_add_acc_x: FixedCells<F>,
-    cond_add_acc_y: FixedCells<F>,
+    booleanity_of_signer_index: Booleanity<F>, //this to prove the bit column is actually holding bits
+    booleanity_of_secret_key_bits: Booleanity<F>,
+
+    sole_signer_inner_prod: InnerProd<F>, //This is a binary cond add making sure \sum signer_index[i] = 1
+    sole_signer_inner_prod_acc: FixedCells<F>,
+
+    cond_add_pubkey: CondAdd<F, Affine<Curve>>,
+    cond_add_pubkey_acc_x: FixedCells<F>,
+    cond_add_pubkey_acc_y: FixedCells<F>,
+
+    cond_add_gen_multiples: CondAdd<F, Affine<Curve>>,
+    cond_add_gen_multiples_acc_x: FixedCells<F>,
+    cond_add_gen_multiples_acc_y: FixedCells<F>,
+
+    power_of_2_multiples_of_vrf_in: PowersOfTwoMultiplesTE<F, Curve>, // TODO; reconcile with addition
+    power_of_2_multiples_of_vrf_in_x: FixedCells<F>,
+    power_of_2_multiples_of_vrf_in_y: FixedCells<F>,
+
+    cond_add_vrfout: CondAdd<F, Affine<Curve>>,
+    cond_add_vrfout_acc_x: FixedCells<F>,
+    cond_add_vrfout_acc_y: FixedCells<F>,
 }
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
@@ -43,44 +68,115 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         fixed_columns: FixedColumns<F, Affine<Curve>>,
         prover_index_in_keys: usize,
         secret: Curve::ScalarField,
+        vrf_input: Affine<Curve>,
     ) -> Self {
         let domain = params.domain.clone();
         let FixedColumns {
-            points,
+            pubkey_points,
+            power_of_2_multiples_of_gen,
             ring_selector,
         } = fixed_columns;
-        let bits = Self::bits_column(&params, prover_index_in_keys, secret);
-        let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
-        let cond_add = CondAdd::init(bits.clone(), points.clone(), params.seed, &domain);
-        let booleanity = Booleanity::init(bits.clone());
-        let cond_add_acc_x = FixedCells::init(cond_add.acc.xs.clone(), &domain);
-        let cond_add_acc_y = FixedCells::init(cond_add.acc.ys.clone(), &domain);
-        let inner_prod_acc = FixedCells::init(inner_prod.acc.clone(), &domain);
+        let (signer_index, signer_secret_key_bits, ring_selector) =
+            Self::bits_columns(params, prover_index_in_keys, secret);
+        let sole_signer_inner_prod =
+            InnerProd::init(ring_selector.col.clone(), signer_index.col.clone(), &domain);
+
+        let cond_add_pubkey = CondAdd::init(
+            signer_index.clone(),
+            pubkey_points.clone(),
+            params.seed,
+            &domain,
+        );
+
+        let booleanity_of_signer_index = Booleanity::init(signer_index.clone());
+        let booleanity_of_secret_key_bits = Booleanity::init(signer_secret_key_bits.clone());
+
+        let sole_signer_inner_prod_acc =
+            FixedCells::init(sole_signer_inner_prod.acc.clone(), &domain);
+
+        let pubkey_acc = cond_add_pubkey.acc.clone();
+        let cond_add_pubkey_acc_x = FixedCells::init(pubkey_acc.xs.clone(), &domain);
+        let cond_add_pubkey_acc_y = FixedCells::init(pubkey_acc.ys.clone(), &domain);
+
+        //we also need to add the accumulation of generator multiples in respect to to secret key's bits
+        let cond_add_gen_multiples = CondAdd::init(
+            signer_secret_key_bits.clone(),
+            power_of_2_multiples_of_gen.clone(),
+            params.seed,
+            &domain,
+        );
+        let gen_multiples_acc = cond_add_gen_multiples.acc.clone();
+        let cond_add_gen_multiples_acc_x = FixedCells::init(gen_multiples_acc.xs.clone(), &domain);
+        let cond_add_gen_multiples_acc_y = FixedCells::init(gen_multiples_acc.ys.clone(), &domain);
+
+        //And also we need compute VRFout in the snark and verify it has been generated using the same secret key.
+        let power_of_2_multiples_of_vrf_in = PowersOfTwoMultiplesTE::init(vrf_input, &domain);
+        let power_of_2_multiples_of_vrf_in_x =
+            FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.xs.clone(), &domain);
+        let power_of_2_multiples_of_vrf_in_y =
+            FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.ys.clone(), &domain);
+
+        let cond_add_vrfout = CondAdd::init(
+            signer_secret_key_bits.clone(),
+            power_of_2_multiples_of_vrf_in.multiples.clone(),
+            params.seed,
+            &domain,
+        );
+        let vrfout_acc = cond_add_vrfout.acc.clone();
+        let cond_add_vrfout_acc_x = FixedCells::init(vrfout_acc.xs.clone(), &domain);
+        let cond_add_vrfout_acc_y = FixedCells::init(vrfout_acc.ys.clone(), &domain);
+
         Self {
             domain,
-            points,
+            pubkey_points,
+            signer_index,
             ring_selector,
-            bits,
-            inner_prod_acc,
-            cond_add_acc_x,
-            cond_add_acc_y,
-            booleanity,
-            inner_prod,
-            cond_add,
+            signer_secret_key_bits,
+
+            power_of_2_multiples_of_gen,
+
+            booleanity_of_signer_index,
+            booleanity_of_secret_key_bits,
+
+            sole_signer_inner_prod,
+            sole_signer_inner_prod_acc,
+
+            cond_add_pubkey_acc_x,
+            cond_add_pubkey_acc_y,
+            cond_add_pubkey,
+
+            power_of_2_multiples_of_vrf_in,
+            power_of_2_multiples_of_vrf_in_x,
+            power_of_2_multiples_of_vrf_in_y,
+
+            cond_add_gen_multiples_acc_x,
+            cond_add_gen_multiples_acc_y,
+            cond_add_gen_multiples,
+
+            cond_add_vrfout_acc_x,
+            cond_add_vrfout_acc_y,
+            cond_add_vrfout,
         }
     }
 
-    fn bits_column(
+    fn bits_columns(
         params: &PiopParams<F, Curve>,
         index_in_keys: usize,
-        secret: Curve::ScalarField,
-    ) -> BitColumn<F> {
-        let mut keyset_part = vec![false; params.keyset_part_size];
-        keyset_part[index_in_keys] = true;
-        let scalar_part = params.scalar_part(secret);
-        let bits = [keyset_part, scalar_part].concat();
-        assert_eq!(bits.len(), params.domain.capacity - 1);
-        BitColumn::init(bits, &params.domain)
+        secret: Curve::ScalarField, //TODO: F
+    ) -> (BitColumn<F>, BitColumn<F>, BitColumn<F>) {
+        //TODO: this is wrong it should be number of secret key bits.
+        let mut signer_selector_bit_vector = vec![false; params.keyset_part_size];
+        signer_selector_bit_vector[index_in_keys] = true;
+
+        let select_all_bit_vector = vec![true; params.keyset_part_size];
+
+        let secret_key_bit_vector = params.scalar_part(secret);
+        // assert_eq!(max(signer_selector_bit_vector.len(), secret_key_bit_vector.len()), params.domain.capacity - 1);
+        (
+            BitColumn::init(signer_selector_bit_vector, &params.domain),
+            BitColumn::init(secret_key_bit_vector, &params.domain),
+            BitColumn::init(select_all_bit_vector, &params.domain),
+        )
     }
 }
 
@@ -98,16 +194,34 @@ where
         &self,
         commit: Fun,
     ) -> Self::Commitments {
-        let bits = commit(self.bits.as_poly());
-        let cond_add_acc = [
-            commit(self.cond_add.acc.xs.as_poly()),
-            commit(self.cond_add.acc.ys.as_poly()),
+        let signer_index = commit(self.signer_index.as_poly());
+        let signer_secret_key_bits = commit(self.signer_secret_key_bits.as_poly());
+        let ring_selector = commit(self.ring_selector.as_poly());
+
+        let cond_add_pubkey_acc = [
+            commit(self.cond_add_pubkey.acc.xs.as_poly()),
+            commit(self.cond_add_pubkey.acc.ys.as_poly()),
         ];
-        let inn_prod_acc = commit(self.inner_prod.acc.as_poly());
+
+        let sole_signer_inn_prod_acc = commit(self.sole_signer_inner_prod.acc.as_poly());
+        let cond_add_gen_multiples_acc = [
+            commit(self.cond_add_gen_multiples.acc.xs.as_poly()),
+            commit(self.cond_add_gen_multiples.acc.ys.as_poly()),
+        ];
+
+        let cond_add_vrfout_acc = [
+            commit(self.cond_add_vrfout.acc.xs.as_poly()),
+            commit(self.cond_add_vrfout.acc.ys.as_poly()),
+        ];
+
         Self::Commitments {
-            bits,
-            cond_add_acc,
-            inn_prod_acc,
+            signer_index,
+            signer_secret_key_bits,
+            ring_selector,
+            sole_signer_inn_prod_acc,
+            cond_add_pubkey_acc,
+            cond_add_gen_multiples_acc,
+            cond_add_vrfout_acc,
             phantom: PhantomData,
         }
     }
@@ -116,54 +230,96 @@ where
     // Self::Evaluations::to_vec() and Self::Commitments::to_vec().
     fn columns(&self) -> Vec<DensePolynomial<F>> {
         vec![
-            self.points.xs.as_poly().clone(),
-            self.points.ys.as_poly().clone(),
+            self.pubkey_points.xs.as_poly().clone(),
+            self.pubkey_points.ys.as_poly().clone(),
             self.ring_selector.as_poly().clone(),
-            self.bits.as_poly().clone(),
-            self.inner_prod.acc.as_poly().clone(),
-            self.cond_add.acc.xs.as_poly().clone(),
-            self.cond_add.acc.ys.as_poly().clone(),
+            self.signer_index.as_poly().clone(),
+            self.signer_secret_key_bits.as_poly().clone(),
+            self.sole_signer_inner_prod.acc.as_poly().clone(),
+            self.cond_add_pubkey.acc.xs.as_poly().clone(),
+            self.cond_add_pubkey.acc.ys.as_poly().clone(),
+            self.cond_add_gen_multiples.acc.xs.as_poly().clone(),
+            self.cond_add_gen_multiples.acc.ys.as_poly().clone(),
+            self.cond_add_vrfout.acc.xs.as_poly().clone(),
+            self.cond_add_vrfout.acc.ys.as_poly().clone(),
         ]
     }
 
     fn columns_evaluated(&self, zeta: &F) -> Self::Evaluations {
-        let points = [self.points.xs.evaluate(zeta), self.points.ys.evaluate(zeta)];
-        let ring_selector = self.ring_selector.evaluate(zeta);
-        let bits = self.bits.evaluate(zeta);
-        let inn_prod_acc = self.inner_prod.acc.evaluate(zeta);
-        let cond_add_acc = [
-            self.cond_add.acc.xs.evaluate(zeta),
-            self.cond_add.acc.ys.evaluate(zeta),
+        let pubkey_points = [
+            self.pubkey_points.xs.evaluate(zeta),
+            self.pubkey_points.ys.evaluate(zeta),
         ];
+        let ring_selector = self.ring_selector.evaluate(zeta);
+        let signer_index = self.signer_index.evaluate(zeta);
+        let signer_secret_key_bits = self.signer_secret_key_bits.evaluate(zeta);
+
+        let sole_signer_inn_prod_acc = self.sole_signer_inner_prod.acc.evaluate(zeta);
+
+        let cond_add_pubkey_acc = [
+            self.cond_add_pubkey.acc.xs.evaluate(zeta),
+            self.cond_add_pubkey.acc.ys.evaluate(zeta),
+        ];
+
+        let cond_add_gen_multiples_acc = [
+            self.cond_add_gen_multiples.acc.xs.evaluate(zeta),
+            self.cond_add_gen_multiples.acc.ys.evaluate(zeta),
+        ];
+
+        let cond_add_vrfout_acc = [
+            self.cond_add_vrfout.acc.xs.evaluate(zeta),
+            self.cond_add_vrfout.acc.ys.evaluate(zeta),
+        ];
+
         Self::Evaluations {
-            points,
+            pubkey_points,
             ring_selector,
-            bits,
-            inn_prod_acc,
-            cond_add_acc,
+            signer_index,
+            signer_secret_key_bits,
+            sole_signer_inn_prod_acc,
+            cond_add_pubkey_acc,
+            cond_add_gen_multiples_acc,
+            cond_add_vrfout_acc,
         }
     }
 
     fn constraints(&self) -> Vec<Evaluations<F>> {
-        vec![
-            self.inner_prod.constraints(),
-            self.cond_add.constraints(),
-            self.booleanity.constraints(),
-            self.cond_add_acc_x.constraints(),
-            self.cond_add_acc_y.constraints(),
-            self.inner_prod_acc.constraints(),
+        [
+            self.sole_signer_inner_prod.constraints(),
+            self.cond_add_pubkey.constraints(),
+            self.cond_add_gen_multiples.constraints(),
+            self.cond_add_vrfout.constraints(),
+            self.booleanity_of_signer_index.constraints(),
+            self.booleanity_of_secret_key_bits.constraints(),
+            self.cond_add_pubkey_acc_x.constraints(),
+            self.cond_add_pubkey_acc_y.constraints(),
+            self.cond_add_gen_multiples_acc_x.constraints(),
+            self.cond_add_gen_multiples_acc_y.constraints(),
+            self.cond_add_vrfout_acc_x.constraints(),
+            self.cond_add_vrfout_acc_y.constraints(),
+            self.sole_signer_inner_prod_acc.constraints(),
         ]
         .concat()
     }
 
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>> {
-        vec![
-            self.inner_prod.constraints_linearized(zeta),
-            self.cond_add.constraints_linearized(zeta),
-            self.booleanity.constraints_linearized(zeta),
-            self.cond_add_acc_x.constraints_linearized(zeta),
-            self.cond_add_acc_y.constraints_linearized(zeta),
-            self.inner_prod_acc.constraints_linearized(zeta),
+        [
+            self.sole_signer_inner_prod.constraints_linearized(zeta),
+            self.cond_add_pubkey.constraints_linearized(zeta),
+            self.cond_add_gen_multiples.constraints_linearized(zeta),
+            self.cond_add_vrfout.constraints_linearized(zeta),
+            self.booleanity_of_signer_index.constraints_linearized(zeta),
+            self.booleanity_of_secret_key_bits
+                .constraints_linearized(zeta),
+            self.cond_add_pubkey_acc_x.constraints_linearized(zeta),
+            self.cond_add_pubkey_acc_y.constraints_linearized(zeta),
+            self.cond_add_gen_multiples_acc_x
+                .constraints_linearized(zeta),
+            self.cond_add_gen_multiples_acc_y
+                .constraints_linearized(zeta),
+            self.cond_add_vrfout_acc_x.constraints_linearized(zeta),
+            self.cond_add_vrfout_acc_y.constraints_linearized(zeta),
+            self.sole_signer_inner_prod_acc.constraints_linearized(zeta),
         ]
         .concat()
     }
@@ -173,6 +329,6 @@ where
     }
 
     fn result(&self) -> Self::Instance {
-        self.cond_add.result
+        self.cond_add_pubkey.result
     }
 }

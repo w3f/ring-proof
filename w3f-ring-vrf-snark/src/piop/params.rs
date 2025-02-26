@@ -56,11 +56,35 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
         let ring_selector = self.keyset_part_selector();
         let ring_selector = self.domain.public_column(ring_selector);
-        let points = self.points_column(&keys);
+        let pubkey_points = self.pubkey_points_column(keys);
+        let power_of_2_multiples_of_gen = self.gen_multiples_column();
         FixedColumns {
-            points,
+            pubkey_points,
+            power_of_2_multiples_of_gen,
             ring_selector,
         }
+    }
+
+    fn gen_multiples_column(&self) -> AffineColumn<F, Affine<Curve>> {
+        let prime_subgroup_gen = Affine::<Curve>::generator(); //TODO: should this be fed as an input param of the ring?
+        let power_of_2_multiples_of_gen =
+            Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
+        //TODO: we might need different domain for different columns
+        AffineColumn::public_column(power_of_2_multiples_of_gen, &self.domain)
+    }
+
+    pub fn power_of_2_multiples_of(
+        base_point: Affine<Curve>,
+        scalar_bitlen: usize,
+    ) -> Vec<Affine<Curve>> {
+        let mut h = base_point.into_group();
+        let mut multiples = Vec::with_capacity(scalar_bitlen);
+        multiples.push(h);
+        for _ in 1..scalar_bitlen {
+            h.double_in_place();
+            multiples.push(h);
+        }
+        CurveGroup::normalize_batch(&multiples)
     }
 
     pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
@@ -69,6 +93,15 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
         let padding = vec![self.padding; padding_len];
         let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
         assert_eq!(points.len(), self.domain.capacity - 1);
+        AffineColumn::public_column(points, &self.domain)
+    }
+
+    pub fn pubkey_points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+        assert!(keys.len() <= self.keyset_part_size);
+        let padding_len = self.keyset_part_size - keys.len();
+        let padding = vec![self.padding; padding_len];
+        let points = [keys, &padding].concat();
+        assert!(points.len() < self.domain.capacity); //check if it fits the domain.
         AffineColumn::public_column(points, &self.domain)
     }
 

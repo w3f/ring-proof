@@ -1,34 +1,37 @@
-use ark_ec::twisted_edwards::{TECurveConfig, Affine as TEAffine};
-use ark_ec::AffineRepr;
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use w3f_pcs::pcs::PCS;
 
-use w3f_plonk_common::gadgets::cond_add::AffineCondAdd;
 use w3f_plonk_common::prover::PlonkProver;
 use w3f_plonk_common::transcript::PlonkTranscript;
 
-use crate::piop::{params::PiopParams, FixedColumns, PiopProver, ProverKey};
+use crate::piop::params::PiopParams;
+use crate::piop::{FixedColumns, PiopProver, ProverKey};
 use crate::{ArkTranscript, RingProof};
 
-pub struct RingProver<
+pub struct RingProver<F, CS, Curve, T = ArkTranscript>
+where
     F: PrimeField,
     CS: PCS<F>,
-    P: TECurveConfig<BaseField = F>,
-    T: PlonkTranscript<F, CS> = ArkTranscript,
-> {
-    piop_params: PiopParams<F, TEAffine<P>>,
-    fixed_columns: FixedColumns<F, TEAffine<P>>,
+    Curve: TECurveConfig<BaseField = F>,
+    T: PlonkTranscript<F, CS>,
+{
+    piop_params: PiopParams<F, Curve>,
+    fixed_columns: FixedColumns<F, Affine<Curve>>,
     k: usize,
     plonk_prover: PlonkProver<F, CS, T>,
 }
 
-impl<F: PrimeField, CS: PCS<F>, P, T: PlonkTranscript<F, CS>> RingProver<F, CS, P, T>
+impl<F, CS, Curve, T> RingProver<F, CS, Curve, T>
 where
-    P: TECurveConfig<BaseField = F>,
+    F: PrimeField,
+    CS: PCS<F>,
+    Curve: TECurveConfig<BaseField = F>,
+    T: PlonkTranscript<F, CS>,
 {
     pub fn init(
-        prover_key: ProverKey<F, CS, TEAffine<P>>,
-        piop_params: PiopParams<F, TEAffine<P>>,
+        prover_key: ProverKey<F, CS, Affine<Curve>>,
+        piop_params: PiopParams<F, Curve>,
         k: usize,
         empty_transcript: T,
     ) -> Self {
@@ -48,13 +51,18 @@ where
         }
     }
 
-    pub fn prove(&self, secret_key: P::ScalarField, vrf_input: TEAffine<P>) -> RingProof<F, CS> {
-        let piop: PiopProver<F, P, <TEAffine<P> as AffineCondAdd>::CondAddT> =
-            PiopProver::build(&self.piop_params, self.fixed_columns.clone(), self.k, secret_key, vrf_input);
+    pub fn prove(&self, t: Curve::ScalarField, vrf_input: Affine<Curve>) -> RingProof<F, CS> {
+        let piop = PiopProver::build(
+            &self.piop_params,
+            self.fixed_columns.clone(),
+            self.k,
+            t,
+            vrf_input,
+        );
         self.plonk_prover.prove(piop)
     }
 
-    pub fn piop_params(&self) -> &PiopParams<F, TEAffine<P>> {
+    pub fn piop_params(&self) -> &PiopParams<F, Curve> {
         &self.piop_params
     }
 }

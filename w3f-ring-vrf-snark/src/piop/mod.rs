@@ -15,7 +15,7 @@ pub(crate) use verifier::PiopVerifier;
 use w3f_plonk_common::gadgets::ec::AffineColumn;
 use w3f_plonk_common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 
-use crate::ring::Ring;
+use crate::ring_vrf::Ring;
 use crate::PiopParams;
 
 pub mod params;
@@ -24,54 +24,74 @@ mod verifier;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
-    pub(crate) bits: C,
-    pub(crate) inn_prod_acc: C,
-    pub(crate) cond_add_acc: [C; 2],
+    pub(crate) signer_index: C,
+    pub(crate) signer_secret_key_bits: C,
+    pub(crate) ring_selector: C,
+    pub(crate) sole_signer_inn_prod_acc: C,
+    pub(crate) cond_add_pubkey_acc: [C; 2],
+    pub(crate) cond_add_gen_multiples_acc: [C; 2],
+    pub(crate) cond_add_vrfout_acc: [C; 2],
     pub(crate) phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<F, C> {
     fn to_vec(self) -> Vec<C> {
         vec![
-            self.bits,
-            self.inn_prod_acc,
-            self.cond_add_acc[0].clone(),
-            self.cond_add_acc[1].clone(),
+            self.signer_index,
+            self.signer_secret_key_bits,
+            self.sole_signer_inn_prod_acc,
+            self.cond_add_pubkey_acc[0].clone(),
+            self.cond_add_pubkey_acc[1].clone(),
+            self.cond_add_gen_multiples_acc[0].clone(),
+            self.cond_add_gen_multiples_acc[1].clone(),
+            self.cond_add_vrfout_acc[0].clone(),
+            self.cond_add_vrfout_acc[1].clone(),
         ]
     }
 }
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingEvaluations<F: PrimeField> {
-    pub(crate) points: [F; 2],
+    pub(crate) pubkey_points: [F; 2],
     pub(crate) ring_selector: F,
-    pub(crate) bits: F,
-    pub(crate) inn_prod_acc: F,
-    pub(crate) cond_add_acc: [F; 2],
+    pub(crate) signer_index: F,
+    pub(crate) signer_secret_key_bits: F,
+    pub(crate) sole_signer_inn_prod_acc: F,
+    pub(crate) cond_add_pubkey_acc: [F; 2],
+    pub(crate) cond_add_gen_multiples_acc: [F; 2],
+    pub(crate) cond_add_vrfout_acc: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
     fn to_vec(self) -> Vec<F> {
         vec![
-            self.points[0],
-            self.points[1],
+            self.pubkey_points[0],
+            self.pubkey_points[1],
             self.ring_selector,
-            self.bits,
-            self.inn_prod_acc,
-            self.cond_add_acc[0],
-            self.cond_add_acc[1],
+            self.signer_index,
+            self.signer_secret_key_bits,
+            self.sole_signer_inn_prod_acc,
+            self.cond_add_pubkey_acc[0],
+            self.cond_add_pubkey_acc[1],
+            self.cond_add_gen_multiples_acc[0],
+            self.cond_add_gen_multiples_acc[1],
+            self.cond_add_vrfout_acc[0],
+            self.cond_add_vrfout_acc[1],
         ]
     }
 }
 
 // Columns commitment to which the verifier knows (or trusts).
+// TODO: comments
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField = F>> {
     // Public keys of the ring participants in order,
     // followed by the powers-of-2 multiples of the second Pedersen base.
     // pk_1, ..., pk_n, H, 2H, 4H, ..., 2^sH
     // 1          n                     n+s+1
-    points: AffineColumn<F, G>,
+    pubkey_points: AffineColumn<F, G>,
+    // The powers-of-2 multiples of the prime subgroup generator.
+    power_of_2_multiples_of_gen: AffineColumn<F, G>,
     // Binary column that highlights which rows of the table correspond to the ring.
     // 1, 1, ..., 1, 0, 0, ..., 0
     // 1          n
@@ -113,8 +133,8 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
 impl<F: PrimeField, G: AffineRepr<BaseField = F>> FixedColumns<F, G> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [
-            CS::commit(ck, self.points.xs.as_poly()).unwrap(),
-            CS::commit(ck, self.points.ys.as_poly()).unwrap(),
+            CS::commit(ck, self.pubkey_points.xs.as_poly()).unwrap(),
+            CS::commit(ck, self.pubkey_points.ys.as_poly()).unwrap(),
         ];
         let ring_selector = CS::commit(ck, self.ring_selector.as_poly()).unwrap();
         FixedColumnsCommitted {
