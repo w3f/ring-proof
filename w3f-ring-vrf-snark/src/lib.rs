@@ -4,12 +4,12 @@ use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
 use ark_serialize::CanonicalSerialize;
 use ark_std::rand::RngCore;
-use fflonk::pcs::PCS;
+use w3f_pcs::pcs::PCS;
 
-pub use common::domain::Domain;
-pub use common::gadgets::cond_add::AffineCondAdd;
+pub use w3f_plonk_common::domain::Domain;
+pub use w3f_plonk_common::gadgets::cond_add::AffineCondAdd;
 
-use common::Proof;
+use w3f_plonk_common::Proof;
 pub use piop::index;
 
 pub use crate::piop::{params::PiopParams, FixedColumnsCommitted, ProverKey, VerifierKey};
@@ -23,12 +23,12 @@ pub mod ring_vrf_verifier;
 pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 /// Polynomial Commitment Schemes.
-pub use fflonk::pcs;
+pub use w3f_pcs::pcs;
 
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
 
-impl<F: PrimeField, CS: PCS<F>> common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
+impl<F: PrimeField, CS: PCS<F>> w3f_plonk_common::transcript::PlonkTranscript<F, CS> for ArkTranscript {
     fn _128_bit_point(&mut self, label: &'static [u8]) -> F {
         self.0.challenge(label).read_reduce()
     }
@@ -67,15 +67,15 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fq, Fr, SWAffine};
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
-    use fflonk::pcs::kzg::KZG;
+    use w3f_pcs::pcs::kzg::KZG;
 
-    use common::test_helpers::random_vec;
+    use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::piop::FixedColumnsCommitted;
     use crate::ring_vrf::{Ring, RingBuilderKey};
     use crate::ring_vrf_prover::RingProver;
     use crate::ring_vrf_verifier::RingVerifier;
-    use common::gadgets::cond_add::AffineCondAdd;
+    use w3f_plonk_common::gadgets::cond_add::AffineCondAdd;
 
     #[cfg(feature = "intensive-benchmarking")]
     use std::hint::black_box;
@@ -200,12 +200,12 @@ mod tests {
 
     #[test]
     fn test_ring_proof_id_sw() {
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment, SWAffine>(2usize.pow(10), 1);
+        _test_ring_proof::<w3f_pcs::pcs::IdentityCommitment, SWAffine>(2usize.pow(10), 1);
     }
 
     #[test]
     fn test_ring_proof_id_te() {
-        _test_ring_proof::<fflonk::pcs::IdentityCommitment, EdwardsAffine>(2usize.pow(10), 1);
+        _test_ring_proof::<w3f_pcs::pcs::IdentityCommitment, EdwardsAffine>(2usize.pow(10), 1);
     }
 
     #[cfg(feature = "intensive-benchmarking")]
