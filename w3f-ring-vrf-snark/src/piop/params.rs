@@ -1,124 +1,107 @@
-use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup,};
+use ark_ec::twisted_edwards::{Affine, TECurveConfig};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
 use w3f_plonk_common::domain::Domain;
-use w3f_plonk_common::AffineColumn;
+use w3f_plonk_common::gadgets::ec::AffineColumn;
 
 use crate::piop::FixedColumns;
 
-///
-/// | 1              | 2           | 3           | 4              | 5              | 6                        | 7&8      | 9&10            | 11&12    | 13&14           |
-/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
-/// | $k$            | $pk_x$      | $pk_y$      | $acc_{pk_x}$   | $acc_{pk_y}$   | $sk$                     | $2^iG$x2 | $acc_{sk}$x2    | $2^iH$x2 | $acc_{out}$x2   |
-/// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
-/// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
-///
-/// We do not have ring selector part so I assume that I we are going to generate two different polynomials for essentially two different table.
-/// TODO: But for now we use a fake selector so we can use the inner product gadget.
-/// Later with we will add a bit vector sum gadget and get rid of selector
-///
+/// Plonk Interactive Oracle Proofs (PIOP) parameters.
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, P: AffineRepr<BaseField = F>> {
-    // Domain over which the piop is represented.
+pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
+    /// Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
-
-    // Number of bits used to represent a jubjub scalar.
+    /// Number of bits used to represent a jubjub scalar.
     pub(crate) scalar_bitlen: usize,
-
-    // size of the padded ring
-    pub padded_keyset_size: usize,
-
-    // The point to start the summation from (as zero doesn't have a SW affine representation),
-    // should be from the jubjub prime-order subgroup complement.
-    pub(crate) seed: P,
-
-    // The point used to pad the actual list of public keys. Should be of an unknown dlog.
-    pub(crate) padding_point: P,
-
+    /// Length of the part of the column representing the public keys (including the padding).
+    pub keyset_part_size: usize,
+    /// Blinding base point.
+    pub(crate) h: Affine<Curve>,
+    /// Summation base point.
+    pub(crate) seed: Affine<Curve>,
+    /// The point used to pad the list of public keys.
+    pub(crate) padding: Affine<Curve>,
 }
 
-impl<F: PrimeField, P: AffineRepr<BaseField = F>> PiopParams<F, P> {
-    pub fn setup(domain: Domain<F>, seed: P, padding_point: P) -> Self {        
-        let scalar_bitlen = P::ScalarField::MODULUS_BIT_SIZE as usize;
-        //make sure the domain size is big enough to at least deal with VRF SNARK
-        //We will later check if the domain is big enough to accomodate the ring
-        assert!(domain.capacity > scalar_bitlen);
+impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
+    /// Initialize PIOP parameters.
+    ///
+    /// - `domain`: polynomials evaluation domain.
+    /// - `h`: Blinding base point.
+    /// - `seed`: Accumulation base point
+    /// - `padding`: The point used to pad the list of public keys.
+    ///
+    /// All points should be of an unknown discrete log.
+    pub fn setup(
+        domain: Domain<F>,
+        h: Affine<Curve>,
+        seed: Affine<Curve>,
+        padding: Affine<Curve>,
+    ) -> Self {
+        let scalar_bitlen = Curve::ScalarField::MODULUS_BIT_SIZE as usize;
         // 1 accounts for the last cells of the points and bits columns that remain unconstrained
-        let padded_keyset_size = domain.capacity - 1;
+        let keyset_part_size = domain.capacity - scalar_bitlen - 1;
         Self {
             domain,
             scalar_bitlen,
-            padded_keyset_size,
+            keyset_part_size,
+            h,
             seed,
-            padding_point,
+            padding,
         }
     }
 
-    pub fn fixed_columns(&self, keys: &[P]) -> FixedColumns<F, P> {
-        let ring_selector = self.domain.public_column(self.keyset_part_selector());
-        let pubkey_points = self.pubkey_points_column(keys);
-        let power_of_2_multiples_of_gen = self.gen_multiples_column();
-
+    pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
+        let ring_selector = self.keyset_part_selector();
+        let ring_selector = self.domain.public_column(ring_selector);
+        let points = self.points_column(&keys);
         FixedColumns {
-            pubkey_points,
-	        power_of_2_multiples_of_gen,
+            points,
             ring_selector,
         }
     }
 
-    pub fn pubkey_points_column(&self, keys: &[P]) -> AffineColumn<F, P> {
-        assert!(keys.len() <= self.padded_keyset_size);
-        let padding_len = self.padded_keyset_size - keys.len();
-        let padding = vec![self.padding_point; padding_len];
-        let points = [keys, &padding].concat();
-        assert!(points.len() < self.domain.capacity); //check if it fits the domain.
+    pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
+        assert!(keys.len() <= self.keyset_part_size);
+        let padding_len = self.keyset_part_size - keys.len();
+        let padding = vec![self.padding; padding_len];
+        let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
+        assert_eq!(points.len(), self.domain.capacity - 1);
         AffineColumn::public_column(points, &self.domain)
     }
 
-    pub fn gen_multiples_column(&self) -> AffineColumn<F, P> {
-	    let prime_subgroup_gen = P::generator(); //TODO: should this be fed as an input param of the ring?
-	    let power_of_2_multiples_of_gen = Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
-        //TODO: we might need different domain for different columns
-        AffineColumn::public_column(power_of_2_multiples_of_gen, &self.domain)
-    }
-    
-    pub fn power_of_2_multiples_of(base_point: P, scalar_bitlen: usize) -> Vec<P> {
-        let mut h = base_point.into_group();
-        let mut multiples = Vec::with_capacity(scalar_bitlen);
+    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine<Curve>> {
+        let mut h = self.h.into_group();
+        let mut multiples = Vec::with_capacity(self.scalar_bitlen);
         multiples.push(h);
-        for _ in 1..scalar_bitlen {
+        for _ in 1..self.scalar_bitlen {
             h.double_in_place();
             multiples.push(h);
         }
         CurveGroup::normalize_batch(&multiples)
     }
 
-    pub fn power_of_2_multiples_of_h(&self) {
-        
-    }
-    pub fn keyset_part_selector(&self) -> Vec<F> {
-        [
-            vec![F::one(); self.padded_keyset_size],
-        ]
-        .concat()
-    }
-    
-    pub fn scalar_to_bitvec(&self, e: P::ScalarField) -> Vec<bool> {
+    pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
         let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
         let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
         significant_bits.to_vec()
     }
 
-    pub fn padding_point(&self) -> P {
-        self.padding_point
+    pub fn keyset_part_selector(&self) -> Vec<F> {
+        [
+            vec![F::one(); self.keyset_part_size],
+            vec![F::zero(); self.scalar_bitlen],
+        ]
+        .concat()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use ark_ec::AffineRepr;
-    use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fq, Fr, SWAffine};
+    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
+    use ark_std::ops::Mul;
     use ark_std::{test_rng, UniformRand};
 
     use w3f_plonk_common::domain::Domain;
@@ -126,26 +109,18 @@ mod tests {
 
     use crate::piop::params::PiopParams;
 
-    fn _test_powers_of_h<P: AffineRepr<BaseField = Fq, ScalarField = Fr>>() {
+    #[test]
+    fn test_powers_of_h() {
         let rng = &mut test_rng();
-        let h = P::rand(rng);
-        let seed = P::rand(rng);
-        let pad = P::rand(rng);
+        let h = EdwardsAffine::rand(rng);
+        let seed = EdwardsAffine::rand(rng);
+        let padding = EdwardsAffine::rand(rng);
         let domain = Domain::new(1024, false);
-        let params = PiopParams::<Fq, P>::setup(domain, h, seed, pad);
+
+        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed, padding);
         let t = Fr::rand(rng);
         let t_bits = params.scalar_part(t);
         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
-        assert_eq!(th, params.h.mul(t).into());
-    }
-
-    #[test]
-    fn test_powers_of_h_te() {
-        _test_powers_of_h::<EdwardsAffine>();
-    }
-
-    #[test]
-    fn test_powers_of_h_sw() {
-        _test_powers_of_h::<SWAffine>();
+        assert_eq!(th, params.h.mul(t));
     }
 }
