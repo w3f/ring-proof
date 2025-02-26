@@ -7,17 +7,17 @@ use ark_poly::Evaluations;
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
 use ark_std::cmp::max;
-use common::gadgets::powers_of_two_multiples::{PowersOfTwoMultipleValuesTE, PowersOfTwoMultiples, PowersOfTwoMultiplesTE};
-use fflonk::pcs::Commitment;
+use w3f_plonk_common::gadgets::powers_of_two_multiples::{PowersOfTwoMultipleValuesTE, PowersOfTwoMultiples, PowersOfTwoMultiplesTE};
+use w3f_pcs::pcs::Commitment;
 
-use common::domain::Domain;
-use common::gadgets::booleanity::{BitColumn, Booleanity};
-use common::gadgets::cond_add::CondAdd;
-use common::gadgets::fixed_cells::FixedCells;
-use common::gadgets::inner_prod::InnerProd;
-use common::gadgets::ProverGadget;
-use common::piop::ProverPiop;
-use common::{AffineColumn, Column, FieldColumn};
+use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
+use w3f_plonk_common::gadgets::cond_add::CondAdd;
+use w3f_plonk_common::gadgets::fixed_cells::FixedCells;
+use w3f_plonk_common::gadgets::inner_prod::InnerProd;
+use w3f_plonk_common::gadgets::ProverGadget;
+use w3f_plonk_common::piop::ProverPiop;
+use w3f_plonk_common::{AffineColumn, Column, FieldColumn};
 
 use crate::piop::params::PiopParams;
 use crate::piop::FixedColumns;

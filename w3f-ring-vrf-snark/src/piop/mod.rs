@@ -4,13 +4,13 @@ use ark_ff::PrimeField;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
-use fflonk::pcs::kzg::commitment::KzgCommitment;
-use fflonk::pcs::kzg::params::RawKzgVerifierKey;
-use fflonk::pcs::kzg::KZG;
-use fflonk::pcs::{Commitment, PcsParams, PCS};
+use w3f_pcs::pcs::kzg::commitment::KzgCommitment;
+use w3f_pcs::pcs::kzg::params::RawKzgVerifierKey;
+use w3f_pcs::pcs::kzg::KZG;
+use w3f_pcs::pcs::{Commitment, PcsParams, PCS};
 
-use common::AffineColumn;
-use common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
+use w3f_plonk_common::AffineColumn;
+use w3f_plonk_common::{Column, ColumnsCommited, ColumnsEvaluated, FieldColumn};
 pub(crate) use prover::PiopProver;
 pub(crate) use verifier::PiopVerifier;
 

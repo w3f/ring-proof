@@ -13,9 +13,9 @@ ark-ff.workspace = true
 ark-ec.workspace = true
 ark-poly.workspace = true
 ark-serialize.workspace = true
-fflonk.workspace = true
+w3f-pcs.workspace = true
 rayon = { workspace = true, optional = true }
-common = { path = "../w3f-plonk-common", default-features = false }
+w3f-plonk-common = { path = "../w3f-plonk-common", default-features = false }
 blake2 = { version = "0.10", default-features = false }
 ark-transcript = { version = "0.0.3", default-features = false }
 
@@ -31,8 +31,8 @@ std = [
   "ark-ec/std",
   "ark-poly/std",
   "ark-serialize/std",
-  "fflonk/std",
-  "common/std"
+  "w3f-pcs/std",
+  "w3f-plonk-common/std"
 ]
 parallel = [
   "std",
@@ -41,14 +41,14 @@ parallel = [
   "ark-ff/parallel",
   "ark-ec/parallel",
   "ark-poly/parallel",
-  "common/parallel",
-  "fflonk/parallel"
+  "w3f-plonk-common/parallel",
+  "w3f-pcs/parallel"
 ]
 print-trace = [
   "ark-std/print-trace",
-  "common/print-trace"
+  "w3f-plonk-common/print-trace"
 ]
-asm = [ "fflonk/asm" ]
-test-vectors = [ "common/test-vectors" ]
+asm = [ "w3f-pcs/asm" ]
+test-vectors = [ "w3f-plonk-common/test-vectors" ]
 # benchmarking by running many proofs and verifications to get more accurate timing comparison
 intensive-benchmarking = ["std"] 

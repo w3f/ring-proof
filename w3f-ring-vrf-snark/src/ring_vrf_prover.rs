@@ -1,11 +1,11 @@
 use ark_ec::twisted_edwards::{TECurveConfig, Affine as TEAffine};
 use ark_ec::AffineRepr;
 use ark_ff::PrimeField;
-use fflonk::pcs::PCS;
+use w3f_pcs::pcs::PCS;
 
-use common::gadgets::cond_add::AffineCondAdd;
-use common::prover::PlonkProver;
-use common::transcript::PlonkTranscript;
+use w3f_plonk_common::gadgets::cond_add::AffineCondAdd;
+use w3f_plonk_common::prover::PlonkProver;
+use w3f_plonk_common::transcript::PlonkTranscript;
 
 use crate::piop::{params::PiopParams, FixedColumns, PiopProver, ProverKey};
 use crate::{ArkTranscript, RingProof};

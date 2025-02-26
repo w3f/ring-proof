@@ -7,10 +7,10 @@ use ark_std::fmt;
 use ark_std::iter;
 use ark_std::ops::Range;
 use ark_std::vec::Vec;
-use fflonk::pcs::kzg::urs::URS;
-use fflonk::pcs::PcsParams;
+use w3f_pcs::pcs::kzg::urs::URS;
+use w3f_pcs::pcs::PcsParams;
 
-use common::domain::ZK_ROWS;
+use w3f_plonk_common::domain::ZK_ROWS;
 
 use crate::PiopParams;
 
@@ -240,12 +240,12 @@ mod tests {
     use ark_bls12_381::{Bls12_381, Fr as Bls12_381_Fr, G1Affine};
     use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, SWAffine};
     use ark_std::test_rng;
-    use fflonk::pcs::kzg::urs::URS;
-    use fflonk::pcs::kzg::KZG;
-    use fflonk::pcs::PCS;
+    use w3f_pcs::pcs::kzg::urs::URS;
+    use w3f_pcs::pcs::kzg::KZG;
+    use w3f_pcs::pcs::PCS;
 
-    use common::domain::Domain;
-    use common::test_helpers::random_vec;
+    use w3f_plonk_common::domain::Domain;
+    use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::ring_vrf::Ring;
     use crate::PiopParams;

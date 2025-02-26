@@ -2,8 +2,8 @@ use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup,};
 use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
-use common::domain::Domain;
-use common::AffineColumn;
+use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::AffineColumn;
 
 use crate::piop::FixedColumns;
 
@@ -121,8 +121,8 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::{EdwardsAffine, Fq, Fr, SWAffine};
     use ark_std::{test_rng, UniformRand};
 
-    use common::domain::Domain;
-    use common::test_helpers::cond_sum;
+    use w3f_plonk_common::domain::Domain;
+    use w3f_plonk_common::test_helpers::cond_sum;
 
     use crate::piop::params::PiopParams;
 
