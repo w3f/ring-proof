@@ -247,7 +247,7 @@ mod tests {
     use common::domain::Domain;
     use common::test_helpers::random_vec;
 
-    use crate::ring::Ring;
+    use crate::ring_vrf::Ring;
     use crate::PiopParams;
 
     use super::*;

@@ -110,12 +110,10 @@ impl<F: PrimeField, P: TECurveConfig<BaseField = F>, CondAddT: CondAdd<F, TEAffi
         let power_of_2_multiples_of_vrf_in_x = FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.xs.clone(), &domain);
         let power_of_2_multiples_of_vrf_in_y = FixedCells::init(power_of_2_multiples_of_vrf_in.multiples.ys.clone(), &domain);
         
-        let power_of_2_multiples_of_vrf_in_multiples = AffineColumn::public_column(PiopParams::power_of_2_multiples_of(vrf_input, params.scalar_bitlen), &domain);
         let cond_add_vrfout = CondAddT::init(signer_secret_key_bits.clone(), power_of_2_multiples_of_vrf_in.multiples.clone(), params.seed, &domain);
         let vrfout_acc = cond_add_vrfout.get_acc();
         let cond_add_vrfout_acc_x = FixedCells::init(vrfout_acc.xs.clone(), &domain);
         let cond_add_vrfout_acc_y = FixedCells::init(vrfout_acc.ys.clone(), &domain);
-
         
         Self {
             domain,

@@ -72,9 +72,9 @@ mod tests {
     use common::test_helpers::random_vec;
 
     use crate::piop::FixedColumnsCommitted;
-    use crate::ring::{Ring, RingBuilderKey};
-    use crate::ring_prover::RingProver;
-    use crate::ring_verifier::RingVerifier;
+    use crate::ring_vrf::{Ring, RingBuilderKey};
+    use crate::ring_vrf_prover::RingProver;
+    use crate::ring_vrf_verifier::RingVerifier;
     use common::gadgets::cond_add::AffineCondAdd;
 
     #[cfg(feature = "intensive-benchmarking")]
