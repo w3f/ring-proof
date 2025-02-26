@@ -7,8 +7,10 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
+use crate::gadgets::ec::AffineColumn;
 use crate::gadgets::{ProverGadget, VerifierGadget};
-use crate::{const_evals, AffineColumn, Column, FieldColumn};
+use crate::{const_evals, Column, FieldColumn};
+use ark_ec::twisted_edwards::{Affine as TEAffine, TECurveConfig};
 
 pub trait PowersOfTwoMultiples<F, AffinePoint>
 where
@@ -30,8 +32,6 @@ where
 
     fn init(points: (F, F), not_last: F, acc: (F, F)) -> Self;
 }
-
-use ark_ec::twisted_edwards::{Affine as TEAffine, TECurveConfig};
 
 // Conditional affine addition:
 // if the bit is set for a point, add the point to the acc and store,
