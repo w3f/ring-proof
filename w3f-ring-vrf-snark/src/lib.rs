@@ -96,7 +96,7 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify(proof, result.into_affine());
+        let res = ring_verifier.verify(proof, vrf_input.into(), result.into_affine(), pk.into());
         end_timer!(t_verify);
         assert!(res);
     }

@@ -45,16 +45,16 @@ where
         }
     }
 
-    pub fn verify(&self, proof: RingProof<F, CS>, result: Affine<Jubjub>) -> bool {
+    pub fn verify(&self, proof: RingProof<F, CS>, vrf_in: Affine<Jubjub>, vrf_out: Affine<Jubjub>, pk: Affine<Jubjub>) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
-            &result,
+            &vrf_out,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
-        let seed_plus_result = (seed + result).into_affine();
+        let seed_plus_result = (seed + vrf_out).into_affine();
         let domain_eval = EvaluatedDomain::new(
             self.piop_params.domain.domain(),
             challenges.zeta,
@@ -67,7 +67,9 @@ where
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),
             (seed.x, seed.y),
-            (seed_plus_result.x, seed_plus_result.y),
+            (vrf_in.x, vrf_in.y),
+            (vrf_out.x, vrf_out.y),
+            (pk.x, pk.y),
         );
 
         self.plonk_verifier

@@ -24,59 +24,61 @@ mod verifier;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
-    pub(crate) signer_index: C,
+    // pub(crate) signer_index: C,
     pub(crate) signer_secret_key_bits: C,
-    pub(crate) ring_selector: C,
-    pub(crate) sole_signer_inn_prod_acc: C,
-    pub(crate) cond_add_pubkey_acc: [C; 2],
-    pub(crate) cond_add_gen_multiples_acc: [C; 2],
-    pub(crate) cond_add_vrfout_acc: [C; 2],
+    // pub(crate) ring_selector: C,
+    // pub(crate) sole_signer_inn_prod_acc: C,
+    // pub(crate) cond_add_pubkey_acc: [C; 2],
+    pub(crate) pk_from_sk_acc: [C; 2],
+    pub(crate) vrf_out_acc: [C; 2],
     pub(crate) phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<F, C> {
     fn to_vec(self) -> Vec<C> {
         vec![
-            self.signer_index,
+            // self.signer_index,
             self.signer_secret_key_bits,
-            self.sole_signer_inn_prod_acc,
-            self.cond_add_pubkey_acc[0].clone(),
-            self.cond_add_pubkey_acc[1].clone(),
-            self.cond_add_gen_multiples_acc[0].clone(),
-            self.cond_add_gen_multiples_acc[1].clone(),
-            self.cond_add_vrfout_acc[0].clone(),
-            self.cond_add_vrfout_acc[1].clone(),
+            // self.sole_signer_inn_prod_acc,
+            // self.cond_add_pubkey_acc[0].clone(),
+            // self.cond_add_pubkey_acc[1].clone(),
+            self.pk_from_sk_acc[0].clone(),
+            self.pk_from_sk_acc[1].clone(),
+            self.vrf_out_acc[0].clone(),
+            self.vrf_out_acc[1].clone(),
         ]
     }
 }
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingEvaluations<F: PrimeField> {
-    pub(crate) pubkey_points: [F; 2],
-    pub(crate) ring_selector: F,
-    pub(crate) signer_index: F,
-    pub(crate) signer_secret_key_bits: F,
-    pub(crate) sole_signer_inn_prod_acc: F,
-    pub(crate) cond_add_pubkey_acc: [F; 2],
-    pub(crate) cond_add_gen_multiples_acc: [F; 2],
-    pub(crate) cond_add_vrfout_acc: [F; 2],
+    pub(crate) pks: [F; 2],
+    // pub(crate) ring_selector: F,
+    // pub(crate) signer_index: F,
+    pub(crate) signer_sk: F,
+    pub(crate) powers_of_g: [F; 2],
+    pub(crate) powers_of_in: [F; 2],
+    // pub(crate) k_is_one_bit: F,
+    pub(crate) pk_from_sk_acc: [F; 2],
+    // pub(crate) pk_from_k_acc: [F; 2],
+    pub(crate) vrf_out_acc: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
     fn to_vec(self) -> Vec<F> {
         vec![
-            self.pubkey_points[0],
-            self.pubkey_points[1],
-            self.ring_selector,
-            self.signer_index,
-            self.signer_secret_key_bits,
-            self.sole_signer_inn_prod_acc,
-            self.cond_add_pubkey_acc[0],
-            self.cond_add_pubkey_acc[1],
-            self.cond_add_gen_multiples_acc[0],
-            self.cond_add_gen_multiples_acc[1],
-            self.cond_add_vrfout_acc[0],
-            self.cond_add_vrfout_acc[1],
+            self.pks[0],
+            self.pks[1],
+            // self.ring_selector,
+            // self.signer_index,
+            self.signer_sk,
+            // self.k_is_one_bit,
+            self.pk_from_sk_acc[0],
+            self.pk_from_sk_acc[1],
+            // self.pk_from_k_acc[0],
+            // self.pk_from_k_acc[1],
+            self.vrf_out_acc[0],
+            self.vrf_out_acc[1],
         ]
     }
 }
