@@ -27,6 +27,7 @@ pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
     // doublings_of_g are prepented by the plonk verifier
     pub(crate) sk_bits: C,
     pub(crate) pk_from_sk: [C; 2],
+    pub(crate) doublings_of_vrf_in: [C; 2],
     // pub(crate) signer_index: C,
     // pub(crate) ring_selector: C,
     // pub(crate) sole_signer_inn_prod_acc: C,
@@ -57,6 +58,7 @@ pub struct RingEvaluations<F: PrimeField> {
     pub(crate) doublings_of_g: [F; 2],
     pub(crate) sk_bits: F,
     pub(crate) pk_from_sk: [F; 2],
+    pub(crate) doublings_of_vrf_in: [F; 2],
     // pub(crate) pks: [F; 2],
     // pub(crate) ring_selector: F,
     // pub(crate) signer_index: F,
