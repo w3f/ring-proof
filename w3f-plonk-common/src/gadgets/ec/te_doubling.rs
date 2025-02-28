@@ -1,5 +1,5 @@
 use core::marker::PhantomData;
-
+use std::ops::Mul;
 use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field, PrimeField};
 use ark_poly::univariate::DensePolynomial;
@@ -13,7 +13,7 @@ use crate::{const_evals, Column, FieldColumn};
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 
 pub struct Doubling<F: FftField, P: AffineRepr<BaseField=F>> {
-    doublings: AffineColumn<F, P>,
+    pub doublings: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
 }
@@ -28,7 +28,7 @@ impl<F, P: AffineRepr<BaseField=F>> Doubling<F, P>
 where
     F: FftField,
 {
-    fn init(p: P, domain: &Domain<F>) -> Self {
+    pub fn init(p: P, domain: &Domain<F>) -> Self {
         let doublings = Self::doublings_of(p, domain);
         let doublings = AffineColumn::public_column(doublings, domain);
         let not_last = domain.not_last_row.clone();
@@ -104,23 +104,10 @@ where
 
     // TODO: rename, constraints_in_zeta_omega?
     fn constraints_linearized(&self, z: &F) -> Vec<DensePolynomial<F>> {
-        let vals = self.evaluate_assignment(z);
-        let (x1, y1) = vals.doublings;
         let x2 = self.doublings.xs.as_poly();
         let y2 = self.doublings.ys.as_poly();
-        // x2.(a.x1² + y1²) - 2.x1.y1 = 0
-        // y2.(2 - a.x1² - y1²) + a.x1² - y1² = 0
-        let c = Curve::COEFF_A * x1 * x1 + y1 * y1; // a.x1² + y1²
-        let mut c1_coeff = c;
-        let mut c2_coeff = F::from(2) - c;
-
-        c1_coeff *= vals.not_last;
-        c2_coeff *= vals.not_last;
-
-        let c1_lin = x2 * c1_coeff;
-        let c2_lin = y2 * c2_coeff;
-
-        vec![c1_lin, c2_lin]
+        let (x_coeff, y_coeff) =  self.evaluate_assignment(z).get_coeffs();
+        vec![x2 * x_coeff, y2 * y_coeff]
     }
 
     fn domain(&self) -> GeneralEvaluationDomain<F> {
@@ -142,6 +129,36 @@ where
     }
 }
 
+impl<F: FftField, Curve> DoublingValues<F, Affine<Curve>>
+where
+    Curve: TECurveConfig<BaseField=F>,
+{
+    pub fn get_coeffs(&self) -> (F, F) {
+        let (x1, y1) = self.doublings;
+        // x2.(a.x1² + y1²) - 2.x1.y1 = 0
+        // y2.(2 - a.x1² - y1²) + a.x1² - y1² = 0
+        let c = Curve::COEFF_A * x1 * x1 + y1 * y1; // a.x1² + y1²
+        let mut x2_coeff = c;
+        let mut y2_coeff = F::from(2) - c;
+        x2_coeff *= self.not_last;
+        y2_coeff *= self.not_last;
+        (x2_coeff, y2_coeff)
+    }
+}
+
+impl<F: PrimeField, Curve> DoublingValues<F, Affine<Curve>>
+where
+    Curve: TECurveConfig<BaseField=F>,
+{
+    pub fn zeta_omega_poly_commitment<C>(&self, cx: C, cy: C) -> Vec<C>
+    where
+        C: Mul<F, Output=C>,
+    {
+        let (x_coeff, y_coeff) = self.get_coeffs();
+        vec![cx * x_coeff, cy * y_coeff]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use ark_std::{test_rng, UniformRand};
@@ -154,7 +171,7 @@ mod tests {
     fn doubling_gadget() {
         let rng = &mut test_rng();
 
-        let log_n = 10;
+        let log_n = 4;
         let n = 2usize.pow(log_n);
         let domain = Domain::new(n, false);
         let p = EdwardsAffine::rand(rng);
@@ -167,8 +184,8 @@ mod tests {
         assert_eq!(c[1].degree(), 3 * n - 2);
 
         // A valid witness satisfies the constraints.
-        let q1 = domain.divide_by_vanishing_poly(&c[0]);
-        let q2 = domain.divide_by_vanishing_poly(&c[1]);
+        domain.divide_by_vanishing_poly(&c[0]);
+        domain.divide_by_vanishing_poly(&c[1]);
 
         let z = Fq::rand(rng);
         let z_w = z * domain.omega();
@@ -179,5 +196,10 @@ mod tests {
 
         assert_eq!(c[0].evaluate(&z), c_z[0] + c_zw[0].evaluate(&z_w));
         assert_eq!(c[1].evaluate(&z), c_z[1] + c_zw[1].evaluate(&z_w));
+
+        let x_col = gadget.doublings.xs.as_poly().clone();
+        let y_col = gadget.doublings.ys.as_poly().clone();
+        assert_eq!(gadget.constraints_linearized(&z), evals_at_z.zeta_omega_poly_commitment(x_col, y_col));
+
     }
 }
