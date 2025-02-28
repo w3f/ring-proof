@@ -17,6 +17,8 @@ pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     pub(crate) scalar_bitlen: usize,
     /// Length of the part of the column representing the public keys (including the padding).
     pub keyset_part_size: usize,
+    /// The generator used to compute public keys, `pk=sk.G`.
+    pub(crate) g: Affine<Curve>,
     /// Blinding base point.
     pub(crate) h: Affine<Curve>,
     /// Summation base point.
@@ -47,6 +49,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
             domain,
             scalar_bitlen,
             keyset_part_size,
+            g: Affine::<Curve>::generator(),
             h,
             seed,
             padding,
@@ -54,37 +57,32 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     }
 
     pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
-        let ring_selector = self.keyset_part_selector();
-        let ring_selector = self.domain.public_column(ring_selector);
-        let pubkey_points = self.pubkey_points_column(keys);
-        let power_of_2_multiples_of_gen = self.gen_multiples_column();
+        // let ring_selector = self.keyset_part_selector();
+        // let ring_selector = self.domain.public_column(ring_selector);
+        // let pubkey_points = self.pubkey_points_column(keys);
+        let doublings_of_g = self.doublings_of_g();
         FixedColumns {
-            pubkey_points,
-            power_of_2_multiples_of_gen,
-            ring_selector,
+            // pubkey_points,
+            doublings_of_g,
+            // ring_selector,
         }
     }
 
-    fn gen_multiples_column(&self) -> AffineColumn<F, Affine<Curve>> {
-        let prime_subgroup_gen = Affine::<Curve>::generator(); //TODO: should this be fed as an input param of the ring?
-        let power_of_2_multiples_of_gen =
-            Self::power_of_2_multiples_of(prime_subgroup_gen, self.scalar_bitlen);
-        //TODO: we might need different domain for different columns
-        AffineColumn::public_column(power_of_2_multiples_of_gen, &self.domain)
+    fn doublings_of_g(&self) -> AffineColumn<F, Affine<Curve>> {
+        let mut doublings_of_g = self.doublings_of(self.g);
+        doublings_of_g.resize(self.domain.capacity - 1, self.g); //TODO: eh, may be zeros
+        AffineColumn::public_column(doublings_of_g, &self.domain)
     }
 
-    pub fn power_of_2_multiples_of(
-        base_point: Affine<Curve>,
-        scalar_bitlen: usize,
-    ) -> Vec<Affine<Curve>> {
-        let mut h = base_point.into_group();
-        let mut multiples = Vec::with_capacity(scalar_bitlen);
-        multiples.push(h);
-        for _ in 1..scalar_bitlen {
-            h.double_in_place();
-            multiples.push(h);
+    pub fn doublings_of(&self, p: Affine<Curve>) -> Vec<Affine<Curve>> {
+        let mut p = p.into_group();
+        let mut doublings = Vec::with_capacity(self.domain.capacity);
+        doublings.push(p);
+        for _ in 1..self.scalar_bitlen {
+            p.double_in_place();
+            doublings.push(p);
         }
-        CurveGroup::normalize_batch(&multiples)
+        CurveGroup::normalize_batch(&doublings)
     }
 
     pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {

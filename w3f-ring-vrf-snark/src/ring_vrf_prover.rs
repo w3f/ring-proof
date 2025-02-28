@@ -1,7 +1,7 @@
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use w3f_pcs::pcs::PCS;
-
+use w3f_plonk_common::piop::ProverPiop;
 use w3f_plonk_common::prover::PlonkProver;
 use w3f_plonk_common::transcript::PlonkTranscript;
 
@@ -51,15 +51,16 @@ where
         }
     }
 
-    pub fn prove(&self, t: Curve::ScalarField, vrf_input: Affine<Curve>) -> RingProof<F, CS> {
-        let piop = PiopProver::build(
+    pub fn prove(&self, t: Curve::ScalarField, vrf_input: Affine<Curve>) -> (RingProof<F, CS>, Affine<Curve>) {
+        let piop: PiopProver<F, Curve> = PiopProver::build(
             &self.piop_params,
             self.fixed_columns.clone(),
             self.k,
             t,
             vrf_input,
         );
-        self.plonk_prover.prove(piop)
+        let res = <PiopProver<F, Curve> as ProverPiop<F, CS::C>>::result(&piop);
+        (self.plonk_prover.prove(piop), res)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Curve> {

@@ -24,61 +24,65 @@ mod verifier;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
+    // doublings_of_g are prepented by the plonk verifier
+    pub(crate) sk_bits: C,
+    pub(crate) pk_from_sk: [C; 2],
     // pub(crate) signer_index: C,
-    pub(crate) signer_secret_key_bits: C,
     // pub(crate) ring_selector: C,
     // pub(crate) sole_signer_inn_prod_acc: C,
     // pub(crate) cond_add_pubkey_acc: [C; 2],
-    pub(crate) pk_from_sk_acc: [C; 2],
-    pub(crate) vrf_out_acc: [C; 2],
+    // pub(crate) vrf_out_acc: [C; 2],
     pub(crate) phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<F, C> {
     fn to_vec(self) -> Vec<C> {
         vec![
+            // doublings_of_g are prepented by the plonk verifier
+            self.sk_bits,
+            self.pk_from_sk[0].clone(),
+            self.pk_from_sk[1].clone(),
             // self.signer_index,
-            self.signer_secret_key_bits,
             // self.sole_signer_inn_prod_acc,
             // self.cond_add_pubkey_acc[0].clone(),
             // self.cond_add_pubkey_acc[1].clone(),
-            self.pk_from_sk_acc[0].clone(),
-            self.pk_from_sk_acc[1].clone(),
-            self.vrf_out_acc[0].clone(),
-            self.vrf_out_acc[1].clone(),
+            // self.vrf_out_acc[0].clone(),
+            // self.vrf_out_acc[1].clone(),
         ]
     }
 }
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingEvaluations<F: PrimeField> {
-    pub(crate) pks: [F; 2],
+    pub(crate) doublings_of_g: [F; 2],
+    pub(crate) sk_bits: F,
+    pub(crate) pk_from_sk: [F; 2],
+    // pub(crate) pks: [F; 2],
     // pub(crate) ring_selector: F,
     // pub(crate) signer_index: F,
-    pub(crate) signer_sk: F,
-    pub(crate) powers_of_g: [F; 2],
-    pub(crate) powers_of_in: [F; 2],
+    // pub(crate) powers_of_in: [F; 2],
     // pub(crate) k_is_one_bit: F,
-    pub(crate) pk_from_sk_acc: [F; 2],
     // pub(crate) pk_from_k_acc: [F; 2],
-    pub(crate) vrf_out_acc: [F; 2],
+    // pub(crate) vrf_out_acc: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
     fn to_vec(self) -> Vec<F> {
         vec![
-            self.pks[0],
-            self.pks[1],
+            self.doublings_of_g[0],
+            self.doublings_of_g[1],
+            self.sk_bits,
+            self.pk_from_sk[0],
+            self.pk_from_sk[1],
+            // self.pks[0],
+            // self.pks[1],
             // self.ring_selector,
             // self.signer_index,
-            self.signer_sk,
             // self.k_is_one_bit,
-            self.pk_from_sk_acc[0],
-            self.pk_from_sk_acc[1],
             // self.pk_from_k_acc[0],
             // self.pk_from_k_acc[1],
-            self.vrf_out_acc[0],
-            self.vrf_out_acc[1],
+            // self.vrf_out_acc[0],
+            // self.vrf_out_acc[1],
         ]
     }
 }
@@ -91,29 +95,29 @@ pub struct FixedColumns<F: PrimeField, G: AffineRepr<BaseField = F>> {
     // followed by the powers-of-2 multiples of the second Pedersen base.
     // pk_1, ..., pk_n, H, 2H, 4H, ..., 2^sH
     // 1          n                     n+s+1
-    pubkey_points: AffineColumn<F, G>,
+    // pubkey_points: AffineColumn<F, G>,
     // The powers-of-2 multiples of the prime subgroup generator.
-    power_of_2_multiples_of_gen: AffineColumn<F, G>,
+    doublings_of_g: AffineColumn<F, G>,
     // Binary column that highlights which rows of the table correspond to the ring.
     // 1, 1, ..., 1, 0, 0, ..., 0
     // 1          n
-    ring_selector: FieldColumn<F>,
+    // ring_selector: FieldColumn<F>,
 }
 
 // Commitments to the fixed columns (see above).
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize, PartialEq, Eq, Debug)]
 pub struct FixedColumnsCommitted<F: PrimeField, C: Commitment<F>> {
-    pub points: [C; 2],
-    pub ring_selector: C,
+    pub doublings_of_g: [C; 2],
+    // pub ring_selector: C,
     pub phantom: PhantomData<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>> FixedColumnsCommitted<F, C> {
     fn as_vec(&self) -> Vec<C> {
         vec![
-            self.points[0].clone(),
-            self.points[1].clone(),
-            self.ring_selector.clone(),
+            self.doublings_of_g[0].clone(),
+            self.doublings_of_g[1].clone(),
+            // self.ring_selector.clone(),
         ]
     }
 }
@@ -125,8 +129,8 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
         let cx = KzgCommitment(ring.cx);
         let cy = KzgCommitment(ring.cy);
         Self {
-            points: [cx, cy],
-            ring_selector: KzgCommitment(ring.selector),
+            doublings_of_g: [cx, cy],
+            // ring_selector: KzgCommitment(ring.selector),
             phantom: Default::default(),
         }
     }
@@ -135,13 +139,13 @@ impl<E: Pairing> FixedColumnsCommitted<E::ScalarField, KzgCommitment<E>> {
 impl<F: PrimeField, G: AffineRepr<BaseField = F>> FixedColumns<F, G> {
     fn commit<CS: PCS<F>>(&self, ck: &CS::CK) -> FixedColumnsCommitted<F, CS::C> {
         let points = [
-            CS::commit(ck, self.pubkey_points.xs.as_poly()).unwrap(),
-            CS::commit(ck, self.pubkey_points.ys.as_poly()).unwrap(),
+            CS::commit(ck, self.doublings_of_g.xs.as_poly()).unwrap(),
+            CS::commit(ck, self.doublings_of_g.ys.as_poly()).unwrap(),
         ];
-        let ring_selector = CS::commit(ck, self.ring_selector.as_poly()).unwrap();
+        // let ring_selector = CS::commit(ck, self.ring_selector.as_poly()).unwrap();
         FixedColumnsCommitted {
-            points,
-            ring_selector,
+            doublings_of_g: points,
+            // ring_selector,
             phantom: Default::default(),
         }
     }

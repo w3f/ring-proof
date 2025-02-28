@@ -47,7 +47,7 @@ where
 
     pub fn verify(&self, proof: RingProof<F, CS>, vrf_in: Affine<Jubjub>, vrf_out: Affine<Jubjub>, pk: Affine<Jubjub>) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
-            &vrf_out,
+            &pk,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
@@ -72,8 +72,7 @@ where
             (pk.x, pk.y),
         );
 
-        self.plonk_verifier
-            .verify(piop, proof, challenges, &mut rng)
+        self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Jubjub> {

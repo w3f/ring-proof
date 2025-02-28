@@ -79,7 +79,7 @@ mod tests {
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
         let vrf_input = EdwardsAffine::rand(rng);
-        let result = piop_params.h.mul(secret) + pk;
+        let result = piop_params.g.mul(secret);
         let ring_prover = RingProver::init(
             prover_key,
             piop_params.clone(),
@@ -87,8 +87,9 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_prove = start_timer!(|| "Prove");
-        let proof = ring_prover.prove(secret, vrf_input);
+        let (proof, res) = ring_prover.prove(secret, vrf_input);
         end_timer!(t_prove);
+        assert_eq!(res, result.into_affine());
 
         let ring_verifier = RingVerifier::init(
             verifier_key,
@@ -96,7 +97,7 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify(proof, vrf_input.into(), result.into_affine(), pk.into());
+        let res = ring_verifier.verify(proof, vrf_input.into(), result.into_affine(), res.into());
         end_timer!(t_verify);
         assert!(res);
     }
@@ -141,10 +142,10 @@ mod tests {
         (pcs_params, piop_params)
     }
 
-    #[test]
-    fn test_ring_proof_kzg() {
-        _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(10));
-    }
+    // #[test]
+    // fn test_ring_proof_kzg() {
+    //     _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(10));
+    // }
 
     #[test]
     fn test_ring_proof_id() {

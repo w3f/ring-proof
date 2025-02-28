@@ -334,7 +334,7 @@ mod tests {
     ) -> (G1Affine, G1Affine) {
         let (_, verifier_key) =
             crate::piop::index::<_, KZG<Bls12_381>, _>(pcs_params, piop_params, keys);
-        let [monimial_cx, monimial_cy] = verifier_key.fixed_columns_committed.points;
+        let [monimial_cx, monimial_cy] = verifier_key.fixed_columns_committed.doublings_of_g;
         (monimial_cx.0, monimial_cy.0)
     }
 }

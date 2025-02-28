@@ -8,7 +8,6 @@ use w3f_pcs::pcs::Commitment;
 use w3f_plonk_common::domain::EvaluatedDomain;
 use w3f_plonk_common::gadgets::booleanity::{BooleanityValues};
 use w3f_plonk_common::gadgets::ec::CondAddValues;
-use w3f_plonk_common::gadgets::ec::te_doubling::{PowersOfTwoMultipleValues, PowersOfTwoMultipleValuesTE};
 use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
 use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
 use w3f_plonk_common::gadgets::VerifierGadget;
@@ -38,9 +37,9 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     pk_from_sk_x: FixedCellsValues<F>,
     pk_from_sk_y: FixedCellsValues<F>,
 
-    vrf_out: CondAddValues<F, P>,
-    vrf_out_x: FixedCellsValues<F>,
-    vrf_out_y: FixedCellsValues<F>,
+    // vrf_out: CondAddValues<F, P>,
+    // vrf_out_x: FixedCellsValues<F>,
+    // vrf_out_y: FixedCellsValues<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
@@ -90,34 +89,34 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 
         // C5: `sk` is boolean
         let booleanity_of_secret_key_bits = BooleanityValues {
-            bits: all_columns_evaluated.signer_sk,
+            bits: all_columns_evaluated.sk_bits,
         };
 
         // C6: `PK_sk := sk.G`
         let pk_from_sk = CondAddValues {
-            bitmask: all_columns_evaluated.signer_sk,
+            bitmask: all_columns_evaluated.sk_bits,
             points:             (
-                all_columns_evaluated.powers_of_g[0],
-                all_columns_evaluated.powers_of_g[1],
+                all_columns_evaluated.doublings_of_g[0],
+                all_columns_evaluated.doublings_of_g[1],
             ),
             not_last: domain_evals.not_last_row,
             acc:             (
-                all_columns_evaluated.pk_from_sk_acc[0],
-                all_columns_evaluated.pk_from_sk_acc[1],
+                all_columns_evaluated.pk_from_sk[0],
+                all_columns_evaluated.pk_from_sk[1],
             ),
             _phantom: Default::default(),
         };
 
         // C7 + C8: `PK_sk == PK`
         let pk_from_sk_val_x = FixedCellsValues {
-            col: all_columns_evaluated.pk_from_sk_acc[0],
+            col: all_columns_evaluated.pk_from_sk[0],
             col_first: seed.0,
             col_last: signer_pk.0,
             l_first: domain_evals.l_first,
             l_last: domain_evals.l_last,
         };
         let pk_from_sk_val_y = FixedCellsValues {
-            col: all_columns_evaluated.pk_from_sk_acc[1],
+            col: all_columns_evaluated.pk_from_sk[1],
             col_first: seed.1,
             col_last: signer_pk.1,
             l_first: domain_evals.l_first,
@@ -139,39 +138,39 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         //     l_last: domain_evals.l_last,
         // };
 
-        // C11: 2-adic powers of the `vrf_input` //TODO
-        let power_of_in = all_columns_evaluated.powers_of_in;
-        // let power_of_in_gadget = PowersOfTwoMultipleValuesTE::init(vrf_in, domain_evals.not_last_row, (power_of_in[0], power_of_in[1]));
-
-        // C12: `snark_out := <sk, powers_of_in>`
-        let snark_vrf_out = CondAddValues {
-            bitmask: all_columns_evaluated.signer_sk, // sk
-            points: (
-                power_of_in[0],
-                power_of_in[1],
-            ),
-            not_last: domain_evals.not_last_row,
-            acc: (
-                all_columns_evaluated.vrf_out_acc[0],
-                all_columns_evaluated.vrf_out_acc[1],
-            ),
-            _phantom: PhantomData,
-        };
+        // // C11: 2-adic powers of the `vrf_input` //TODO
+        // let power_of_in = all_columns_evaluated.powers_of_in;
+        // // let power_of_in_gadget = PowersOfTwoMultipleValuesTE::init(vrf_in, domain_evals.not_last_row, (power_of_in[0], power_of_in[1]));
+        //
+        // // C12: `snark_out := <sk, powers_of_in>`
+        // let snark_vrf_out = CondAddValues {
+        //     bitmask: all_columns_evaluated.signer_sk, // sk
+        //     points: (
+        //         power_of_in[0],
+        //         power_of_in[1],
+        //     ),
+        //     not_last: domain_evals.not_last_row,
+        //     acc: (
+        //         all_columns_evaluated.vrf_out_acc[0],
+        //         all_columns_evaluated.vrf_out_acc[1],
+        //     ),
+        //     _phantom: PhantomData,
+        // };
         // C13+14: `snark_out == vrf_out`
-        let snark_vrf_out_x = FixedCellsValues {
-            col: all_columns_evaluated.vrf_out_acc[0],
-            col_first: seed.0,
-            col_last: vrf_out.0,
-            l_first: domain_evals.l_first,
-            l_last: domain_evals.l_last,
-        };
-        let snark_vrf_out_y = FixedCellsValues {
-            col: all_columns_evaluated.vrf_out_acc[1],
-            col_first: seed.1,
-            col_last: vrf_out.1,
-            l_first: domain_evals.l_first,
-            l_last: domain_evals.l_last,
-        };
+        // let snark_vrf_out_x = FixedCellsValues {
+        //     col: all_columns_evaluated.vrf_out_acc[0],
+        //     col_first: seed.0,
+        //     col_last: vrf_out.0,
+        //     l_first: domain_evals.l_first,
+        //     l_last: domain_evals.l_last,
+        // };
+        // let snark_vrf_out_y = FixedCellsValues {
+        //     col: all_columns_evaluated.vrf_out_acc[1],
+        //     col_first: seed.1,
+        //     col_last: vrf_out.1,
+        //     l_first: domain_evals.l_first,
+        //     l_last: domain_evals.l_last,
+        // };
 
         Self {
             domain_evals,
@@ -191,9 +190,9 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             pk_from_sk_x: pk_from_sk_val_x,
             pk_from_sk_y: pk_from_sk_val_y,
 
-            vrf_out: snark_vrf_out,
-            vrf_out_x: snark_vrf_out_x,
-            vrf_out_y: snark_vrf_out_y,
+            // vrf_out: snark_vrf_out,
+            // vrf_out_x: snark_vrf_out_x,
+            // vrf_out_y: snark_vrf_out_y,
 
             // sole_signer_inner_prod_acc: inner_prod_acc,
             // powers_of_in: power_of_in_gadget,
@@ -204,8 +203,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 7;
-    const N_COLUMNS: usize = 7;
+    const N_CONSTRAINTS: usize = 3;
+    const N_COLUMNS: usize = 5;
 
     fn precommitted_columns(&self) -> Vec<C> {
         self.fixed_columns_committed.as_vec()
@@ -213,41 +212,36 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
 
     fn evaluate_constraints_main(&self) -> Vec<F> {
         [
+            self.pk_from_sk.evaluate_constraints_main(),
+            self.booleanity_of_secret_key_bits
+                .evaluate_constraints_main(),
             // self.sole_signer_inner_prod.evaluate_constraints_main(),
             // self.cond_add_pubkey.evaluate_constraints_main(),
             // self.booleanity_of_signer_index.evaluate_constraints_main(),
-            self.booleanity_of_secret_key_bits
-                .evaluate_constraints_main(),
+
             // self.cond_add_pubkey_acc_x.evaluate_constraints_main(),
             // self.cond_add_pubkey_acc_y.evaluate_constraints_main(),
-            self.pk_from_sk_x
-                .evaluate_constraints_main(),
-            self.pk_from_sk_y
-                .evaluate_constraints_main(),
-            self.vrf_out_x.evaluate_constraints_main(),
-            self.vrf_out_y.evaluate_constraints_main(),
+            // self.pk_from_sk_x
+            //     .evaluate_constraints_main(),
+            // self.pk_from_sk_y
+            //     .evaluate_constraints_main(),
+            // self.vrf_out_x.evaluate_constraints_main(),
+            // self.vrf_out_y.evaluate_constraints_main(),
             // self.sole_signer_inner_prod_acc.evaluate_constraints_main(),
-        ]
-        .concat()
+        ].concat()
     }
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
-        // let inner_prod_acc = self
-        //     .witness_columns_committed
-        //     .sole_signer_inn_prod_acc
-        //     .mul(self.sole_signer_inner_prod.not_last);
-        // let pubkey_acc_x = &self.witness_columns_committed.cond_add_pubkey_acc[0];
-        // let pubkey_acc_y = &self.witness_columns_committed.cond_add_pubkey_acc[1];
-        //
-        // let (c_acc_x, c_acc_y) = self.cond_add_pubkey.acc_coeffs_1();
-        // let c1_lin = pubkey_acc_x.mul(c_acc_x) + pubkey_acc_y.mul(c_acc_y);
-        //
-        // let (c_acc_x, c_acc_y) = self.cond_add_pubkey.acc_coeffs_2();
-        // let c2_lin = pubkey_acc_x.mul(c_acc_x) + pubkey_acc_y.mul(c_acc_y);
+        let acc_x = &self.witness_columns_committed.pk_from_sk[0];
+        let acc_y = &self.witness_columns_committed.pk_from_sk[1];
 
-        // vec![inner_prod_acc, c1_lin, c2_lin]
-        // vec![c1_lin, c2_lin]
-        vec![]
+        let (c_acc_x, c_acc_y) = self.pk_from_sk.acc_coeffs_1();
+        let c1_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
+
+        let (c_acc_x, c_acc_y) = self.pk_from_sk.acc_coeffs_2();
+        let c2_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
+
+        vec![c1_lin, c2_lin]
     }
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F> {
