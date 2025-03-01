@@ -169,12 +169,17 @@ where
             commit(self.out_from_in.acc.xs.as_poly()),
             commit(self.out_from_in.acc.ys.as_poly()),
         ];
+        let pk_from_index = [
+            commit(self.pk_from_index_x.acc.as_poly()),
+            commit(self.pk_from_index_y.acc.as_poly()),
+        ];
         RingCommitments {
             sk_bits,
             pk_index,
             pk_from_sk,
             doublings_of_in,
             out_from_in,
+            pk_from_index,
             phantom: Default::default(),
         }
     }
@@ -236,12 +241,15 @@ where
     fn constraints(&self) -> Vec<Evaluations<F>> {
         [
             self.sk_bits_bool.constraints(),
+            self.pk_index_bool.constraints(),
             self.pk_from_sk.constraints(),
             self.doublings_of_in_gadget.constraints(),
             self.out_from_in.constraints(),
+            self.pk_from_index_x.constraints(),
+            self.pk_from_index_y.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
-            self.pk_index_bool.constraints(),
+
         ]
         .concat()
     }
@@ -249,12 +257,14 @@ where
     fn constraints_lin(&self, zeta: &F) -> Vec<DensePolynomial<F>> {
         [
             self.sk_bits_bool.constraints_linearized(zeta),
+            self.pk_index_bool.constraints_linearized(zeta),
             self.pk_from_sk.constraints_linearized(zeta),
             self.doublings_of_in_gadget.constraints_linearized(zeta),
             self.out_from_in.constraints_linearized(zeta),
+            self.pk_from_index_x.constraints_linearized(zeta),
+            self.pk_from_index_y.constraints_linearized(zeta),
             self.out_from_in_x.constraints_linearized(zeta),
             self.out_from_in_y.constraints_linearized(zeta),
-            self.pk_index_bool.constraints_linearized(zeta),
         ]
         .concat()
     }

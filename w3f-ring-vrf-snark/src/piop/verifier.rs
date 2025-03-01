@@ -136,8 +136,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 10;
-    const N_COLUMNS: usize = 12;
+    const N_CONSTRAINTS: usize = 12;
+    const N_COLUMNS: usize = 14;
 
     fn precommitted_columns(&self) -> Vec<C> {
         self.fixed_columns_committed.as_vec()
@@ -146,12 +146,14 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
     fn evaluate_constraints_main(&self) -> Vec<F> {
         [
             self.sk_bits_bool.evaluate_constraints_main(),
+            self.pk_index_bool.evaluate_constraints_main(),
             self.pk_from_sk.evaluate_constraints_main(),
             self.doublings_of_in_gadget.evaluate_constraints_main(),
             self.out_from_in.evaluate_constraints_main(),
+            self.pk_from_index_x.evaluate_constraints_main(),
+            self.pk_from_index_y.evaluate_constraints_main(),
             self.out_from_in_x.evaluate_constraints_main(),
             self.out_from_in_y.evaluate_constraints_main(),
-            self.pk_index_bool.evaluate_constraints_main(),
         ]
         .concat()
     }
@@ -177,6 +179,11 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         let (out_x_coeff, out_y_coeff) = self.out_from_in.acc_coeffs_2();
         let out_from_in_c2_lin = out_x.mul(out_x_coeff) + out_y.mul(out_y_coeff);
 
+        let pk_from_index_x = &self.witness_columns_committed.pk_from_index[0];
+        let pk_from_index_y = &self.witness_columns_committed.pk_from_index[1];
+        let pk_from_index_x_lin = pk_from_index_x.mul(self.domain_evals.not_last_row);
+        let pk_from_index_y_lin = pk_from_index_y.mul(self.domain_evals.not_last_row);
+
         vec![
             pk_from_sk_c1_lin,
             pk_from_sk_c2_lin,
@@ -184,6 +191,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             doublings_of_in_lin[1].clone(),
             out_from_in_c1_lin,
             out_from_in_c2_lin,
+            pk_from_index_x_lin,
+            pk_from_index_y_lin,
         ]
     }
 
