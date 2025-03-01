@@ -124,10 +124,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
     }
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
-        let inner_prod_acc = (&self
-            .witness_columns_committed
-            .inn_prod_acc)
-            .mul(self.inner_prod.not_last);
+        let inner_prod_acc =
+            (&self.witness_columns_committed.inn_prod_acc).mul(self.inner_prod.not_last);
         let acc_x = &self.witness_columns_committed.cond_add_acc[0];
         let acc_y = &self.witness_columns_committed.cond_add_acc[1];
 
