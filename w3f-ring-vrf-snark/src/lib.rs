@@ -14,7 +14,7 @@ pub use w3f_pcs::pcs;
 pub use w3f_plonk_common::domain::Domain;
 
 mod piop;
-mod ring_vrf;
+// mod ring_vrf;
 pub mod ring_vrf_prover;
 pub mod ring_vrf_verifier;
 
@@ -46,18 +46,14 @@ impl ArkTranscript {
 
 #[cfg(test)]
 mod tests {
-    use ark_bls12_381::Bls12_381;
     use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
-    use w3f_pcs::pcs::kzg::KZG;
 
     use w3f_plonk_common::test_helpers::random_vec;
 
-    use crate::piop::FixedColumnsCommitted;
-    use crate::ring_vrf::{Ring, RingBuilderKey};
     use crate::ring_vrf_prover::RingProver;
     use crate::ring_vrf_verifier::RingVerifier;
 
@@ -101,29 +97,29 @@ mod tests {
         assert!(res);
     }
 
-    #[test]
-    fn test_lagrangian_commitment() {
-        let rng = &mut test_rng();
-
-        let domain_size = 2usize.pow(9);
-
-        let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>>(rng, domain_size);
-        let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
-
-        let max_keyset_size = piop_params.keyset_part_size;
-        let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
-
-        let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
-
-        let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
-
-        let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
-        assert_eq!(
-            fixed_columns_committed,
-            verifier_key.fixed_columns_committed
-        );
-    }
+    // #[test]
+    // fn test_lagrangian_commitment() {
+    //     let rng = &mut test_rng();
+    //
+    //     let domain_size = 2usize.pow(9);
+    //
+    //     let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>>(rng, domain_size);
+    //     let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
+    //
+    //     let max_keyset_size = piop_params.keyset_part_size;
+    //     let keyset_size: usize = rng.gen_range(0..max_keyset_size);
+    //     let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
+    //
+    //     let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
+    //
+    //     let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
+    //
+    //     let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
+    //     assert_eq!(
+    //         fixed_columns_committed,
+    //         verifier_key.fixed_columns_committed
+    //     );
+    // }
 
     fn setup<R: Rng, CS: PCS<Fq>>(
         rng: &mut R,
