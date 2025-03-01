@@ -1,6 +1,7 @@
 use ark_ff::{FftField, Field, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
+use ark_std::rc::Rc;
 use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
@@ -10,7 +11,7 @@ use crate::{const_evals, Column, FieldColumn};
 #[derive(Clone)]
 pub struct BitColumn<F: FftField> {
     pub bits: Vec<bool>,
-    pub col: FieldColumn<F>,
+    pub col: Rc<FieldColumn<F>>,
 }
 
 impl<F: FftField> BitColumn<F> {
@@ -20,6 +21,7 @@ impl<F: FftField> BitColumn<F> {
             .map(|&b| if b { F::one() } else { F::zero() })
             .collect();
         let col = domain.private_column(bits_as_field_elements);
+        let col = Rc::new(col);
         Self { bits, col }
     }
 }
@@ -39,11 +41,11 @@ impl<F: FftField> Column<F> for BitColumn<F> {
 }
 
 pub struct Booleanity<F: FftField> {
-    bits: BitColumn<F>,
+    bits: Rc<BitColumn<F>>,
 }
 
 impl<'a, F: FftField> Booleanity<F> {
-    pub fn init(bits: BitColumn<F>) -> Self {
+    pub fn init(bits: Rc<BitColumn<F>>) -> Self {
         Self { bits }
     }
 
