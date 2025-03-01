@@ -151,7 +151,6 @@ impl<F: FftField, C: TECurveConfig<BaseField = F>> VerifierGadget<F>
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
     use crate::gadgets::ec::AffineColumn;
     use crate::gadgets::ec::BitColumn;
     use crate::gadgets::ec::Domain;
@@ -159,6 +158,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
+    use std::rc::Rc;
 
     use crate::test_helpers::cond_sum;
     use crate::test_helpers::*;

@@ -150,7 +150,6 @@ impl<F: Field, C: SWCurveConfig<BaseField = F>> VerifierGadget<F> for CondAddVal
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
     use crate::domain::Domain;
     use crate::gadgets::booleanity::BitColumn;
     use crate::gadgets::ec::AffineColumn;
@@ -160,6 +159,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::SWAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
+    use std::rc::Rc;
 
     use super::*;
 
