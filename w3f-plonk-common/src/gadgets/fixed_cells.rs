@@ -2,7 +2,7 @@ use ark_ff::{FftField, Field, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::{vec, vec::Vec};
-use std::rc::Rc;
+use ark_std::rc::Rc;
 
 use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;

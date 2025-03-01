@@ -3,7 +3,7 @@ use crate::gadgets::booleanity::BitColumn;
 use crate::{Column, FieldColumn};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
-use std::rc::Rc;
+use ark_std::rc::Rc;
 // use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;

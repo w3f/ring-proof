@@ -159,7 +159,7 @@ mod tests {
     use ark_ed_on_bls12_381_bandersnatch::SWAffine;
     use ark_poly::Polynomial;
     use ark_std::test_rng;
-    use std::rc::Rc;
+    use ark_std::rc::Rc;
 
     use super::*;
 
