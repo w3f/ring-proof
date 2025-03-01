@@ -151,6 +151,7 @@ impl<F: FftField, C: TECurveConfig<BaseField = F>> VerifierGadget<F>
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
     use crate::gadgets::ec::AffineColumn;
     use crate::gadgets::ec::BitColumn;
     use crate::gadgets::ec::Domain;
@@ -176,8 +177,8 @@ mod tests {
         let points = random_vec::<EdwardsAffine, _>(domain.capacity - 1, rng);
         let expected_res = seed + cond_sum(&bitmask, &points);
 
-        let bitmask_col = BitColumn::init(bitmask, &domain);
-        let points_col = AffineColumn::private_column(points, &domain);
+        let bitmask_col = Rc::new(BitColumn::init(bitmask, &domain));
+        let points_col = Rc::new(AffineColumn::private_column(points, &domain));
         let gadget = CondAdd::init(bitmask_col, points_col, seed, &domain);
         let res = gadget.acc.points.last().unwrap();
         assert_eq!(res, &expected_res);

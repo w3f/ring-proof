@@ -1,3 +1,4 @@
+use std::rc::Rc;
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::univariate::DensePolynomial;
@@ -23,11 +24,11 @@ use w3f_plonk_common::{Column, FieldColumn};
 // and the constraints -- polynomials that vanish on every 2 consecutive rows.
 pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     domain: Domain<F>,
-    // Fixed (public input) columns:
-    points: AffineColumn<F, Affine<Curve>>,
-    ring_selector: FieldColumn<F>,
+    /// Advice (public input) columns
+    points: Rc<AffineColumn<F, Affine<Curve>>>,
+    ring_selector: Rc<FieldColumn<F>>,
     // Private input column.
-    bits: BitColumn<F>,
+    bits: Rc<BitColumn<F>>,
     // Gadgets:
     booleanity: Booleanity<F>,
     inner_prod: InnerProd<F>,
@@ -49,7 +50,11 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             points,
             ring_selector,
         } = fixed_columns;
+        let points = Rc::new(points);
+        let ring_selector = Rc::new(ring_selector);
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
+        let bits = Rc::new(bits);
+
         let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
         let cond_add = CondAdd::init(bits.clone(), points.clone(), params.seed, &domain);
         let booleanity = Booleanity::init(bits.clone());
