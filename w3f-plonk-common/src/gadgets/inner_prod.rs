@@ -1,6 +1,7 @@
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
+use ark_std::rc::Rc;
 use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
@@ -8,10 +9,10 @@ use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::{Column, FieldColumn};
 
 pub struct InnerProd<F: FftField> {
-    a: FieldColumn<F>,
-    b: FieldColumn<F>,
+    a: Rc<FieldColumn<F>>,
+    b: Rc<FieldColumn<F>>,
     not_last: FieldColumn<F>,
-    pub acc: FieldColumn<F>,
+    pub acc: Rc<FieldColumn<F>>,
 }
 
 pub struct InnerProdValues<F: Field> {
@@ -22,13 +23,14 @@ pub struct InnerProdValues<F: Field> {
 }
 
 impl<F: FftField> InnerProd<F> {
-    pub fn init(a: FieldColumn<F>, b: FieldColumn<F>, domain: &Domain<F>) -> Self {
+    pub fn init(a: Rc<FieldColumn<F>>, b: Rc<FieldColumn<F>>, domain: &Domain<F>) -> Self {
         assert_eq!(a.len, domain.capacity - 1); // last element is not constrained
         assert_eq!(b.len, domain.capacity - 1); // last element is not constrained
         let inner_prods = Self::partial_inner_prods(a.vals(), b.vals());
         let mut acc = vec![F::zero()];
         acc.extend(inner_prods);
         let acc = domain.private_column(acc);
+        let acc = Rc::new(acc);
         Self {
             a,
             b,
@@ -109,8 +111,8 @@ mod tests {
         let a = random_vec(domain.capacity - 1, rng);
         let b = random_vec(domain.capacity - 1, rng);
         let ab = inner_prod(&a, &b);
-        let a = domain.private_column(a);
-        let b = domain.private_column(b);
+        let a = Rc::new(domain.private_column(a));
+        let b = Rc::new(domain.private_column(b));
 
         let gadget = InnerProd::<Fq>::init(a, b, &domain);
 
