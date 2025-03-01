@@ -54,7 +54,7 @@ pub struct CondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
     // Accumulates the (conditional) rolling sum of the points
-    pub acc: AffineColumn<F, P>,
+    pub acc: Rc<AffineColumn<F, P>>,
     pub result: P,
 }
 
@@ -90,6 +90,7 @@ where
         let result = init_plus_result.into_group() - seed.into_group();
         let result = result.into_affine();
         let acc = AffineColumn::private_column(acc, domain);
+        let acc = Rc::new(acc);
 
         Self {
             bitmask,
