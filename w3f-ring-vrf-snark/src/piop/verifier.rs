@@ -111,7 +111,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
     const N_CONSTRAINTS: usize = 9;
-    const N_COLUMNS: usize = 9;
+    const N_COLUMNS: usize = 12;
 
     fn precommitted_columns(&self) -> Vec<C> {
         self.fixed_columns_committed.as_vec()

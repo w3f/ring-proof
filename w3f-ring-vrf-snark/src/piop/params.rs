@@ -4,13 +4,14 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::{vec, vec::Vec};
 
 use w3f_plonk_common::domain::Domain;
+use w3f_plonk_common::gadgets::booleanity::BitColumn;
 use w3f_plonk_common::gadgets::ec::AffineColumn;
 
 use crate::piop::FixedColumns;
 
 /// Plonk Interactive Oracle Proofs (PIOP) parameters.
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
+pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField=F>> {
     /// Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
     /// Number of bits used to represent a jubjub scalar.
@@ -27,7 +28,7 @@ pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     pub(crate) padding: Affine<Curve>,
 }
 
-impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
+impl<F: PrimeField, Curve: TECurveConfig<BaseField=F>> PiopParams<F, Curve> {
     /// Initialize PIOP parameters.
     ///
     /// - `domain`: polynomials evaluation domain.
@@ -56,17 +57,35 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
         }
     }
 
-    pub fn fixed_columns(&self, _keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
-        let doublings_of_g = self.doublings_of_g();
+    pub fn fixed_columns(&self, pks: Vec<Affine<Curve>>) -> FixedColumns<F, Affine<Curve>> {
+        let doublings_of_g = self.doublings_of_g_col();
+        let mut pks = pks;
+        assert!(pks.len() <= self.domain.capacity - 1);
+        pks.resize(self.domain.capacity - 1, self.padding);
+        let pks = AffineColumn::public_column(pks, &self.domain); // TODO: here we assume pk.len() > 256
         FixedColumns {
+            pks,
             doublings_of_g,
         }
     }
 
-    fn doublings_of_g(&self) -> AffineColumn<F, Affine<Curve>> {
+    fn doublings_of_g_col(&self) -> AffineColumn<F, Affine<Curve>> {
         let mut doublings_of_g = self.doublings_of(self.g);
         doublings_of_g.resize(self.domain.capacity - 1, self.g); //TODO: eh, may be zeros
         AffineColumn::public_column(doublings_of_g, &self.domain)
+    }
+
+    pub fn pk_index_col(&self, index: usize) -> BitColumn<F> {
+        assert!(index <= self.domain.capacity - 1);
+        let mut col = vec![false; self.domain.capacity - 1];
+        col[index] = true;
+        BitColumn::init(col, &self.domain)
+    }
+
+    pub fn sk_bits(&self, sk: Curve::ScalarField) -> Vec<bool> {
+        let bits_with_trailing_zeroes = sk.into_bigint().to_bits_le();
+        let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
+        significant_bits.to_vec()
     }
 
     pub fn doublings_of(&self, p: Affine<Curve>) -> Vec<Affine<Curve>> {
@@ -79,74 +98,31 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
         }
         CurveGroup::normalize_batch(&doublings)
     }
-
-    pub fn points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
-        assert!(keys.len() <= self.keyset_part_size);
-        let padding_len = self.keyset_part_size - keys.len();
-        let padding = vec![self.padding; padding_len];
-        let points = [keys, &padding, &self.power_of_2_multiples_of_h()].concat();
-        assert_eq!(points.len(), self.domain.capacity - 1);
-        AffineColumn::public_column(points, &self.domain)
-    }
-
-    pub fn pubkey_points_column(&self, keys: &[Affine<Curve>]) -> AffineColumn<F, Affine<Curve>> {
-        assert!(keys.len() <= self.keyset_part_size);
-        let padding_len = self.keyset_part_size - keys.len();
-        let padding = vec![self.padding; padding_len];
-        let points = [keys, &padding].concat();
-        assert!(points.len() < self.domain.capacity); //check if it fits the domain.
-        AffineColumn::public_column(points, &self.domain)
-    }
-
-    pub fn power_of_2_multiples_of_h(&self) -> Vec<Affine<Curve>> {
-        let mut h = self.h.into_group();
-        let mut multiples = Vec::with_capacity(self.scalar_bitlen);
-        multiples.push(h);
-        for _ in 1..self.scalar_bitlen {
-            h.double_in_place();
-            multiples.push(h);
-        }
-        CurveGroup::normalize_batch(&multiples)
-    }
-
-    pub fn scalar_part(&self, e: Curve::ScalarField) -> Vec<bool> {
-        let bits_with_trailing_zeroes = e.into_bigint().to_bits_le();
-        let significant_bits = &bits_with_trailing_zeroes[..self.scalar_bitlen];
-        significant_bits.to_vec()
-    }
-
-    pub fn keyset_part_selector(&self) -> Vec<F> {
-        [
-            vec![F::one(); self.keyset_part_size],
-            vec![F::zero(); self.scalar_bitlen],
-        ]
-        .concat()
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
-    use ark_std::ops::Mul;
-    use ark_std::{test_rng, UniformRand};
-
-    use w3f_plonk_common::domain::Domain;
-    use w3f_plonk_common::test_helpers::cond_sum;
-
-    use crate::piop::params::PiopParams;
-
-    #[test]
-    fn test_powers_of_h() {
-        let rng = &mut test_rng();
-        let h = EdwardsAffine::rand(rng);
-        let seed = EdwardsAffine::rand(rng);
-        let padding = EdwardsAffine::rand(rng);
-        let domain = Domain::new(1024, false);
-
-        let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed, padding);
-        let t = Fr::rand(rng);
-        let t_bits = params.scalar_part(t);
-        let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
-        assert_eq!(th, params.h.mul(t));
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
+//     use ark_std::ops::Mul;
+//     use ark_std::{test_rng, UniformRand};
+//
+//     use w3f_plonk_common::domain::Domain;
+//     use w3f_plonk_common::test_helpers::cond_sum;
+//
+//     use crate::piop::params::PiopParams;
+//
+//     #[test]
+//     fn test_powers_of_h() {
+//         let rng = &mut test_rng();
+//         let h = EdwardsAffine::rand(rng);
+//         let seed = EdwardsAffine::rand(rng);
+//         let padding = EdwardsAffine::rand(rng);
+//         let domain = Domain::new(1024, false);
+//
+//         let params = PiopParams::<Fq, BandersnatchConfig>::setup(domain, h, seed, padding);
+//         let t = Fr::rand(rng);
+//         let t_bits = params.scalar_part(t);
+//         let th = cond_sum(&t_bits, &params.power_of_2_multiples_of_h());
+//         assert_eq!(th, params.h.mul(t));
+//     }
+// }
