@@ -50,15 +50,15 @@ where
         proof: RingProof<F, CS>,
         vrf_in: Affine<Jubjub>,
         vrf_out: Affine<Jubjub>,
-        pk: Affine<Jubjub>,
     ) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
-            &pk,
+            &vrf_out,
             &proof,
             // '1' accounts for the quotient polynomial that is aggregated together with the columns
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
+        println!("{:?}", challenges);
         let seed = self.piop_params.seed;
         let seed_plus_out = (seed + vrf_out).into_affine();
         let domain_eval = EvaluatedDomain::new(

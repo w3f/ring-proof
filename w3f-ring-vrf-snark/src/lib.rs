@@ -78,7 +78,7 @@ mod tests {
         // PROOF generation
         let secret = Fr::rand(rng); // prover's secret scalar
         let vrf_input = EdwardsAffine::rand(rng);
-        let result = piop_params.g.mul(secret);
+        let vrf_output = vrf_input.mul(secret).into_affine();
         let ring_prover = RingProver::init(
             prover_key,
             piop_params.clone(),
@@ -88,7 +88,7 @@ mod tests {
         let t_prove = start_timer!(|| "Prove");
         let (proof, res) = ring_prover.prove(secret, vrf_input);
         end_timer!(t_prove);
-        assert_eq!(res, result.into_affine());
+        assert_eq!(res, vrf_output);
 
         let ring_verifier = RingVerifier::init(
             verifier_key,
@@ -96,7 +96,7 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify(proof, vrf_input.into(), result.into_affine(), res.into());
+        let res = ring_verifier.verify(proof, vrf_input, vrf_output);
         end_timer!(t_verify);
         assert!(res);
     }
