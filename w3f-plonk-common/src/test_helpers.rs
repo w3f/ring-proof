@@ -1,4 +1,4 @@
-use ark_ec::{AffineRepr, CurveGroup};
+use ark_ec::{AdditiveGroup, AffineRepr, CurveGroup};
 use ark_std::rand::Rng;
 use ark_std::vec::Vec;
 use ark_std::UniformRand;
@@ -22,4 +22,15 @@ where
         .map(|(&b, &p)| if b { p } else { P::zero() })
         .sum::<P::Group>()
         .into_affine()
+}
+
+pub fn power_of_two_multiple<P>(point: P, power: usize) -> P
+where
+    P: AffineRepr,
+{
+    let mut point_multiple = point.into_group();
+    for _ in 1..power {
+        point_multiple.double_in_place();
+    }
+    point_multiple.into()
 }
