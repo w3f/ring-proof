@@ -51,7 +51,11 @@ where
         }
     }
 
-    pub fn prove(&self, t: Curve::ScalarField, vrf_input: Affine<Curve>) -> (RingProof<F, CS>, Affine<Curve>) {
+    pub fn prove(
+        &self,
+        t: Curve::ScalarField,
+        vrf_input: Affine<Curve>,
+    ) -> (RingProof<F, CS>, Affine<Curve>) {
         let piop: PiopProver<F, Curve> = PiopProver::build(
             &self.piop_params,
             self.fixed_columns.clone(),

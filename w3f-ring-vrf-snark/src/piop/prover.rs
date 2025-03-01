@@ -18,8 +18,8 @@ use w3f_plonk_common::gadgets::inner_prod::InnerProd;
 use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
-use w3f_plonk_common::Column;
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
+use w3f_plonk_common::Column;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -71,19 +71,15 @@ pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     pk_from_sk_x: FixedCells<F>,
     pk_from_sk_y: FixedCells<F>,
 
-    doublings_of_vrf_in: Doubling<F, Affine<Curve>>
-
-
-    // sole_signer_inner_prod: InnerProd<F>, //This is a binary cond add making sure \sum signer_index[i] = 1
-    // sole_signer_inner_prod_acc: FixedCells<F>,
-    // pk_from_k: CondAdd<F, Affine<Curve>>,
-    // pk_from_k_x: FixedCells<F>,
-    // pk_from_k_y: FixedCells<F>,
-    // vrf_out: CondAdd<F, Affine<Curve>>,
-    // vrf_out_x: FixedCells<F>,
-    // vrf_out_y: FixedCells<F>,
+    doublings_of_vrf_in: Doubling<F, Affine<Curve>>, // sole_signer_inner_prod: InnerProd<F>, //This is a binary cond add making sure \sum signer_index[i] = 1
+                                                     // sole_signer_inner_prod_acc: FixedCells<F>,
+                                                     // pk_from_k: CondAdd<F, Affine<Curve>>,
+                                                     // pk_from_k_x: FixedCells<F>,
+                                                     // pk_from_k_y: FixedCells<F>,
+                                                     // vrf_out: CondAdd<F, Affine<Curve>>,
+                                                     // vrf_out_x: FixedCells<F>,
+                                                     // vrf_out_y: FixedCells<F>,
 }
-
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
     pub fn build(
@@ -175,7 +171,6 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             // pk_from_k,
 
             // powers_of_in,
-
             pk_from_sk_x,
             pk_from_sk_y,
             pk_from_sk,
@@ -241,8 +236,6 @@ where
 
         // let sole_signer_inn_prod_acc = commit(self.sole_signer_inner_prod.acc.as_poly());
 
-
-
         // let vrf_out_acc = [
         //     commit(self.vrf_out.acc.xs.as_poly()),
         //     commit(self.vrf_out.acc.ys.as_poly()),
@@ -258,7 +251,6 @@ where
             // vrf_out_acc,
             doublings_of_vrf_in,
             phantom: PhantomData,
-
         }
     }
 
@@ -304,7 +296,6 @@ where
         // let ring_selector = self.ring_selector.evaluate(zeta);
         // let signer_index = self.signer_index.evaluate(zeta);
 
-
         // let sole_signer_inn_prod_acc = self.sole_signer_inner_prod.acc.evaluate(zeta);
 
         // let cond_add_pubkey_acc = [
@@ -312,14 +303,10 @@ where
         //     self.pk_from_k.acc.ys.evaluate(zeta),
         // ];
 
-
-
         // let cond_add_vrfout_acc = [
         //     self.vrf_out.acc.xs.evaluate(zeta),
         //     self.vrf_out.acc.ys.evaluate(zeta),
         // ];
-
-
 
         // let powers_of_in = [
         //     self.powers_of_in.multiples.xs.evaluate(zeta),

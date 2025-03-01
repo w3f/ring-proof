@@ -7,9 +7,9 @@ use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::Commitment;
 
 use w3f_plonk_common::domain::EvaluatedDomain;
-use w3f_plonk_common::gadgets::booleanity::{BooleanityValues};
-use w3f_plonk_common::gadgets::ec::CondAddValues;
+use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
 use w3f_plonk_common::gadgets::ec::te_doubling::DoublingValues;
+use w3f_plonk_common::gadgets::ec::CondAddValues;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
 use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
 use w3f_plonk_common::gadgets::VerifierGadget;
@@ -29,8 +29,6 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     pk_from_sk_x: FixedCellsValues<F>,
     pk_from_sk_y: FixedCellsValues<F>,
     doublings_of_vrf_in: DoublingValues<F, P>,
-
-
     // powers_of_in: PowersOfTwoMultipleValuesTE<F, P>, //TODO
 
     // sole_signer_inner_prod: InnerProdValues<F>,
@@ -39,7 +37,6 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     // cond_add_pubkey: CondAddValues<F, P>,
     // cond_add_pubkey_acc_x: FixedCellsValues<F>,
     // cond_add_pubkey_acc_y: FixedCellsValues<F>,
-
 
     // vrf_out: CondAddValues<F, P>,
     // vrf_out_x: FixedCellsValues<F>,
@@ -99,12 +96,12 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         // C6: `PK_sk := sk.G`
         let pk_from_sk = CondAddValues {
             bitmask: all_columns_evaluated.sk_bits,
-            points:             (
+            points: (
                 all_columns_evaluated.doublings_of_g[0],
                 all_columns_evaluated.doublings_of_g[1],
             ),
             not_last: domain_evals.not_last_row,
-            acc:             (
+            acc: (
                 all_columns_evaluated.pk_from_sk[0],
                 all_columns_evaluated.pk_from_sk[1],
             ),
@@ -130,7 +127,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         let doublings_of_vrf_in = DoublingValues {
             doublings: (
                 all_columns_evaluated.doublings_of_vrf_in[0],
-                all_columns_evaluated.doublings_of_vrf_in[1]
+                all_columns_evaluated.doublings_of_vrf_in[1],
             ),
             not_last: domain_evals.not_last_row,
             _phantom: Default::default(),
@@ -198,7 +195,6 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 
             // cond_add_pubkey_acc_x: pk_from_k_val_x
             // cond_add_pubkey_acc_y: pk_from_k_val_y
-
             pk_from_sk: pk_from_sk,
             pk_from_sk_x: pk_from_sk_val_x,
             pk_from_sk_y: pk_from_sk_val_y,
@@ -243,7 +239,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             // self.vrf_out_x.evaluate_constraints_main(),
             // self.vrf_out_y.evaluate_constraints_main(),
             // self.sole_signer_inner_prod_acc.evaluate_constraints_main(),
-        ].concat()
+        ]
+        .concat()
     }
 
     fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
@@ -258,7 +255,9 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
 
         let doublings_of_in_x = self.witness_columns_committed.doublings_of_vrf_in[0].clone();
         let doublings_of_in_y = self.witness_columns_committed.doublings_of_vrf_in[1].clone();
-        let c3c4 = self.doublings_of_vrf_in.zeta_omega_poly_commitment(doublings_of_in_x, doublings_of_in_y);
+        let c3c4 = self
+            .doublings_of_vrf_in
+            .zeta_omega_poly_commitment(doublings_of_in_x, doublings_of_in_y);
 
         vec![c1_lin, c2_lin, c3c4[0].clone(), c3c4[1].clone()]
     }
