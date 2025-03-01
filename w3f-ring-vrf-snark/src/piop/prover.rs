@@ -107,10 +107,6 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             &domain,
         );
 
-        let pk_index_bool = Booleanity::init(pk_index.clone());
-        let pk_from_index_x = InnerProd::init(pks.xs.clone(), pk_index.col.clone(), &domain);
-        let pk_from_index_y = InnerProd::init(pks.ys.clone(), pk_index.col.clone(), &domain);
-
         let doublings_of_in_gadget = Doubling::init(vrf_in, &domain);
         let doublings_of_in = doublings_of_in_gadget.doublings.clone();
         let out_from_in = CondAdd::init(
@@ -121,6 +117,10 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         );
         let out_from_in_x = FixedCells::init(out_from_in.acc.xs.clone(), &domain);
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
+
+        let pk_index_bool = Booleanity::init(pk_index.clone());
+        let pk_from_index_x = InnerProd::init(pks.xs.clone(), pk_index.col.clone(), &domain);
+        let pk_from_index_y = InnerProd::init(pks.ys.clone(), pk_index.col.clone(), &domain);
 
         Self {
             domain,
@@ -217,6 +217,10 @@ where
             self.out_from_in.acc.xs.evaluate(zeta),
             self.out_from_in.acc.ys.evaluate(zeta),
         ];
+        let pk_from_index = [
+            self.pk_from_index_x.acc.evaluate(zeta),
+            self.pk_from_index_y.acc.evaluate(zeta),
+        ];
         RingEvaluations {
             pks,
             doublings_of_g,
@@ -225,6 +229,7 @@ where
             pk_from_sk,
             doublings_of_in,
             out_from_in,
+            pk_from_index,
         }
     }
 
@@ -236,6 +241,7 @@ where
             self.out_from_in.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
+            self.pk_index_bool.constraints(),
         ]
         .concat()
     }
@@ -248,6 +254,7 @@ where
             self.out_from_in.constraints_linearized(zeta),
             self.out_from_in_x.constraints_linearized(zeta),
             self.out_from_in_y.constraints_linearized(zeta),
+            self.pk_index_bool.constraints_linearized(zeta),
         ]
         .concat()
     }

@@ -9,6 +9,7 @@ use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
 use w3f_plonk_common::gadgets::ec::te_doubling::DoublingValues;
 use w3f_plonk_common::gadgets::ec::CondAddValues;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
+use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
 use w3f_plonk_common::gadgets::VerifierGadget;
 use w3f_plonk_common::piop::VerifierPiop;
 
@@ -27,6 +28,11 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     out_from_in: CondAddValues<F, P>,
     out_from_in_x: FixedCellsValues<F>,
     out_from_in_y: FixedCellsValues<F>,
+    pk_index_bool: BooleanityValues<F>,
+    // pk_index_unique: InnerProd<F>, //TODO:
+    pk_from_index_x: InnerProdValues<F>,
+    pk_from_index_y: InnerProdValues<F>,
+    // pks_equal // TODO
 }
 
 impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
@@ -93,6 +99,23 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             l_last: domain_evals.l_last,
         };
 
+        let pk_index_bool = BooleanityValues {
+            bits: all_columns_evaluated.pk_index,
+        };
+        // pk_index_unique: InnerProd<F>, //TODO:
+        let pk_from_index_x = InnerProdValues {
+            a: all_columns_evaluated.pks[0],
+            b: all_columns_evaluated.pk_index,
+            not_last: domain_evals.not_last_row,
+            acc: all_columns_evaluated.pk_from_index[0],
+        };
+        let pk_from_index_y = InnerProdValues {
+            a: all_columns_evaluated.pks[1],
+            b: all_columns_evaluated.pk_index,
+            not_last: domain_evals.not_last_row,
+            acc: all_columns_evaluated.pk_from_index[1],
+        };
+
         Self {
             domain_evals,
             fixed_columns_committed,
@@ -103,6 +126,9 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             out_from_in,
             out_from_in_x,
             out_from_in_y,
+            pk_index_bool,
+            pk_from_index_x,
+            pk_from_index_y,
         }
     }
 }
@@ -110,7 +136,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 9;
+    const N_CONSTRAINTS: usize = 10;
     const N_COLUMNS: usize = 12;
 
     fn precommitted_columns(&self) -> Vec<C> {
@@ -125,6 +151,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.out_from_in.evaluate_constraints_main(),
             self.out_from_in_x.evaluate_constraints_main(),
             self.out_from_in_y.evaluate_constraints_main(),
+            self.pk_index_bool.evaluate_constraints_main(),
         ]
         .concat()
     }

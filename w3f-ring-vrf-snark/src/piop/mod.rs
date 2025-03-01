@@ -56,6 +56,7 @@ pub struct RingEvaluations<F: PrimeField> {
     pub(crate) pk_from_sk: [F; 2],
     pub(crate) doublings_of_in: [F; 2],
     pub(crate) out_from_in: [F; 2],
+    pub(crate) pk_from_index: [F; 2],
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
