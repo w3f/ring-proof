@@ -110,7 +110,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 5;
+    const N_CONSTRAINTS: usize = 7;
     const N_COLUMNS: usize = 9;
 
     fn precommitted_columns(&self) -> Vec<C> {
@@ -122,7 +122,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.sk_bits_bool.evaluate_constraints_main(),
             self.pk_from_sk.evaluate_constraints_main(),
             self.doublings_of_in_gadget.evaluate_constraints_main(),
-            // self.out_from_in.evaluate_constraints_main(),
+            self.out_from_in.evaluate_constraints_main(),
             // self.out_from_in_x.evaluate_constraints_main(),
             // self.out_from_in_y.evaluate_constraints_main(),
         ]
@@ -155,8 +155,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             pk_from_sk_c2_lin,
             doublings_of_in_lin[0].clone(),
             doublings_of_in_lin[1].clone(),
-            // out_from_in_c1_lin,
-            // out_from_in_c2_lin,
+            out_from_in_c1_lin,
+            out_from_in_c2_lin,
         ]
     }
 

@@ -201,7 +201,7 @@ where
             self.sk_bits_bool.constraints(),
             self.pk_from_sk.constraints(),
             self.doublings_of_in_gadget.constraints(),
-            // self.out_from_in.constraints(),
+            self.out_from_in.constraints(),
             // self.out_from_in_x.constraints(),
             // self.out_from_in_y.constraints(),
         ]
@@ -213,7 +213,7 @@ where
             self.sk_bits_bool.constraints_linearized(zeta),
             self.pk_from_sk.constraints_linearized(zeta),
             self.doublings_of_in_gadget.constraints_linearized(zeta),
-            // self.out_from_in.constraints_linearized(zeta),
+            self.out_from_in.constraints_linearized(zeta),
             // self.out_from_in_x.constraints_linearized(zeta),
             // self.out_from_in_y.constraints_linearized(zeta),
         ]
