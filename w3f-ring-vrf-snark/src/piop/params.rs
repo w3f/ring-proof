@@ -56,15 +56,10 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
         }
     }
 
-    pub fn fixed_columns(&self, keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
-        // let ring_selector = self.keyset_part_selector();
-        // let ring_selector = self.domain.public_column(ring_selector);
-        // let pubkey_points = self.pubkey_points_column(keys);
+    pub fn fixed_columns(&self, _keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
         let doublings_of_g = self.doublings_of_g();
         FixedColumns {
-            // pubkey_points,
             doublings_of_g,
-            // ring_selector,
         }
     }
 

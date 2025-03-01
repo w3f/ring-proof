@@ -16,7 +16,7 @@ pub struct RingVerifier<F, CS, Jubjub, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: TECurveConfig<BaseField = F>,
+    Jubjub: TECurveConfig<BaseField=F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Jubjub>,
@@ -28,7 +28,7 @@ impl<F, CS, Jubjub, T> RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: TECurveConfig<BaseField = F>,
+    Jubjub: TECurveConfig<BaseField=F>,
     T: PlonkTranscript<F, CS>,
 {
     pub fn init(
@@ -60,7 +60,7 @@ where
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
         let seed = self.piop_params.seed;
-        let seed_plus_result = (seed + vrf_out).into_affine();
+        let seed_plus_out = (seed + vrf_out).into_affine();
         let domain_eval = EvaluatedDomain::new(
             self.piop_params.domain.domain(),
             challenges.zeta,
@@ -74,12 +74,10 @@ where
             proof.columns_at_zeta.clone(),
             (seed.x, seed.y),
             (vrf_in.x, vrf_in.y),
-            (vrf_out.x, vrf_out.y),
-            (pk.x, pk.y),
+            (seed_plus_out.x, seed_plus_out.y),
         );
 
-        self.plonk_verifier
-            .verify(piop, proof, challenges, &mut rng)
+        self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Jubjub> {

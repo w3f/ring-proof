@@ -72,7 +72,6 @@ mod tests {
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
         let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
         let k = rng.gen_range(0..keyset_size); // prover's secret index
-        let pk = pks[k].clone();
 
         let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 

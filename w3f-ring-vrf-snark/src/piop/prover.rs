@@ -2,8 +2,8 @@ use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
-use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
+use std::rc::Rc;
 use w3f_pcs::pcs::Commitment;
 
 use crate::piop::params::PiopParams;
@@ -14,7 +14,6 @@ use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
 use w3f_plonk_common::gadgets::ec::AffineColumn;
 use w3f_plonk_common::gadgets::ec::CondAdd;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCells;
-use w3f_plonk_common::gadgets::inner_prod::InnerProd;
 use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
@@ -54,152 +53,69 @@ use w3f_plonk_common::Column;
 /// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
 pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     domain: Domain<F>,
-    // advice columns:
-    // ring_selector: BitColumn<F>,
-    doublings_of_g: AffineColumn<F, Affine<Curve>>,
-    // pubkey_points: AffineColumn<F, Affine<Curve>>, // `R` above
-
-    // private columns
-    // signer_index: BitColumn<F>, // `k` above
-    sk_bits: BitColumn<F>,
-
-    // Gadgets:
-    // booleanity_of_signer_index: Booleanity<F>, //this to prove the bit column is actually holding bits
+    doublings_of_g: Rc<AffineColumn<F, Affine<Curve>>>,
+    sk_bits: Rc<BitColumn<F>>,
+    // gadgets
     sk_bits_bool: Booleanity<F>,
-
     pk_from_sk: CondAdd<F, Affine<Curve>>,
-    pk_from_sk_x: FixedCells<F>,
-    pk_from_sk_y: FixedCells<F>,
-
-    doublings_of_vrf_in: Doubling<F, Affine<Curve>>, // sole_signer_inner_prod: InnerProd<F>, //This is a binary cond add making sure \sum signer_index[i] = 1
-                                                     // sole_signer_inner_prod_acc: FixedCells<F>,
-                                                     // pk_from_k: CondAdd<F, Affine<Curve>>,
-                                                     // pk_from_k_x: FixedCells<F>,
-                                                     // pk_from_k_y: FixedCells<F>,
-                                                     // vrf_out: CondAdd<F, Affine<Curve>>,
-                                                     // vrf_out_x: FixedCells<F>,
-                                                     // vrf_out_y: FixedCells<F>,
+    doublings_of_in_gadget: Doubling<F, Affine<Curve>>,
+    out_from_in: CondAdd<F, Affine<Curve>>,
+    out_from_in_x: FixedCells<F>,
+    out_from_in_y: FixedCells<F>,
 }
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
     pub fn build(
         params: &PiopParams<F, Curve>,
         fixed_columns: FixedColumns<F, Affine<Curve>>, // TODO: rename to AdviceColumns
-        prover_index_in_keys: usize,
-        secret: Curve::ScalarField,
-        vrf_input: Affine<Curve>,
+        _signer_index: usize, //TODO
+        sk: Curve::ScalarField,
+        vrf_in: Affine<Curve>,
     ) -> Self {
         let domain = params.domain.clone();
-        // let pubkey_points = fixed_columns.pubkey_points;
-        let powers_of_g = fixed_columns.doublings_of_g;
-        // let (signer_index, signer_secret_key_bits, ring_selector) =
-        //     Self::bits_columns(params, prover_index_in_keys, secret); // TODO: that's ugly
-        let mut secret_key_bit_vector = params.scalar_part(secret);
-        assert!(secret_key_bit_vector.len() + 1 <= domain.capacity);
-        secret_key_bit_vector.resize(domain.capacity - 1, false);
-        let signer_secret_key_bits = BitColumn::init(secret_key_bit_vector, &params.domain);
 
-        // C1: `signer_index` column is boolean
-        // let signer_index_is_bool = Booleanity::init(signer_index.clone());
-        // C2 + С3: <signer_index, ring_selector> == 1
-        // let scalar_inner_prod = InnerProd::init(ring_selector.col.clone(), signer_index.col.clone(), &domain);
-        // let inner_prod_acc = FixedCells::init(scalar_inner_prod.acc.clone(), &domain);
+        let doublings_of_g = fixed_columns.doublings_of_g;
+        let doublings_of_g = Rc::new(doublings_of_g);
 
-        // C4: PK_k := <k, R>
-        // let pk_from_k = CondAdd::init(
-        //     signer_index.clone(),
-        //     pubkey_points.clone(),
-        //     params.seed,
-        //     &domain,
-        // );
+        let sk_bits = {
+            let mut sk_bits = params.scalar_part(sk); //TODO: return right thing
+            assert!(sk_bits.len() <= domain.capacity - 1);
+            sk_bits.resize(domain.capacity - 1, false);
+            let sk_bits = BitColumn::init(sk_bits, &params.domain);
+            Rc::new(sk_bits)
+        };
+        let sk_bits_bool = Booleanity::init(sk_bits.clone());
 
-        // C5: `sk` is boolean
-        let booleanity_of_secret_key_bits = Booleanity::init(signer_secret_key_bits.clone());
-
-        // C6: `PK_sk := sk.G`
-        // assert_eq!(signer_secret_key_bits.bits.len(), powers_of_g.xs.vals().len(), "PIZDA");
+        // `PK_sk := sk.G`
         let pk_from_sk = CondAdd::init(
-            signer_secret_key_bits.clone(),
-            powers_of_g.clone(),
+            sk_bits.clone(),
+            doublings_of_g.clone(),
             params.seed,
             &domain,
         );
 
-        let doublings_of_vrf_in = Doubling::init(vrf_input, &domain);
-
-        // TODO: actually we want to prove that `PK_sk = PK_k` w/o exposing PK to the verifier
-        // C7 + C8: `PK_sk == PK`
-        let pk_from_sk_acc = pk_from_sk.acc.clone();
-        let pk_from_sk_x = FixedCells::init(pk_from_sk_acc.xs.clone(), &domain);
-        let pk_from_sk_y = FixedCells::init(pk_from_sk_acc.ys.clone(), &domain);
-        // C9 + C10: `PK_k == PK`
-        // let pk_from_k_acc = pk_from_k.acc.clone();
-        // let pk_from_k_x = FixedCells::init(pk_from_k_acc.xs.clone(), &domain);
-        // let pk_from_k_y = FixedCells::init(pk_from_k_acc.ys.clone(), &domain);
-
-        // C11: 2-adic powers of the `vrf_input`
-        // let powers_of_in = PowersOfTwoMultiplesTE::init(vrf_input, &domain);
-        //
-        // // C12: `snark_out := <sk, powers_of_in>`
-        // let vrf_out = CondAdd::init(
-        //     signer_secret_key_bits.clone(),
-        //     powers_of_in.multiples.clone(),
-        //     params.seed,
-        //     &domain,
-        // );
-        // // C13+14: `snark_out == vrf_out`
-        // let vrf_out_x = FixedCells::init( vrf_out.acc.xs.clone(), &domain);
-        // let vrf_out_y = FixedCells::init( vrf_out.acc.ys.clone(), &domain);
+        let doublings_of_in_gadget = Doubling::init(vrf_in, &domain);
+        let doublings_of_in = doublings_of_in_gadget.doublings.clone();
+        let out_from_in = CondAdd::init(
+            sk_bits.clone(),
+            doublings_of_in,
+            params.seed,
+            &domain,
+        );
+        let out_from_in_x = FixedCells::init(out_from_in.acc.xs.clone(), &domain);
+        let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 
         Self {
             domain,
-            // pubkey_points,
-            // signer_index,
-            // ring_selector,
-            sk_bits: signer_secret_key_bits,
-
-            doublings_of_g: powers_of_g,
-
-            // booleanity_of_signer_index: signer_index_is_bool,
-            sk_bits_bool: booleanity_of_secret_key_bits,
-
-            // sole_signer_inner_prod: scalar_inner_prod,
-            // sole_signer_inner_prod_acc: inner_prod_acc,
-
-            // pk_from_k_x,
-            // pk_from_k_y,
-            // pk_from_k,
-
-            // powers_of_in,
-            pk_from_sk_x,
-            pk_from_sk_y,
+            doublings_of_g,
+            sk_bits,
+            sk_bits_bool,
             pk_from_sk,
-            //
-            // vrf_out_x,
-            // vrf_out_y,
-            // vrf_out,
-            doublings_of_vrf_in,
+            doublings_of_in_gadget,
+            out_from_in,
+            out_from_in_x,
+            out_from_in_y,
         }
-    }
-
-    fn bits_columns(
-        params: &PiopParams<F, Curve>,
-        signer_index: usize,
-        secret: Curve::ScalarField,
-    ) -> (BitColumn<F>, BitColumn<F>, BitColumn<F>) {
-        //TODO: this is wrong it should be number of secret key bits.
-        let mut signer_selector_bit_vector = vec![false; params.keyset_part_size];
-        signer_selector_bit_vector[signer_index] = true;
-
-        let select_all_bit_vector = vec![true; params.keyset_part_size];
-
-        let secret_key_bit_vector = params.scalar_part(secret);
-        // assert_eq!(max(signer_selector_bit_vector.len(), secret_key_bit_vector.len()), params.domain.capacity - 1);
-        (
-            BitColumn::init(signer_selector_bit_vector, &params.domain),
-            BitColumn::init(secret_key_bit_vector, &params.domain),
-            BitColumn::init(select_all_bit_vector, &params.domain),
-        )
     }
 }
 
@@ -217,61 +133,39 @@ where
         &self,
         commit: Fun,
     ) -> Self::Commitments {
-        let signer_secret_key_bits = commit(self.sk_bits.as_poly());
-        let pk_from_sk_acc = [
+        let sk_bits = commit(self.sk_bits.as_poly());
+        let pk_from_sk = [
             commit(self.pk_from_sk.acc.xs.as_poly()),
             commit(self.pk_from_sk.acc.ys.as_poly()),
         ];
-        let doublings_of_vrf_in = [
-            commit(self.doublings_of_vrf_in.doublings.xs.as_poly()),
-            commit(self.doublings_of_vrf_in.doublings.ys.as_poly()),
+        let doublings_of_in = [
+            commit(self.doublings_of_in_gadget.doublings.xs.as_poly()),
+            commit(self.doublings_of_in_gadget.doublings.ys.as_poly()),
         ];
-
-        // let signer_index = commit(self.signer_index.as_poly());
-        // let ring_selector = commit(self.ring_selector.as_poly());
-        // let cond_add_pubkey_acc = [
-        //     commit(self.pk_from_k.acc.xs.as_poly()),
-        //     commit(self.pk_from_k.acc.ys.as_poly()),
-        // ];
-
-        // let sole_signer_inn_prod_acc = commit(self.sole_signer_inner_prod.acc.as_poly());
-
-        // let vrf_out_acc = [
-        //     commit(self.vrf_out.acc.xs.as_poly()),
-        //     commit(self.vrf_out.acc.ys.as_poly()),
-        // ];
-
+        let out_from_in = [
+            commit(self.out_from_in.acc.xs.as_poly()),
+            commit(self.out_from_in.acc.ys.as_poly()),
+        ];
         RingCommitments {
-            // signer_index,
-            sk_bits: signer_secret_key_bits,
-            // ring_selector,
-            // sole_signer_inn_prod_acc,
-            // cond_add_pubkey_acc,
-            pk_from_sk: pk_from_sk_acc,
-            // vrf_out_acc,
-            doublings_of_vrf_in,
-            phantom: PhantomData,
+            sk_bits,
+            pk_from_sk,
+            doublings_of_in,
+            out_from_in,
+            phantom: Default::default(),
         }
     }
 
-    // Should return polynomials in the consistent with
+    // Should return polynomials in order the consistent with
     // Self::Evaluations::to_vec() and Self::Commitments::to_vec().
     fn columns(&self) -> Vec<DensePolynomial<F>> {
         vec![
             self.sk_bits.as_poly().clone(),
             self.pk_from_sk.acc.xs.as_poly().clone(),
             self.pk_from_sk.acc.ys.as_poly().clone(),
-            self.doublings_of_vrf_in.doublings.xs.as_poly().clone(),
-            self.doublings_of_vrf_in.doublings.ys.as_poly().clone(),
-            // self.pubkey_points.xs.as_poly().clone(),
-            // self.pubkey_points.ys.as_poly().clone(),
-            // self.ring_selector.as_poly().clone(),
-            // self.signer_index.as_poly().clone(),
-            // self.sole_signer_inner_prod.acc.as_poly().clone(),
-            // self.pk_from_k.acc.xs.as_poly().clone(),
-            // self.pk_from_k.acc.ys.as_poly().clone(),
-            // self.vrf_out.acc.xs.as_poly().clone(),
-            // self.vrf_out.acc.ys.as_poly().clone(),
+            self.doublings_of_in_gadget.doublings.xs.as_poly().clone(),
+            self.doublings_of_in_gadget.doublings.ys.as_poly().clone(),
+            self.out_from_in.acc.xs.as_poly().clone(),
+            self.out_from_in.acc.ys.as_poly().clone(),
         ]
     }
 
@@ -285,51 +179,20 @@ where
             self.pk_from_sk.acc.xs.evaluate(zeta),
             self.pk_from_sk.acc.ys.evaluate(zeta),
         ];
-        let doublings_of_vrf_in = [
-            self.doublings_of_vrf_in.doublings.xs.evaluate(zeta),
-            self.doublings_of_vrf_in.doublings.ys.evaluate(zeta),
+        let doublings_of_in = [
+            self.doublings_of_in_gadget.doublings.xs.evaluate(zeta),
+            self.doublings_of_in_gadget.doublings.ys.evaluate(zeta),
         ];
-        // let pubkey_points = [
-        //     self.pubkey_points.xs.evaluate(zeta),
-        //     self.pubkey_points.ys.evaluate(zeta),
-        // ];
-        // let ring_selector = self.ring_selector.evaluate(zeta);
-        // let signer_index = self.signer_index.evaluate(zeta);
-
-        // let sole_signer_inn_prod_acc = self.sole_signer_inner_prod.acc.evaluate(zeta);
-
-        // let cond_add_pubkey_acc = [
-        //     self.pk_from_k.acc.xs.evaluate(zeta),
-        //     self.pk_from_k.acc.ys.evaluate(zeta),
-        // ];
-
-        // let cond_add_vrfout_acc = [
-        //     self.vrf_out.acc.xs.evaluate(zeta),
-        //     self.vrf_out.acc.ys.evaluate(zeta),
-        // ];
-
-        // let powers_of_in = [
-        //     self.powers_of_in.multiples.xs.evaluate(zeta),
-        //     self.powers_of_in.multiples.ys.evaluate(zeta),
-        // ];
-
-        // let pk_from_k_acc = [
-        //     self.pk_from_k.acc.xs.evaluate(zeta),
-        //     self.pk_from_k.acc.ys.evaluate(zeta),
-        // ];
-
+        let out_from_in = [
+            self.out_from_in.acc.xs.evaluate(zeta),
+            self.out_from_in.acc.ys.evaluate(zeta),
+        ];
         RingEvaluations {
             doublings_of_g,
             sk_bits,
             pk_from_sk,
-            doublings_of_vrf_in,
-            // pks: pubkey_points,
-            // ring_selector,
-            // signer_index,
-            // powers_of_in,
-            // k_is_one_bit: sole_signer_inn_prod_acc,
-            // vrf_out_acc: cond_add_vrfout_acc,
-            // pk_from_k_acc,
+            doublings_of_in,
+            out_from_in,
         }
     }
 
@@ -337,18 +200,10 @@ where
         [
             self.sk_bits_bool.constraints(),
             self.pk_from_sk.constraints(),
-            self.doublings_of_vrf_in.constraints(),
-            // self.sole_signer_inner_prod.constraints(),
-            // self.pk_from_k.constraints(),
-            // self.vrf_out.constraints(),
-            // self.booleanity_of_signer_index.constraints(),
-            // self.pk_from_k_x.constraints(),
-            // self.pk_from_k_y.constraints(),
-            // self.pk_from_sk_x.constraints(),
-            // self.pk_from_sk_y.constraints(),
-            // self.vrf_out_x.constraints(),
-            // self.vrf_out_y.constraints(),
-            // self.sole_signer_inner_prod_acc.constraints(),
+            self.doublings_of_in_gadget.constraints(),
+            self.out_from_in.constraints(),
+            self.out_from_in_x.constraints(),
+            self.out_from_in_y.constraints(),
         ]
         .concat()
     }
@@ -357,21 +212,10 @@ where
         [
             self.sk_bits_bool.constraints_linearized(zeta),
             self.pk_from_sk.constraints_linearized(zeta),
-            self.doublings_of_vrf_in.constraints_linearized(zeta),
-            // self.sole_signer_inner_prod.constraints_linearized(zeta),
-            // self.pk_from_k.constraints_linearized(zeta),
-            // self.vrf_out.constraints_linearized(zeta),
-            // self.booleanity_of_signer_index.constraints_linearized(zeta),
-
-            // self.pk_from_k_x.constraints_linearized(zeta),
-            // self.pk_from_k_y.constraints_linearized(zeta),
-            // self.pk_from_sk_x
-            //     .constraints_linearized(zeta),
-            // self.pk_from_sk_y
-            //     .constraints_linearized(zeta),
-            // self.vrf_out_x.constraints_linearized(zeta),
-            // self.vrf_out_y.constraints_linearized(zeta),
-            // self.sole_signer_inner_prod_acc.constraints_linearized(zeta),
+            self.doublings_of_in_gadget.constraints_linearized(zeta),
+            self.out_from_in.constraints_linearized(zeta),
+            self.out_from_in_x.constraints_linearized(zeta),
+            self.out_from_in_y.constraints_linearized(zeta),
         ]
         .concat()
     }
