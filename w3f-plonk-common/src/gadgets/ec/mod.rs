@@ -3,7 +3,8 @@ use crate::gadgets::booleanity::BitColumn;
 use crate::{Column, FieldColumn};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
-use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+use ark_std::rc::Rc;
+// use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
 
@@ -13,11 +14,13 @@ pub mod te_doubling;
 
 // A vec of affine points from the prime-order subgroup of the curve whose base field enables FFTs,
 // and its convenience representation as columns of coordinates over the curve's base field.
-#[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
+
+// #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
+#[derive(Clone)]
 pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField = F>> {
     points: Vec<P>,
-    pub xs: FieldColumn<F>,
-    pub ys: FieldColumn<F>,
+    pub xs: Rc<FieldColumn<F>>,
+    pub ys: Rc<FieldColumn<F>>,
 }
 
 impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
@@ -26,6 +29,8 @@ impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
         let (xs, ys) = points.iter().map(|p| p.xy().unwrap()).unzip();
         let xs = domain.column(xs, hidden);
         let ys = domain.column(ys, hidden);
+        let xs = Rc::new(xs);
+        let ys = Rc::new(ys);
         Self { points, xs, ys }
     }
     pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
@@ -45,8 +50,8 @@ impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
 // if the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
 pub struct CondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    bitmask: BitColumn<F>,
-    points: AffineColumn<F, P>,
+    bitmask: Rc<BitColumn<F>>,
+    points: Rc<AffineColumn<F, P>>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
     // Accumulates the (conditional) rolling sum of the points
@@ -63,8 +68,8 @@ where
     // If we assume the proofs of possession have been verified for the ring points,
     // this can be achieved by setting the seed to a point of unknown dlog from the prime order subgroup.
     pub fn init(
-        bitmask: BitColumn<F>,
-        points: AffineColumn<F, P>,
+        bitmask: Rc<BitColumn<F>>,
+        points: Rc<AffineColumn<F, P>>,
         seed: P,
         domain: &Domain<F>,
     ) -> Self {
