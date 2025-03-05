@@ -73,8 +73,7 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
             .map(|(y, r)| y * r)
             .sum();
 
-        let lin_pices = piop.constraint_polynomials_linearized_commitments();
-        let lin_comm = CS::C::combine(&challenges.alphas[..3], &lin_pices);
+        let lin_comm = piop.constraint_polynomials_linearized_commitments(&challenges.alphas);
 
         let zeta_omega = zeta * domain_evaluated.omega();
 

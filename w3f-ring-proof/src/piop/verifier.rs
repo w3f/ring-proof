@@ -123,19 +123,23 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         .concat()
     }
 
-    fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
-        let inner_prod_acc =
-            (&self.witness_columns_committed.inn_prod_acc).mul(self.inner_prod.not_last);
-        let acc_x = &self.witness_columns_committed.cond_add_acc[0];
-        let acc_y = &self.witness_columns_committed.cond_add_acc[1];
+    fn constraint_polynomials_linearized_commitments(&self, agg_coeffs: &[F]) -> C {
+        assert_eq!(agg_coeffs.len(), Self::N_CONSTRAINTS);
 
+        let inner_prod_acc = self.witness_columns_committed.inn_prod_acc.clone();
+        let inner_prod_coeff = agg_coeffs[0] * self.inner_prod.not_last;
+
+        let cond_add_acc_x = self.witness_columns_committed.cond_add_acc[0].clone();
+        let cond_add_acc_y = self.witness_columns_committed.cond_add_acc[1].clone();
         let (c_acc_x, c_acc_y) = self.cond_add.acc_coeffs_1();
-        let c1_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
-
+        let mut cond_add_x_coeff = agg_coeffs[1] * c_acc_x;
+        let mut cond_add_y_coeff = agg_coeffs[1] * c_acc_y;
         let (c_acc_x, c_acc_y) = self.cond_add.acc_coeffs_2();
-        let c2_lin = acc_x.mul(c_acc_x) + acc_y.mul(c_acc_y);
+        cond_add_x_coeff += agg_coeffs[2] * c_acc_x;
+        cond_add_y_coeff += agg_coeffs[2] * c_acc_y;
 
-        vec![inner_prod_acc, c1_lin, c2_lin]
+        C::combine(&[inner_prod_coeff, cond_add_x_coeff, cond_add_y_coeff],
+        &[inner_prod_acc.clone(), cond_add_acc_x, cond_add_acc_y])
     }
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F> {
