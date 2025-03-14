@@ -50,6 +50,24 @@ pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {
     // Constant terms of the linearization polynomials for each constraint.
     fn evaluate_constraints_main(&self) -> Vec<F>;
 
+    // Computes the constant term of the aggregated linearization polynomial
+    // from the column evaluations at `zeta`.
+    fn _evaluate_lin_poly_ct(&self, agg_coeffs: &[F]) -> F {
+        self.evaluate_constraints_main()
+            .iter()
+            .zip(agg_coeffs)
+            .map(|(c, alpha)| *alpha * c)
+            .sum()
+    }
+
+    // Computes the quotient polynomial of the constraint system
+    // from the column evaluations at `zeta` and the value of the linearization poly at `zeta.omega`.
+    fn evaluate_q_at_zeta(&self, agg_coeffs: &[F], lin_at_zeta_omega: F) -> F {
+        let eval: F = self._evaluate_lin_poly_ct(agg_coeffs);
+        self.domain_evaluated()
+            .divide_by_vanishing_poly_in_zeta(eval + lin_at_zeta_omega)
+    }
+
     // Commitment to the aggregated linearization polynomial without the constant term.
     fn lin_poly_commitment(&self, agg_coeffs: &[F]) -> C;
 

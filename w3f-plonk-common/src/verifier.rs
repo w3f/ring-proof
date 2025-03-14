@@ -44,17 +44,7 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         Commitments: ColumnsCommited<F, CS::C>,
         Evaluations: ColumnsEvaluated<F>,
     {
-        let eval: F = piop
-            .evaluate_constraints_main()
-            .iter()
-            .zip(challenges.alphas.iter())
-            .map(|(c, alpha)| *alpha * c)
-            .sum();
-        let zeta = challenges.zeta;
-        let domain_evaluated = piop.domain_evaluated();
-
-        let q_zeta =
-            domain_evaluated.divide_by_vanishing_poly_in_zeta(eval + proof.lin_at_zeta_omega);
+        let q_zeta = piop.evaluate_q_at_zeta(&challenges.alphas, proof.lin_at_zeta_omega);
 
         let mut columns = [
             piop.precommitted_columns(),
@@ -75,7 +65,8 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
 
         let lin_comm = piop.lin_poly_commitment(&challenges.alphas);
 
-        let zeta_omega = zeta * domain_evaluated.omega();
+        let zeta = challenges.zeta;
+        let zeta_omega = zeta * piop.domain_evaluated().omega();
 
         CS::batch_verify(
             &self.pcs_vk,
