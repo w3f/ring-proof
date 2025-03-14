@@ -58,7 +58,6 @@ where
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
-        println!("{:?}", challenges);
         let seed = self.piop_params.seed;
         let seed_plus_out = (seed + vrf_out).into_affine();
         let domain_eval = EvaluatedDomain::new(

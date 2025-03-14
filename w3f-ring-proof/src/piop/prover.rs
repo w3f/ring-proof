@@ -75,6 +75,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         }
     }
 
+    // TODO: move to params?
     fn bits_column(
         params: &PiopParams<F, Curve>,
         index_in_keys: usize,
