@@ -2,8 +2,8 @@ use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
-use ark_std::{vec, vec::Vec};
 use ark_std::rc::Rc;
+use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::Commitment;
 
 use crate::piop::params::PiopParams;
