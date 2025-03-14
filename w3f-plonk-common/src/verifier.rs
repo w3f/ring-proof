@@ -66,22 +66,22 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkVerifier<F, CS, 
         let mut columns_at_zeta = proof.columns_at_zeta.to_vec();
         columns_at_zeta.push(q_zeta);
 
-        let cl = CS::C::combine(&challenges.nus, &columns);
-        let agg_y = columns_at_zeta
+        let agg_comm = CS::C::combine(&challenges.nus, &columns);
+        let agg_at_zeta = columns_at_zeta
             .into_iter()
             .zip(challenges.nus.iter())
             .map(|(y, r)| y * r)
             .sum();
 
-        let lin_comm = piop.constraint_polynomials_linearized_commitments(&challenges.alphas);
+        let lin_comm = piop.lin_poly_commitment(&challenges.alphas);
 
         let zeta_omega = zeta * domain_evaluated.omega();
 
         CS::batch_verify(
             &self.pcs_vk,
-            vec![cl, lin_comm],
-            vec![challenges.zeta, zeta_omega],
-            vec![agg_y, proof.lin_at_zeta_omega],
+            vec![agg_comm, lin_comm],
+            vec![zeta, zeta_omega],
+            vec![agg_at_zeta, proof.lin_at_zeta_omega],
             vec![proof.agg_at_zeta_proof, proof.lin_at_zeta_omega_proof],
             rng,
         )

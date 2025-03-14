@@ -47,9 +47,11 @@ pub trait VerifierPiop<F: PrimeField, C: Commitment<F>> {
     // Columns the commitments to which are publicly known. These commitments are omitted from the proof.
     fn precommitted_columns(&self) -> Vec<C>;
 
+    // Constant terms of the linearization polynomials for each constraint.
     fn evaluate_constraints_main(&self) -> Vec<F>;
 
-    fn constraint_polynomials_linearized_commitments(&self, agg_coeffs: &[F]) -> C;
+    // Commitment to the aggregated linearization polynomial without the constant term.
+    fn lin_poly_commitment(&self, agg_coeffs: &[F]) -> C;
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F>;
 }
