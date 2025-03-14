@@ -20,8 +20,6 @@ pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     pub keyset_part_size: usize,
     /// The generator used to compute public keys, `pk=sk.G`.
     pub(crate) g: Affine<Curve>,
-    /// Blinding base point.
-    pub(crate) h: Affine<Curve>,
     /// Summation base point.
     pub(crate) seed: Affine<Curve>,
     /// The point used to pad the list of public keys.
@@ -39,7 +37,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     /// All points should be of an unknown discrete log.
     pub fn setup(
         domain: Domain<F>,
-        h: Affine<Curve>,
+        _h: Affine<Curve>, //TODO: cleanup
         seed: Affine<Curve>,
         padding: Affine<Curve>,
     ) -> Self {
@@ -51,7 +49,6 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
             scalar_bitlen,
             keyset_part_size,
             g: Affine::<Curve>::generator(),
-            h,
             seed,
             padding,
         }
