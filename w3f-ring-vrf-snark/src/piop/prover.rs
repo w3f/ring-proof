@@ -18,8 +18,8 @@ use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
-use w3f_plonk_common::Column;
 use w3f_plonk_common::gadgets::inner_prod::InnerProd;
+use w3f_plonk_common::Column;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -109,12 +109,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
 
         let doublings_of_in_gadget = Doubling::init(vrf_in, &domain);
         let doublings_of_in = doublings_of_in_gadget.doublings.clone();
-        let out_from_in = CondAdd::init(
-            sk_bits.clone(),
-            doublings_of_in,
-            params.seed,
-            &domain,
-        );
+        let out_from_in = CondAdd::init(sk_bits.clone(), doublings_of_in, params.seed, &domain);
         let out_from_in_x = FixedCells::init(out_from_in.acc.xs.clone(), &domain);
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 
@@ -200,10 +195,7 @@ where
     }
 
     fn columns_evaluated(&self, zeta: &F) -> RingEvaluations<F> {
-        let pks = [
-            self.pks.xs.evaluate(zeta),
-            self.pks.ys.evaluate(zeta),
-        ];
+        let pks = [self.pks.xs.evaluate(zeta), self.pks.ys.evaluate(zeta)];
         let doublings_of_g = [
             self.doublings_of_g.xs.evaluate(zeta),
             self.doublings_of_g.ys.evaluate(zeta),
@@ -249,7 +241,6 @@ where
             self.pk_from_index_y.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
-
         ]
         .concat()
     }

@@ -11,7 +11,7 @@ use crate::piop::FixedColumns;
 
 /// Plonk Interactive Oracle Proofs (PIOP) parameters.
 #[derive(Clone)]
-pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField=F>> {
+pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     /// Domain over which the piop is represented.
     pub(crate) domain: Domain<F>,
     /// Number of bits used to represent a jubjub scalar.
@@ -28,7 +28,7 @@ pub struct PiopParams<F: PrimeField, Curve: TECurveConfig<BaseField=F>> {
     pub(crate) padding: Affine<Curve>,
 }
 
-impl<F: PrimeField, Curve: TECurveConfig<BaseField=F>> PiopParams<F, Curve> {
+impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     /// Initialize PIOP parameters.
     ///
     /// - `domain`: polynomials evaluation domain.

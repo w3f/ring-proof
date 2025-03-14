@@ -158,7 +158,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         .concat()
     }
 
-    fn constraint_polynomials_linearized_commitments(&self) -> Vec<C> {
+    fn lin_poly_commitment(&self, agg_coeffs: &[F]) -> C {
         let pk_x = &self.witness_columns_committed.pk_from_sk[0];
         let pk_y = &self.witness_columns_committed.pk_from_sk[1];
         let (pk_x_coeff, pk_y_coeff) = self.pk_from_sk.acc_coeffs_1();
@@ -184,7 +184,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         let pk_from_index_x_lin = pk_from_index_x.mul(self.domain_evals.not_last_row);
         let pk_from_index_y_lin = pk_from_index_y.mul(self.domain_evals.not_last_row);
 
-        vec![
+        let per_constraint = vec![
             pk_from_sk_c1_lin,
             pk_from_sk_c2_lin,
             doublings_of_in_lin[0].clone(),
@@ -193,7 +193,10 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             out_from_in_c2_lin,
             pk_from_index_x_lin,
             pk_from_index_y_lin,
-        ]
+        ];
+
+        // TODO: optimize muls
+        C::combine(&agg_coeffs[2..10], &per_constraint) //TODO
     }
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F> {
