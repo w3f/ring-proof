@@ -68,7 +68,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
     pub fn build(
         params: &PiopParams<F, Curve>,
         fixed_columns: FixedColumns<F, Affine<Curve>>, // TODO: rename to AdviceColumns
-        _signer_index: usize, //TODO
+        _signer_index: usize,                          //TODO
         sk: Curve::ScalarField,
         vrf_in: Affine<Curve>,
     ) -> Self {
@@ -96,12 +96,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
 
         let doublings_of_in_gadget = Doubling::init(vrf_in, &domain);
         let doublings_of_in = doublings_of_in_gadget.doublings.clone();
-        let out_from_in = CondAdd::init(
-            sk_bits.clone(),
-            doublings_of_in,
-            params.seed,
-            &domain,
-        );
+        let out_from_in = CondAdd::init(sk_bits.clone(), doublings_of_in, params.seed, &domain);
         let out_from_in_x = FixedCells::init(out_from_in.acc.xs.clone(), &domain);
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 

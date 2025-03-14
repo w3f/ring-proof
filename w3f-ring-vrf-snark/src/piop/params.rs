@@ -58,9 +58,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
 
     pub fn fixed_columns(&self, _keys: &[Affine<Curve>]) -> FixedColumns<F, Affine<Curve>> {
         let doublings_of_g = self.doublings_of_g();
-        FixedColumns {
-            doublings_of_g,
-        }
+        FixedColumns { doublings_of_g }
     }
 
     fn doublings_of_g(&self) -> AffineColumn<F, Affine<Curve>> {

@@ -16,7 +16,7 @@ pub struct RingVerifier<F, CS, Jubjub, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: TECurveConfig<BaseField=F>,
+    Jubjub: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     piop_params: PiopParams<F, Jubjub>,
@@ -28,7 +28,7 @@ impl<F, CS, Jubjub, T> RingVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
-    Jubjub: TECurveConfig<BaseField=F>,
+    Jubjub: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
 {
     pub fn init(
@@ -77,7 +77,8 @@ where
             (seed_plus_out.x, seed_plus_out.y),
         );
 
-        self.plonk_verifier.verify(piop, proof, challenges, &mut rng)
+        self.plonk_verifier
+            .verify(piop, proof, challenges, &mut rng)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Jubjub> {
