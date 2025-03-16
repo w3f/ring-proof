@@ -18,7 +18,6 @@ use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
-use w3f_plonk_common::gadgets::inner_prod::InnerProd;
 use w3f_plonk_common::Column;
 
 /// The prover's private input is its secret key `sk`.
@@ -67,8 +66,7 @@ pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     out_from_in_y: FixedCells<F>,
     pk_index_bool: Booleanity<F>,
     // pk_index_unique: InnerProd<F>, //TODO:
-    pk_from_index_x: InnerProd<F>,
-    pk_from_index_y: InnerProd<F>,
+    pk_from_index: CondAdd<F, Affine<Curve>>, // TODO: constrain the seed
     // pks_equal // TODO
 }
 
@@ -114,8 +112,12 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 
         let pk_index_bool = Booleanity::init(pk_index.clone());
-        let pk_from_index_x = InnerProd::init(pks.xs.clone(), pk_index.col.clone(), &domain);
-        let pk_from_index_y = InnerProd::init(pks.ys.clone(), pk_index.col.clone(), &domain);
+        let pk_from_index = CondAdd::init(
+            pk_index.clone(),
+            pks.clone(),
+            params.seed,
+            &domain,
+        );
 
         Self {
             domain,
@@ -130,8 +132,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             out_from_in_x,
             out_from_in_y,
             pk_index_bool,
-            pk_from_index_x,
-            pk_from_index_y,
+            pk_from_index,
         }
     }
 }
@@ -165,8 +166,8 @@ where
             commit(self.out_from_in.acc.ys.as_poly()),
         ];
         let pk_from_index = [
-            commit(self.pk_from_index_x.acc.as_poly()),
-            commit(self.pk_from_index_y.acc.as_poly()),
+            commit(self.pk_from_index.acc.xs.as_poly()),
+            commit(self.pk_from_index.acc.ys.as_poly()),
         ];
         RingCommitments {
             sk_bits,
@@ -191,6 +192,8 @@ where
             self.doublings_of_in_gadget.doublings.ys.as_poly().clone(),
             self.out_from_in.acc.xs.as_poly().clone(),
             self.out_from_in.acc.ys.as_poly().clone(),
+            self.pk_from_index.acc.xs.as_poly().clone(),
+            self.pk_from_index.acc.ys.as_poly().clone(),
         ]
     }
 
@@ -215,8 +218,8 @@ where
             self.out_from_in.acc.ys.evaluate(zeta),
         ];
         let pk_from_index = [
-            self.pk_from_index_x.acc.evaluate(zeta),
-            self.pk_from_index_y.acc.evaluate(zeta),
+            self.pk_from_index.acc.xs.evaluate(zeta),
+            self.pk_from_index.acc.ys.evaluate(zeta),
         ];
         RingEvaluations {
             pks,
@@ -237,8 +240,7 @@ where
             self.pk_from_sk.constraints(),
             self.doublings_of_in_gadget.constraints(),
             self.out_from_in.constraints(),
-            self.pk_from_index_x.constraints(),
-            self.pk_from_index_y.constraints(),
+            self.pk_from_index.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
         ]
@@ -252,8 +254,7 @@ where
             self.pk_from_sk.constraints_linearized(zeta),
             self.doublings_of_in_gadget.constraints_linearized(zeta),
             self.out_from_in.constraints_linearized(zeta),
-            self.pk_from_index_x.constraints_linearized(zeta),
-            self.pk_from_index_y.constraints_linearized(zeta),
+            self.pk_from_index.constraints_linearized(zeta),
             self.out_from_in_x.constraints_linearized(zeta),
             self.out_from_in_y.constraints_linearized(zeta),
         ]

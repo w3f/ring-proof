@@ -9,7 +9,6 @@ use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
 use w3f_plonk_common::gadgets::ec::te_doubling::DoublingValues;
 use w3f_plonk_common::gadgets::ec::CondAddValues;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
-use w3f_plonk_common::gadgets::inner_prod::InnerProdValues;
 use w3f_plonk_common::gadgets::VerifierGadget;
 use w3f_plonk_common::piop::VerifierPiop;
 
@@ -30,8 +29,7 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     out_from_in_y: FixedCellsValues<F>,
     pk_index_bool: BooleanityValues<F>,
     // pk_index_unique: InnerProd<F>, //TODO:
-    pk_from_index_x: InnerProdValues<F>,
-    pk_from_index_y: InnerProdValues<F>,
+    pk_from_index: CondAddValues<F, P>,
     // pks_equal // TODO
 }
 
@@ -103,17 +101,18 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             bits: all_columns_evaluated.pk_index,
         };
         // pk_index_unique: InnerProd<F>, //TODO:
-        let pk_from_index_x = InnerProdValues {
-            a: all_columns_evaluated.pks[0],
-            b: all_columns_evaluated.pk_index,
+        let pk_from_index = CondAddValues {
+            bitmask: all_columns_evaluated.pk_index,
+            points: (
+                all_columns_evaluated.pks[0],
+                all_columns_evaluated.pks[1],
+            ),
             not_last: domain_evals.not_last_row,
-            acc: all_columns_evaluated.pk_from_index[0],
-        };
-        let pk_from_index_y = InnerProdValues {
-            a: all_columns_evaluated.pks[1],
-            b: all_columns_evaluated.pk_index,
-            not_last: domain_evals.not_last_row,
-            acc: all_columns_evaluated.pk_from_index[1],
+            acc: (
+                all_columns_evaluated.pk_from_index[0],
+                all_columns_evaluated.pk_from_index[1],
+            ),
+            _phantom: Default::default(),
         };
 
         Self {
@@ -127,8 +126,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             out_from_in_x,
             out_from_in_y,
             pk_index_bool,
-            pk_from_index_x,
-            pk_from_index_y,
+            pk_from_index,
         }
     }
 }
@@ -150,8 +148,7 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.pk_from_sk.evaluate_constraints_main(),
             self.doublings_of_in_gadget.evaluate_constraints_main(),
             self.out_from_in.evaluate_constraints_main(),
-            self.pk_from_index_x.evaluate_constraints_main(),
-            self.pk_from_index_y.evaluate_constraints_main(),
+            self.pk_from_index.evaluate_constraints_main(),
             self.out_from_in_x.evaluate_constraints_main(),
             self.out_from_in_y.evaluate_constraints_main(),
         ]
@@ -159,12 +156,12 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
     }
 
     fn lin_poly_commitment(&self, agg_coeffs: &[F]) -> C {
-        let pk_x = &self.witness_columns_committed.pk_from_sk[0];
-        let pk_y = &self.witness_columns_committed.pk_from_sk[1];
+        let pk_from_sk_x = &self.witness_columns_committed.pk_from_sk[0];
+        let pk_from_sk_y = &self.witness_columns_committed.pk_from_sk[1];
         let (pk_x_coeff, pk_y_coeff) = self.pk_from_sk.acc_coeffs_1();
-        let pk_from_sk_c1_lin = pk_x.mul(pk_x_coeff) + pk_y.mul(pk_y_coeff);
+        let pk_from_sk_c1_lin = pk_from_sk_x.mul(pk_x_coeff) + pk_from_sk_y.mul(pk_y_coeff);
         let (pk_x_coeff, pk_y_coeff) = self.pk_from_sk.acc_coeffs_2();
-        let pk_from_sk_c2_lin = pk_x.mul(pk_x_coeff) + pk_y.mul(pk_y_coeff);
+        let pk_from_sk_c2_lin = pk_from_sk_x.mul(pk_x_coeff) + pk_from_sk_y.mul(pk_y_coeff);
 
         let doublings_of_in_x = self.witness_columns_committed.doublings_of_in[0].clone();
         let doublings_of_in_y = self.witness_columns_committed.doublings_of_in[1].clone();
@@ -181,8 +178,10 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
 
         let pk_from_index_x = &self.witness_columns_committed.pk_from_index[0];
         let pk_from_index_y = &self.witness_columns_committed.pk_from_index[1];
-        let pk_from_index_x_lin = pk_from_index_x.mul(self.domain_evals.not_last_row);
-        let pk_from_index_y_lin = pk_from_index_y.mul(self.domain_evals.not_last_row);
+        let (pk_x_coeff, pk_y_coeff) = self.pk_from_index.acc_coeffs_1();
+        let pk_from_index_c1_lin = pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
+        let (pk_x_coeff, pk_y_coeff) = self.pk_from_index.acc_coeffs_2();
+        let pk_from_index_c2_lin = pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
 
         let per_constraint = vec![
             pk_from_sk_c1_lin,
@@ -191,8 +190,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             doublings_of_in_lin[1].clone(),
             out_from_in_c1_lin,
             out_from_in_c2_lin,
-            pk_from_index_x_lin,
-            pk_from_index_y_lin,
+            pk_from_index_c1_lin,
+            pk_from_index_c2_lin,
         ];
 
         // TODO: optimize muls
