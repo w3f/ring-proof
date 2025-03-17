@@ -66,15 +66,18 @@ mod tests {
 
         let max_keyset_size = piop_params.keyset_part_size;
         let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
+        let mut pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
         let k = rng.gen_range(0..keyset_size); // prover's secret index
+        let sk = Fr::rand(rng); // prover's secret scalar
+        let pk = piop_params.g.mul(sk).into_affine();
+        pks[k] = pk;
 
         let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 
         // PROOF generation
-        let secret = Fr::rand(rng); // prover's secret scalar
+
         let vrf_input = EdwardsAffine::rand(rng);
-        let vrf_output = vrf_input.mul(secret).into_affine();
+        let vrf_output = vrf_input.mul(sk).into_affine();
         let ring_prover = RingProver::init(
             prover_key,
             piop_params.clone(),
@@ -82,7 +85,7 @@ mod tests {
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_prove = start_timer!(|| "Prove");
-        let (proof, res) = ring_prover.prove(secret, vrf_input);
+        let (proof, res) = ring_prover.prove(sk, vrf_input);
         end_timer!(t_prove);
         assert_eq!(res, vrf_output);
 
