@@ -19,6 +19,7 @@ use w3f_plonk_common::piop::ProverPiop;
 
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
 use w3f_plonk_common::Column;
+use crate::piop::cell_equality::CellEqualityPolys;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -67,7 +68,8 @@ pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     pk_index_bool: Booleanity<F>,
     // pk_index_unique: InnerProd<F>, //TODO:
     pk_from_index: CondAdd<F, Affine<Curve>>, // TODO: constrain the seed
-    // pks_equal // TODO
+    pks_equal_x: CellEqualityPolys<F>,
+    pks_equal_y: CellEqualityPolys<F>,
 }
 
 impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
@@ -119,6 +121,17 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             &domain,
         );
 
+        let pks_equal_x = CellEqualityPolys::init(
+            pk_from_index.acc.xs.clone(),
+            pk_from_sk.acc.xs.clone(),
+            &domain
+        );
+        let pks_equal_y = CellEqualityPolys::init(
+            pk_from_index.acc.ys.clone(),
+            pk_from_sk.acc.ys.clone(),
+            &domain
+        );
+
         Self {
             domain,
             pks,
@@ -133,6 +146,8 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             out_from_in_y,
             pk_index_bool,
             pk_from_index,
+            pks_equal_x,
+            pks_equal_y,
         }
     }
 }
@@ -243,6 +258,8 @@ where
             self.pk_from_index.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
+            self.pks_equal_x.constraints(),
+            self.pks_equal_y.constraints(),
         ]
         .concat()
     }
@@ -257,6 +274,8 @@ where
             self.pk_from_index.constraints_linearized(zeta),
             self.out_from_in_x.constraints_linearized(zeta),
             self.out_from_in_y.constraints_linearized(zeta),
+            self.pks_equal_x.constraints_linearized(zeta),
+            self.pks_equal_y.constraints_linearized(zeta),
         ]
         .concat()
     }

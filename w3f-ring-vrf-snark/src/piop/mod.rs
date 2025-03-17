@@ -20,6 +20,7 @@ use crate::PiopParams;
 pub mod params;
 mod prover;
 mod verifier;
+mod cell_equality;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {

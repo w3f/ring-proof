@@ -13,6 +13,7 @@ use w3f_plonk_common::gadgets::VerifierGadget;
 use w3f_plonk_common::piop::VerifierPiop;
 
 use crate::piop::{FixedColumnsCommitted, RingCommitments};
+use crate::piop::cell_equality::CellEqualityEvals;
 use crate::RingEvaluations;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> {
@@ -30,7 +31,8 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     pk_index_bool: BooleanityValues<F>,
     // pk_index_unique: InnerProd<F>, //TODO:
     pk_from_index: CondAddValues<F, P>,
-    // pks_equal // TODO
+    pks_equal_x: CellEqualityEvals<F>,
+    pks_equal_y: CellEqualityEvals<F>,
 }
 
 impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
@@ -115,6 +117,17 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             _phantom: Default::default(),
         };
 
+        let pks_equal_x = CellEqualityEvals {
+            a: all_columns_evaluated.pk_from_index[0],
+            b: all_columns_evaluated.pk_from_sk[0],
+            l_last: domain_evals.l_last,
+        };
+        let pks_equal_y = CellEqualityEvals {
+            a: all_columns_evaluated.pk_from_index[1],
+            b: all_columns_evaluated.pk_from_sk[1],
+            l_last: domain_evals.l_last,
+        };
+
         Self {
             domain_evals,
             fixed_columns_committed,
@@ -127,6 +140,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             out_from_in_y,
             pk_index_bool,
             pk_from_index,
+            pks_equal_x,
+            pks_equal_y,
         }
     }
 }
@@ -134,7 +149,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 12;
+    const N_CONSTRAINTS: usize = 14;
     const N_COLUMNS: usize = 14;
 
     fn precommitted_columns(&self) -> Vec<C> {
@@ -151,6 +166,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.pk_from_index.evaluate_constraints_main(),
             self.out_from_in_x.evaluate_constraints_main(),
             self.out_from_in_y.evaluate_constraints_main(),
+            self.pks_equal_x.evaluate_constraints_main(),
+            self.pks_equal_y.evaluate_constraints_main(),
         ]
         .concat()
     }
