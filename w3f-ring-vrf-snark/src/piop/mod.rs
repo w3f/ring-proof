@@ -17,10 +17,10 @@ use w3f_plonk_common::{Column, ColumnsCommited, ColumnsEvaluated};
 
 use crate::PiopParams;
 
+mod cell_equality;
 pub mod params;
 mod prover;
 mod verifier;
-mod cell_equality;
 
 #[derive(Clone, CanonicalSerialize, CanonicalDeserialize)]
 pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {

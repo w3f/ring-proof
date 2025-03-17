@@ -17,9 +17,9 @@ use w3f_plonk_common::gadgets::fixed_cells::FixedCells;
 use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
+use crate::piop::cell_equality::CellEqualityPolys;
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
 use w3f_plonk_common::Column;
-use crate::piop::cell_equality::CellEqualityPolys;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -114,22 +114,17 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 
         let pk_index_bool = Booleanity::init(pk_index.clone());
-        let pk_from_index = CondAdd::init(
-            pk_index.clone(),
-            pks.clone(),
-            params.seed,
-            &domain,
-        );
+        let pk_from_index = CondAdd::init(pk_index.clone(), pks.clone(), params.seed, &domain);
 
         let pks_equal_x = CellEqualityPolys::init(
             pk_from_index.acc.xs.clone(),
             pk_from_sk.acc.xs.clone(),
-            &domain
+            &domain,
         );
         let pks_equal_y = CellEqualityPolys::init(
             pk_from_index.acc.ys.clone(),
             pk_from_sk.acc.ys.clone(),
-            &domain
+            &domain,
         );
 
         Self {

@@ -12,8 +12,8 @@ use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
 use w3f_plonk_common::gadgets::VerifierGadget;
 use w3f_plonk_common::piop::VerifierPiop;
 
-use crate::piop::{FixedColumnsCommitted, RingCommitments};
 use crate::piop::cell_equality::CellEqualityEvals;
+use crate::piop::{FixedColumnsCommitted, RingCommitments};
 use crate::RingEvaluations;
 
 pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> {
@@ -105,10 +105,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         // pk_index_unique: InnerProd<F>, //TODO:
         let pk_from_index = CondAddValues {
             bitmask: all_columns_evaluated.pk_index,
-            points: (
-                all_columns_evaluated.pks[0],
-                all_columns_evaluated.pks[1],
-            ),
+            points: (all_columns_evaluated.pks[0], all_columns_evaluated.pks[1]),
             not_last: domain_evals.not_last_row,
             acc: (
                 all_columns_evaluated.pk_from_index[0],
@@ -196,9 +193,11 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         let pk_from_index_x = &self.witness_columns_committed.pk_from_index[0];
         let pk_from_index_y = &self.witness_columns_committed.pk_from_index[1];
         let (pk_x_coeff, pk_y_coeff) = self.pk_from_index.acc_coeffs_1();
-        let pk_from_index_c1_lin = pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
+        let pk_from_index_c1_lin =
+            pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
         let (pk_x_coeff, pk_y_coeff) = self.pk_from_index.acc_coeffs_2();
-        let pk_from_index_c2_lin = pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
+        let pk_from_index_c2_lin =
+            pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
 
         let per_constraint = vec![
             pk_from_sk_c1_lin,

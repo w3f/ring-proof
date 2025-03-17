@@ -28,11 +28,7 @@ impl<F: FftField> CellEqualityPolys<F> {
         let b_last = b.evals.evals[domain.capacity - 1];
         assert_eq!(a_last, b_last);
         let l_last = domain.l_last.clone();
-        Self {
-            a,
-            b,
-            l_last,
-        }
+        Self { a, b, l_last }
     }
 
     pub fn constraints(&self) -> Vec<Evaluations<F>> {
