@@ -18,9 +18,9 @@ use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::piop::ProverPiop;
 
 use crate::piop::cell_equality::CellEqualityPolys;
+use w3f_plonk_common::gadgets::column_sum::ColumnSumPolys;
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
 use w3f_plonk_common::Column;
-use w3f_plonk_common::gadgets::column_sum::ColumnSumPolys;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -278,12 +278,36 @@ where
             self.out_from_in_y.constraints(),
             self.pks_equal_x.constraints(),
             self.pks_equal_y.constraints(),
-            vec![FixedCells::constraint_cell(&self.pk_from_sk.acc.xs, &self.domain.l_first, 0)],
-            vec![FixedCells::constraint_cell(&self.pk_from_sk.acc.ys, &self.domain.l_first, 0)],
-            vec![FixedCells::constraint_cell(&self.pk_from_index.acc.xs, &self.domain.l_first, 0)],
-            vec![FixedCells::constraint_cell(&self.pk_from_index.acc.ys, &self.domain.l_first, 0)],
-            vec![FixedCells::constraint_cell(&self.doublings_of_in_gadget.doublings.xs, &self.domain.l_first, 0)],
-            vec![FixedCells::constraint_cell(&self.doublings_of_in_gadget.doublings.ys, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(
+                &self.pk_from_sk.acc.xs,
+                &self.domain.l_first,
+                0,
+            )],
+            vec![FixedCells::constraint_cell(
+                &self.pk_from_sk.acc.ys,
+                &self.domain.l_first,
+                0,
+            )],
+            vec![FixedCells::constraint_cell(
+                &self.pk_from_index.acc.xs,
+                &self.domain.l_first,
+                0,
+            )],
+            vec![FixedCells::constraint_cell(
+                &self.pk_from_index.acc.ys,
+                &self.domain.l_first,
+                0,
+            )],
+            vec![FixedCells::constraint_cell(
+                &self.doublings_of_in_gadget.doublings.xs,
+                &self.domain.l_first,
+                0,
+            )],
+            vec![FixedCells::constraint_cell(
+                &self.doublings_of_in_gadget.doublings.ys,
+                &self.domain.l_first,
+                0,
+            )],
         ]
         .concat()
     }

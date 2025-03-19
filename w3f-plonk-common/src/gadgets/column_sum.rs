@@ -41,10 +41,12 @@ impl<F: FftField> ColumnSumPolys<F> {
 
     /// Returns `col[0], col[0] + col[1], ..., col[0] + col[1] + ... + col[n-1]`.
     fn partial_sums(col: &[F]) -> Vec<F> {
-        col.iter().scan(F::zero(), |state, &x| {
-            *state += x;
-            Some(*state)
-        }).collect()
+        col.iter()
+            .scan(F::zero(), |state, &x| {
+                *state += x;
+                Some(*state)
+            })
+            .collect()
     }
 }
 

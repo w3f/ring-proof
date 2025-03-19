@@ -189,12 +189,36 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.out_from_in_y.evaluate_constraints_main(),
             self.pks_equal_x.evaluate_constraints_main(),
             self.pks_equal_y.evaluate_constraints_main(),
-            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_sk.acc.0, self.domain_evals.l_first, self.seed.0)],
-            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_sk.acc.1, self.domain_evals.l_first, self.seed.1)],
-            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_index.acc.0, self.domain_evals.l_first, self.seed.0)],
-            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_index.acc.1, self.domain_evals.l_first, self.seed.1)],
-            vec![FixedCellsValues::evaluate_for_cell(self.doublings_of_in_gadget.doublings.0, self.domain_evals.l_first, self.vrf_in.0)],
-            vec![FixedCellsValues::evaluate_for_cell(self.doublings_of_in_gadget.doublings.1, self.domain_evals.l_first, self.vrf_in.1)],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.pk_from_sk.acc.0,
+                self.domain_evals.l_first,
+                self.seed.0,
+            )],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.pk_from_sk.acc.1,
+                self.domain_evals.l_first,
+                self.seed.1,
+            )],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.pk_from_index.acc.0,
+                self.domain_evals.l_first,
+                self.seed.0,
+            )],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.pk_from_index.acc.1,
+                self.domain_evals.l_first,
+                self.seed.1,
+            )],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.doublings_of_in_gadget.doublings.0,
+                self.domain_evals.l_first,
+                self.vrf_in.0,
+            )],
+            vec![FixedCellsValues::evaluate_for_cell(
+                self.doublings_of_in_gadget.doublings.1,
+                self.domain_evals.l_first,
+                self.vrf_in.1,
+            )],
         ]
         .concat()
     }
@@ -229,8 +253,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         let pk_from_index_c2_lin =
             pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
 
-        let pk_index_sum_lin = (&self.witness_columns_committed.pk_index_sum)
-            .mul(self.pk_index_sum.not_last);
+        let pk_index_sum_lin =
+            (&self.witness_columns_committed.pk_index_sum).mul(self.pk_index_sum.not_last);
 
         let per_constraint = vec![
             pk_from_sk_c1_lin,
