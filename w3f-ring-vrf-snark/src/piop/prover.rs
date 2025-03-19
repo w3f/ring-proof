@@ -1,5 +1,5 @@
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
-use ark_ff::PrimeField;
+use ark_ff::{PrimeField, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
 use ark_std::rc::Rc;
@@ -52,6 +52,14 @@ use w3f_plonk_common::Column;
 /// | $k$            | $pk_x$      | $pk_y$      | $acc_{pk_x}$   | $acc_{pk_y}$   | $sk$                     | $2^iG$x2 | $acc_{sk}$x2    | $2^iH$x2 | $acc_{out}$x2   |
 /// | --------       | --------    | --------    | --             | -              | -                        | -        | -               | -        | -               |
 /// | signer's index | x of pubkey | y of pubkey | $\sum k_ipk_x$ | $\sum k_ipk_y$ | binary rep of secret key |          | $\sum sk_i2^iG$ |          | $\sum sk_i2^iH$ |
+
+/// Verifier's input is:
+/// - the `seed` to seed the `pk_from_sk`, `pk_from_index`, and `out_from_in` additions,
+/// - `vrf_in` to seed the `doublings_of_in_gadget`,
+/// - `vrf_out = sk.vrf_in + seed` -- the result of `out_from_in`,
+/// and also the commitments to
+/// - the ring -- the list of public keys enrolled,
+/// - the doublings `g, 2g, 4g, ...` of the generator `g` (such that `pk = sk.g`).
 pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     domain: Domain<F>,
     pks: Rc<AffineColumn<F, Affine<Curve>>>,
@@ -93,7 +101,7 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             let mut sk_bits = params.sk_bits(sk); //TODO: return right thing
             assert!(sk_bits.len() <= domain.capacity - 1);
             sk_bits.resize(domain.capacity - 1, false);
-            let sk_bits = BitColumn::init(sk_bits, &params.domain);
+            let sk_bits = BitColumn::init(sk_bits, &domain);
             Rc::new(sk_bits)
         };
         let pk_index = Rc::new(params.pk_index_col(pk_index));
@@ -255,6 +263,12 @@ where
             self.out_from_in_y.constraints(),
             self.pks_equal_x.constraints(),
             self.pks_equal_y.constraints(),
+            vec![FixedCells::constraint_cell(&self.pk_from_sk.acc.xs, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(&self.pk_from_sk.acc.ys, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(&self.pk_from_index.acc.xs, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(&self.pk_from_index.acc.ys, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(&self.doublings_of_in_gadget.doublings.xs, &self.domain.l_first, 0)],
+            vec![FixedCells::constraint_cell(&self.doublings_of_in_gadget.doublings.ys, &self.domain.l_first, 0)],
         ]
         .concat()
     }
@@ -271,6 +285,12 @@ where
             self.out_from_in_y.constraints_linearized(zeta),
             self.pks_equal_x.constraints_linearized(zeta),
             self.pks_equal_y.constraints_linearized(zeta),
+            vec![DensePolynomial::zero()],
+            vec![DensePolynomial::zero()],
+            vec![DensePolynomial::zero()],
+            vec![DensePolynomial::zero()],
+            vec![DensePolynomial::zero()],
+            vec![DensePolynomial::zero()],
         ]
         .concat()
     }

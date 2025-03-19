@@ -33,6 +33,10 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     pk_from_index: CondAddValues<F, P>,
     pks_equal_x: CellEqualityEvals<F>,
     pks_equal_y: CellEqualityEvals<F>,
+
+    //TODO: params?
+    seed: (F, F),
+    vrf_in: (F, F),
 }
 
 impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier<F, C, P> {
@@ -42,7 +46,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         witness_columns_committed: RingCommitments<F, C>,
         all_columns_evaluated: RingEvaluations<F>,
         seed: (F, F),
-        _vrf_in: (F, F), //TODO
+        vrf_in: (F, F),
         vrf_out: (F, F),
     ) -> Self {
         let sk_bits_bool = BooleanityValues {
@@ -139,6 +143,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             pk_from_index,
             pks_equal_x,
             pks_equal_y,
+            seed,
+            vrf_in,
         }
     }
 }
@@ -146,7 +152,7 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 14;
+    const N_CONSTRAINTS: usize = 20;
     const N_COLUMNS: usize = 14;
 
     fn precommitted_columns(&self) -> Vec<C> {
@@ -165,6 +171,12 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.out_from_in_y.evaluate_constraints_main(),
             self.pks_equal_x.evaluate_constraints_main(),
             self.pks_equal_y.evaluate_constraints_main(),
+            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_sk.acc.0, self.domain_evals.l_first, self.seed.0)],
+            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_sk.acc.1, self.domain_evals.l_first, self.seed.1)],
+            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_index.acc.0, self.domain_evals.l_first, self.seed.0)],
+            vec![FixedCellsValues::evaluate_for_cell(self.pk_from_index.acc.1, self.domain_evals.l_first, self.seed.1)],
+            vec![FixedCellsValues::evaluate_for_cell(self.doublings_of_in_gadget.doublings.0, self.domain_evals.l_first, self.vrf_in.0)],
+            vec![FixedCellsValues::evaluate_for_cell(self.doublings_of_in_gadget.doublings.1, self.domain_evals.l_first, self.vrf_in.1)],
         ]
         .concat()
     }
