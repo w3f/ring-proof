@@ -31,6 +31,7 @@ pub struct RingCommitments<F: PrimeField, C: Commitment<F>> {
     pub(crate) doublings_of_in: [C; 2],
     pub(crate) out_from_in: [C; 2],
     pub(crate) pk_from_index: [C; 2],
+    pub(crate) pk_index_sum: C,
     pub(crate) phantom: PhantomData<F>,
 }
 
@@ -47,6 +48,7 @@ impl<F: PrimeField, C: Commitment<F>> ColumnsCommited<F, C> for RingCommitments<
             self.out_from_in[1].clone(),
             self.pk_from_index[0].clone(),
             self.pk_from_index[1].clone(),
+            self.pk_index_sum.clone(),
         ]
     }
 }
@@ -61,6 +63,7 @@ pub struct RingEvaluations<F: PrimeField> {
     pub(crate) doublings_of_in: [F; 2],
     pub(crate) out_from_in: [F; 2],
     pub(crate) pk_from_index: [F; 2],
+    pub(crate) pk_index_sum: F,
 }
 
 impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
@@ -80,6 +83,7 @@ impl<F: PrimeField> ColumnsEvaluated<F> for RingEvaluations<F> {
             self.out_from_in[1],
             self.pk_from_index[0],
             self.pk_from_index[1],
+            self.pk_index_sum,
         ]
     }
 }

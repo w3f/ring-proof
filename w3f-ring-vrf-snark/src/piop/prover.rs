@@ -20,6 +20,7 @@ use w3f_plonk_common::piop::ProverPiop;
 use crate::piop::cell_equality::CellEqualityPolys;
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
 use w3f_plonk_common::Column;
+use w3f_plonk_common::gadgets::column_sum::ColumnSumPolys;
 
 /// The prover's private input is its secret key `sk`.
 /// The public inputs are:
@@ -74,8 +75,11 @@ pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     out_from_in_x: FixedCells<F>,
     out_from_in_y: FixedCells<F>,
     pk_index_bool: Booleanity<F>,
-    // pk_index_unique: InnerProd<F>, //TODO:
-    pk_from_index: CondAdd<F, Affine<Curve>>, // TODO: constrain the seed
+    /// The following 2 together guarantee that the single bit is set in `pk_index[0..domain.capacity - 1]`.
+    /// `pk_index[domain.capacity - 1]` is not constrained. That's ok because the ec addition gadget ignores the last bit.
+    pk_index_sum: ColumnSumPolys<F>,
+    pk_index_sum_val: FixedCells<F>,
+    pk_from_index: CondAdd<F, Affine<Curve>>,
     pks_equal_x: CellEqualityPolys<F>,
     pks_equal_y: CellEqualityPolys<F>,
 }
@@ -122,6 +126,8 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         let out_from_in_y = FixedCells::init(out_from_in.acc.ys.clone(), &domain);
 
         let pk_index_bool = Booleanity::init(pk_index.clone());
+        let pk_index_sum = ColumnSumPolys::init(pk_index.col.clone(), &domain);
+        let pk_index_sum_val = FixedCells::init(pk_index_sum.acc.clone(), &domain);
         let pk_from_index = CondAdd::init(pk_index.clone(), pks.clone(), params.seed, &domain);
 
         let pks_equal_x = CellEqualityPolys::init(
@@ -148,6 +154,8 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             out_from_in_x,
             out_from_in_y,
             pk_index_bool,
+            pk_index_sum,
+            pk_index_sum_val,
             pk_from_index,
             pks_equal_x,
             pks_equal_y,
@@ -187,6 +195,7 @@ where
             commit(self.pk_from_index.acc.xs.as_poly()),
             commit(self.pk_from_index.acc.ys.as_poly()),
         ];
+        let pk_index_sum = commit(self.pk_index_sum.acc.as_poly());
         RingCommitments {
             sk_bits,
             pk_index,
@@ -194,6 +203,7 @@ where
             doublings_of_in,
             out_from_in,
             pk_from_index,
+            pk_index_sum,
             phantom: Default::default(),
         }
     }
@@ -212,6 +222,7 @@ where
             self.out_from_in.acc.ys.as_poly().clone(),
             self.pk_from_index.acc.xs.as_poly().clone(),
             self.pk_from_index.acc.ys.as_poly().clone(),
+            self.pk_index_sum.acc.as_poly().clone(),
         ]
     }
 
@@ -239,6 +250,7 @@ where
             self.pk_from_index.acc.xs.evaluate(zeta),
             self.pk_from_index.acc.ys.evaluate(zeta),
         ];
+        let pk_index_unique = self.pk_index_sum.acc.evaluate(zeta);
         RingEvaluations {
             pks,
             doublings_of_g,
@@ -248,6 +260,7 @@ where
             doublings_of_in,
             out_from_in,
             pk_from_index,
+            pk_index_sum: pk_index_unique,
         }
     }
 
@@ -259,6 +272,8 @@ where
             self.doublings_of_in_gadget.constraints(),
             self.out_from_in.constraints(),
             self.pk_from_index.constraints(),
+            self.pk_index_sum.constraints(),
+            self.pk_index_sum_val.constraints(),
             self.out_from_in_x.constraints(),
             self.out_from_in_y.constraints(),
             self.pks_equal_x.constraints(),
@@ -281,6 +296,8 @@ where
             self.doublings_of_in_gadget.constraints_linearized(zeta),
             self.out_from_in.constraints_linearized(zeta),
             self.pk_from_index.constraints_linearized(zeta),
+            self.pk_index_sum.constraints_linearized(zeta),
+            self.pk_index_sum_val.constraints_linearized(zeta),
             self.out_from_in_x.constraints_linearized(zeta),
             self.out_from_in_y.constraints_linearized(zeta),
             self.pks_equal_x.constraints_linearized(zeta),

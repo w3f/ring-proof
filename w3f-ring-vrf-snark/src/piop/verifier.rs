@@ -6,6 +6,7 @@ use w3f_pcs::pcs::Commitment;
 
 use w3f_plonk_common::domain::EvaluatedDomain;
 use w3f_plonk_common::gadgets::booleanity::BooleanityValues;
+use w3f_plonk_common::gadgets::column_sum::ColumnSumEvals;
 use w3f_plonk_common::gadgets::ec::te_doubling::DoublingValues;
 use w3f_plonk_common::gadgets::ec::CondAddValues;
 use w3f_plonk_common::gadgets::fixed_cells::FixedCellsValues;
@@ -29,7 +30,8 @@ pub struct PiopVerifier<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField
     out_from_in_x: FixedCellsValues<F>,
     out_from_in_y: FixedCellsValues<F>,
     pk_index_bool: BooleanityValues<F>,
-    // pk_index_unique: InnerProd<F>, //TODO:
+    pk_index_sum: ColumnSumEvals<F>,
+    pk_index_sum_val: FixedCellsValues<F>,
     pk_from_index: CondAddValues<F, P>,
     pks_equal_x: CellEqualityEvals<F>,
     pks_equal_y: CellEqualityEvals<F>,
@@ -106,7 +108,19 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
         let pk_index_bool = BooleanityValues {
             bits: all_columns_evaluated.pk_index,
         };
-        // pk_index_unique: InnerProd<F>, //TODO:
+        let pk_index_sum = ColumnSumEvals {
+            col: all_columns_evaluated.pk_index,
+            acc: all_columns_evaluated.pk_index_sum,
+            not_last: domain_evals.not_last_row,
+        };
+        let pk_index_sum_val = FixedCellsValues {
+            col: all_columns_evaluated.pk_index_sum,
+            col_first: F::zero(),
+            col_last: F::one(),
+            l_first: domain_evals.l_first,
+            l_last: domain_evals.l_last,
+        };
+
         let pk_from_index = CondAddValues {
             bitmask: all_columns_evaluated.pk_index,
             points: (all_columns_evaluated.pks[0], all_columns_evaluated.pks[1]),
@@ -140,6 +154,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
             out_from_in_x,
             out_from_in_y,
             pk_index_bool,
+            pk_index_sum,
+            pk_index_sum_val,
             pk_from_index,
             pks_equal_x,
             pks_equal_y,
@@ -152,8 +168,8 @@ impl<F: PrimeField, C: Commitment<F>, P: AffineRepr<BaseField = F>> PiopVerifier
 impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> VerifierPiop<F, C>
     for PiopVerifier<F, C, Affine<Jubjub>>
 {
-    const N_CONSTRAINTS: usize = 20;
-    const N_COLUMNS: usize = 14;
+    const N_CONSTRAINTS: usize = 22;
+    const N_COLUMNS: usize = 15;
 
     fn precommitted_columns(&self) -> Vec<C> {
         self.fixed_columns_committed.as_vec()
@@ -167,6 +183,8 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             self.doublings_of_in_gadget.evaluate_constraints_main(),
             self.out_from_in.evaluate_constraints_main(),
             self.pk_from_index.evaluate_constraints_main(),
+            self.pk_index_sum.evaluate_constraints_main(),
+            self.pk_index_sum_val.evaluate_constraints_main(),
             self.out_from_in_x.evaluate_constraints_main(),
             self.out_from_in_y.evaluate_constraints_main(),
             self.pks_equal_x.evaluate_constraints_main(),
@@ -211,6 +229,9 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
         let pk_from_index_c2_lin =
             pk_from_index_x.mul(pk_x_coeff) + pk_from_index_y.mul(pk_y_coeff);
 
+        let pk_index_sum_lin = (&self.witness_columns_committed.pk_index_sum)
+            .mul(self.pk_index_sum.not_last);
+
         let per_constraint = vec![
             pk_from_sk_c1_lin,
             pk_from_sk_c2_lin,
@@ -220,10 +241,11 @@ impl<F: PrimeField, C: Commitment<F>, Jubjub: TECurveConfig<BaseField = F>> Veri
             out_from_in_c2_lin,
             pk_from_index_c1_lin,
             pk_from_index_c2_lin,
+            pk_index_sum_lin,
         ];
 
         // TODO: optimize muls
-        C::combine(&agg_coeffs[2..10], &per_constraint) //TODO
+        C::combine(&agg_coeffs[2..11], &per_constraint) //TODO
     }
 
     fn domain_evaluated(&self) -> &EvaluatedDomain<F> {

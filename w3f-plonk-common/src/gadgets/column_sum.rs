@@ -12,10 +12,10 @@ pub struct ColumnSumPolys<F: FftField> {
     /// Input column.
     /// Should have length `n-1`, where `n` is the domain "capacity" (domain.size - ZK_ROWS):
     /// `col[0], ..., col[n-2]`
-    col: Rc<FieldColumn<F>>,
+    pub col: Rc<FieldColumn<F>>,
     /// Partial sums of `col`: `acc[0] = 0, acc[i] = col[0] + ... + col[i-1], i = 1,...,n-1`
-    acc: Rc<FieldColumn<F>>,
-    not_last: FieldColumn<F>,
+    pub acc: Rc<FieldColumn<F>>,
+    pub not_last: FieldColumn<F>,
 }
 
 pub struct ColumnSumEvals<F: Field> {
