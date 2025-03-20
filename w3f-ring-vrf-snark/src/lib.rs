@@ -18,7 +18,8 @@ mod piop;
 pub mod ring_vrf_prover;
 pub mod ring_vrf_verifier;
 
-pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
+pub type RingVrfProof<F, CS> =
+    Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
@@ -54,8 +55,8 @@ mod tests {
 
     use w3f_plonk_common::test_helpers::random_vec;
 
-    use crate::ring_vrf_prover::RingProver;
-    use crate::ring_vrf_verifier::RingVerifier;
+    use crate::ring_vrf_prover::RingVrfProver;
+    use crate::ring_vrf_verifier::RingVrfVerifier;
 
     use super::*;
 
@@ -64,38 +65,37 @@ mod tests {
 
         let (pcs_params, piop_params) = setup::<_, CS>(rng, domain_size);
 
-        let max_keyset_size = piop_params.keyset_part_size;
-        let keyset_size: usize = rng.gen_range(0..max_keyset_size);
+        let keyset_size: usize = rng.gen_range(1..=piop_params.max_keys());
         let mut pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
-        let k = rng.gen_range(0..keyset_size); // prover's secret index
+        let pk_index = rng.gen_range(0..keyset_size); // prover's secret index
         let sk = Fr::rand(rng); // prover's secret scalar
         let pk = piop_params.g.mul(sk).into_affine();
-        pks[k] = pk;
+        pks[pk_index] = pk;
 
         let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 
-        // PROOF generation
+        let vrf_in = EdwardsAffine::rand(rng);
+        let vrf_out = vrf_in.mul(sk).into_affine();
 
-        let vrf_input = EdwardsAffine::rand(rng);
-        let vrf_output = vrf_input.mul(sk).into_affine();
-        let ring_prover = RingProver::init(
+        let ring_prover = RingVrfProver::init(
             prover_key,
             piop_params.clone(),
-            k,
+            pk_index,
+            sk,
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_prove = start_timer!(|| "Prove");
-        let (proof, res) = ring_prover.prove(sk, vrf_input);
+        let (res, proof) = ring_prover.prove(vrf_in);
         end_timer!(t_prove);
-        assert_eq!(res, vrf_output);
+        assert_eq!(res, vrf_out);
 
-        let ring_verifier = RingVerifier::init(
+        let ring_verifier = RingVrfVerifier::init(
             verifier_key,
             piop_params,
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify(proof, vrf_input, vrf_output);
+        let res = ring_verifier.verify(vrf_in, vrf_out, proof);
         end_timer!(t_verify);
         assert!(res);
     }
@@ -130,13 +130,10 @@ mod tests {
     ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
-
         let domain = Domain::new(domain_size, true);
-        let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
         let padding = EdwardsAffine::rand(rng);
-        let piop_params = PiopParams::setup(domain, h, seed, padding);
-
+        let piop_params = PiopParams::setup(domain, seed, padding);
         (pcs_params, piop_params)
     }
 
