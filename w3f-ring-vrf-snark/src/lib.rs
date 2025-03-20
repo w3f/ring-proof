@@ -14,7 +14,6 @@ pub use w3f_pcs::pcs;
 pub use w3f_plonk_common::domain::Domain;
 
 mod piop;
-// mod ring_vrf;
 pub mod ring_vrf_prover;
 pub mod ring_vrf_verifier;
 
@@ -47,12 +46,13 @@ impl ArkTranscript {
 
 #[cfg(test)]
 mod tests {
+    use ark_bls12_381::Bls12_381;
     use ark_ec::CurveGroup;
     use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, EdwardsAffine, Fq, Fr};
     use ark_std::ops::Mul;
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
-
+    use w3f_pcs::pcs::kzg::KZG;
     use w3f_plonk_common::test_helpers::random_vec;
 
     use crate::ring_vrf_prover::RingVrfProver;
@@ -60,12 +60,11 @@ mod tests {
 
     use super::*;
 
-    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
+    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize, keyset_size: usize) {
         let rng = &mut test_rng();
 
         let (pcs_params, piop_params) = setup::<_, CS>(rng, domain_size);
 
-        let keyset_size: usize = rng.gen_range(1..=piop_params.max_keys());
         let mut pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
         let pk_index = rng.gen_range(0..keyset_size); // prover's secret index
         let sk = Fr::rand(rng); // prover's secret scalar
@@ -137,13 +136,15 @@ mod tests {
         (pcs_params, piop_params)
     }
 
-    // #[test]
-    // fn test_ring_proof_kzg() {
-    //     _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(10));
-    // }
+    #[test]
+    fn test_ring_proof_kzg() {
+        _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(9), 512);
+    }
 
     #[test]
     fn test_ring_proof_id() {
-        _test_ring_proof::<w3f_pcs::pcs::IdentityCommitment>(2usize.pow(10));
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(10), 2usize.pow(10) - 4); // no padding
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(9), 253);
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(9), 1);
     }
 }
