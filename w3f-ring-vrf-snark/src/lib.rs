@@ -138,7 +138,7 @@ mod tests {
 
     #[test]
     fn test_ring_proof_kzg() {
-        _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(9), 512);
+        _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(9), 500);
     }
 
     #[test]
