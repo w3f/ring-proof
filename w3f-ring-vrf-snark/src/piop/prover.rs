@@ -212,6 +212,10 @@ where
     // Self::Evaluations::to_vec() and Self::Commitments::to_vec().
     fn columns(&self) -> Vec<DensePolynomial<F>> {
         vec![
+            self.pks.xs.as_poly().clone(),
+            self.pks.ys.as_poly().clone(),
+            self.doublings_of_g.xs.as_poly().clone(),
+            self.doublings_of_g.ys.as_poly().clone(),
             self.sk_bits.as_poly().clone(),
             self.pk_index.as_poly().clone(),
             self.pk_from_sk.acc.xs.as_poly().clone(),
