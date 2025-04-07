@@ -157,7 +157,7 @@ mod tests {
     use ark_ec::AffineRepr;
     use ark_ed_on_bls12_381_bandersnatch::EdwardsAffine;
     use ark_poly::Polynomial;
-    use ark_std::rc::Rc;
+
     use ark_std::test_rng;
 
     use crate::test_helpers::cond_sum;

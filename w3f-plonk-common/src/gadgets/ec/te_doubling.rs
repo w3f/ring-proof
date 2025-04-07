@@ -8,12 +8,12 @@ use ark_ff::{FftField, Field, PrimeField};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
 use ark_std::ops::Mul;
-use ark_std::rc::Rc;
+
 use ark_std::{vec, vec::Vec};
 use core::marker::PhantomData;
 
 pub struct Doubling<F: FftField, P: AffineRepr<BaseField = F>> {
-    pub doublings: Rc<AffineColumn<F, P>>,
+    pub doublings: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
 }
@@ -31,7 +31,6 @@ where
     pub fn init(p: P, domain: &Domain<F>) -> Self {
         let doublings = Self::doublings_of(p, domain);
         let doublings = AffineColumn::public_column(doublings, domain);
-        let doublings = Rc::new(doublings);
         let not_last = domain.not_last_row.clone();
         Self {
             doublings,

@@ -2,7 +2,7 @@ use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::{PrimeField, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
-use ark_std::rc::Rc;
+
 use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::Commitment;
 
@@ -63,10 +63,10 @@ use w3f_plonk_common::Column;
 /// - the doublings `g, 2g, 4g, ...` of the generator `g` (such that `pk = sk.g`).
 pub struct PiopProver<F: PrimeField, Curve: TECurveConfig<BaseField = F>> {
     domain: Domain<F>,
-    pks: Rc<AffineColumn<F, Affine<Curve>>>,
-    doublings_of_g: Rc<AffineColumn<F, Affine<Curve>>>,
-    sk_bits: Rc<BitColumn<F>>,
-    pk_index: Rc<BitColumn<F>>,
+    pks: AffineColumn<F, Affine<Curve>>,
+    doublings_of_g: AffineColumn<F, Affine<Curve>>,
+    sk_bits: BitColumn<F>,
+    pk_index: BitColumn<F>,
     // gadgets
     sk_bits_bool: Booleanity<F>,
     pk_from_sk: CondAdd<F, Affine<Curve>>,
@@ -98,17 +98,14 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
             pks,
             doublings_of_g,
         } = fixed_columns;
-        let pks = Rc::new(pks);
-        let doublings_of_g = Rc::new(doublings_of_g);
 
         let sk_bits = {
             let mut sk_bits = params.sk_bits(sk); //TODO: return right thing
             assert!(sk_bits.len() <= domain.capacity - 1);
             sk_bits.resize(domain.capacity - 1, false);
-            let sk_bits = BitColumn::init(sk_bits, &domain);
-            Rc::new(sk_bits)
+            BitColumn::init(sk_bits, &domain)
         };
-        let pk_index = Rc::new(params.pk_index_col(pk_index));
+        let pk_index = params.pk_index_col(pk_index);
 
         let sk_bits_bool = Booleanity::init(sk_bits.clone());
         // `PK_sk := sk.G`

@@ -1,7 +1,7 @@
 use ark_ff::{FftField, Field};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::{Evaluations, GeneralEvaluationDomain};
-use ark_std::rc::Rc;
+
 use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
@@ -19,10 +19,10 @@ pub struct ColumnSumPolys<F: FftField> {
     /// Input column.
     /// Should have length `c-1`,
     /// `col[0], ..., col[c-2]`
-    pub col: Rc<FieldColumn<F>>,
+    pub col: FieldColumn<F>,
     /// Partial sums of `col`:
     /// `acc[0] = 0, acc[i+1] = col[0] + ... + col[i], i = 0,...,c-2`
-    pub acc: Rc<FieldColumn<F>>,
+    pub acc: FieldColumn<F>,
     /// `p(X) = X - w^(c-1)` -- disables the constraint for `i = c-1`, i.e. between `acc[c-1]` and `acc[c]`.
     pub not_last: FieldColumn<F>,
 }
@@ -34,13 +34,12 @@ pub struct ColumnSumEvals<F: Field> {
 }
 
 impl<F: FftField> ColumnSumPolys<F> {
-    pub fn init(col: Rc<FieldColumn<F>>, domain: &Domain<F>) -> Self {
+    pub fn init(col: FieldColumn<F>, domain: &Domain<F>) -> Self {
         assert_eq!(col.len, domain.capacity - 1); // last element is not constrained
         let partial_sums = Self::partial_sums(col.vals());
         let mut acc = vec![F::zero()];
         acc.extend(partial_sums);
         let acc = domain.private_column(acc);
-        let acc = Rc::new(acc);
         Self {
             col,
             acc,
@@ -114,7 +113,7 @@ mod tests {
 
         let col = random_vec(domain.capacity - 1, rng);
         let sum = col.iter().sum();
-        let col = Rc::new(domain.private_column(col));
+        let col = domain.private_column(col);
 
         let gadget = ColumnSumPolys::<Fq>::init(col, &domain);
 
