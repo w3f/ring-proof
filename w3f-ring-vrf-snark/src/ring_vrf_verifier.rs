@@ -10,9 +10,9 @@ use w3f_plonk_common::verifier::PlonkVerifier;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumnsCommitted, PiopVerifier, VerifierKey};
-use crate::{ArkTranscript, RingProof};
+use crate::{ArkTranscript, RingVrfProof};
 
-pub struct RingVerifier<F, CS, Jubjub, T = ArkTranscript>
+pub struct RingVrfVerifier<F, CS, Jubjub, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,
@@ -24,7 +24,7 @@ where
     plonk_verifier: PlonkVerifier<F, CS, T>,
 }
 
-impl<F, CS, Jubjub, T> RingVerifier<F, CS, Jubjub, T>
+impl<F, CS, Jubjub, T> RingVrfVerifier<F, CS, Jubjub, T>
 where
     F: PrimeField,
     CS: PCS<F>,
@@ -47,9 +47,9 @@ where
 
     pub fn verify(
         &self,
-        proof: RingProof<F, CS>,
         vrf_in: Affine<Jubjub>,
         vrf_out: Affine<Jubjub>,
+        proof: RingVrfProof<F, CS>,
     ) -> bool {
         let (challenges, mut rng) = self.plonk_verifier.restore_challenges(
             &vrf_out,
@@ -58,17 +58,16 @@ where
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_COLUMNS + 1,
             PiopVerifier::<F, CS::C, Affine<Jubjub>>::N_CONSTRAINTS,
         );
-        println!("{:?}", challenges);
         let seed = self.piop_params.seed;
         let seed_plus_out = (seed + vrf_out).into_affine();
-        let domain_eval = EvaluatedDomain::new(
+        let domain_evals = EvaluatedDomain::new(
             self.piop_params.domain.domain(),
             challenges.zeta,
             self.piop_params.domain.hiding,
         );
 
         let piop = PiopVerifier::<_, _, Affine<Jubjub>>::init(
-            domain_eval,
+            domain_evals,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),

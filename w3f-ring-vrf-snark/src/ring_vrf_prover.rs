@@ -7,9 +7,9 @@ use w3f_plonk_common::transcript::PlonkTranscript;
 
 use crate::piop::params::PiopParams;
 use crate::piop::{FixedColumns, PiopProver, ProverKey};
-use crate::{ArkTranscript, RingProof};
+use crate::{ArkTranscript, RingVrfProof};
 
-pub struct RingProver<F, CS, Curve, T = ArkTranscript>
+pub struct RingVrfProver<F, CS, Curve, T = ArkTranscript>
 where
     F: PrimeField,
     CS: PCS<F>,
@@ -18,11 +18,12 @@ where
 {
     piop_params: PiopParams<F, Curve>,
     fixed_columns: FixedColumns<F, Affine<Curve>>,
-    k: usize,
+    pk_index: usize,
+    sk: Curve::ScalarField,
     plonk_prover: PlonkProver<F, CS, T>,
 }
 
-impl<F, CS, Curve, T> RingProver<F, CS, Curve, T>
+impl<F, CS, Curve, T> RingVrfProver<F, CS, Curve, T>
 where
     F: PrimeField,
     CS: PCS<F>,
@@ -32,7 +33,8 @@ where
     pub fn init(
         prover_key: ProverKey<F, CS, Affine<Curve>>,
         piop_params: PiopParams<F, Curve>,
-        k: usize,
+        pk_index: usize,
+        sk: Curve::ScalarField,
         empty_transcript: T,
     ) -> Self {
         let ProverKey {
@@ -46,25 +48,23 @@ where
         Self {
             piop_params,
             fixed_columns,
-            k,
+            pk_index,
+            sk,
             plonk_prover,
         }
     }
 
-    pub fn prove(
-        &self,
-        t: Curve::ScalarField,
-        vrf_input: Affine<Curve>,
-    ) -> (RingProof<F, CS>, Affine<Curve>) {
+    pub fn prove(&self, vrf_in: Affine<Curve>) -> (Affine<Curve>, RingVrfProof<F, CS>) {
         let piop: PiopProver<F, Curve> = PiopProver::build(
             &self.piop_params,
             self.fixed_columns.clone(),
-            self.k,
-            t,
-            vrf_input,
+            self.pk_index,
+            self.sk,
+            vrf_in,
         );
-        let res = <PiopProver<F, Curve> as ProverPiop<F, CS::C>>::result(&piop);
-        (self.plonk_prover.prove(piop), res)
+        let vrf_out = <PiopProver<F, Curve> as ProverPiop<F, CS::C>>::result(&piop);
+        let proof = self.plonk_prover.prove(piop);
+        (vrf_out, proof)
     }
 
     pub fn piop_params(&self) -> &PiopParams<F, Curve> {

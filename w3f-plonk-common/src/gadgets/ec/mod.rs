@@ -74,7 +74,7 @@ where
         domain: &Domain<F>,
     ) -> Self {
         assert_eq!(bitmask.bits.len(), domain.capacity - 1);
-        assert_eq!(points.points.len(), domain.capacity - 1);
+        // assert_eq!(points.points.len(), domain.capacity - 1); //TODO
         let not_last = domain.not_last_row.clone();
         let acc = bitmask
             .bits

@@ -14,11 +14,11 @@ pub use w3f_pcs::pcs;
 pub use w3f_plonk_common::domain::Domain;
 
 mod piop;
-mod ring_vrf;
 pub mod ring_vrf_prover;
 pub mod ring_vrf_verifier;
 
-pub type RingProof<F, CS> = Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
+pub type RingVrfProof<F, CS> =
+    Proof<F, CS, RingCommitments<F, <CS as PCS<F>>::C>, RingEvaluations<F>>;
 
 #[derive(Clone)]
 pub struct ArkTranscript(ark_transcript::Transcript);
@@ -53,77 +53,75 @@ mod tests {
     use ark_std::rand::Rng;
     use ark_std::{end_timer, start_timer, test_rng, UniformRand};
     use w3f_pcs::pcs::kzg::KZG;
-
     use w3f_plonk_common::test_helpers::random_vec;
 
-    use crate::piop::FixedColumnsCommitted;
-    use crate::ring_vrf::{Ring, RingBuilderKey};
-    use crate::ring_vrf_prover::RingProver;
-    use crate::ring_vrf_verifier::RingVerifier;
+    use crate::ring_vrf_prover::RingVrfProver;
+    use crate::ring_vrf_verifier::RingVrfVerifier;
 
     use super::*;
 
-    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize) {
+    fn _test_ring_proof<CS: PCS<Fq>>(domain_size: usize, keyset_size: usize) {
         let rng = &mut test_rng();
 
         let (pcs_params, piop_params) = setup::<_, CS>(rng, domain_size);
 
-        let max_keyset_size = piop_params.keyset_part_size;
-        let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
-        let k = rng.gen_range(0..keyset_size); // prover's secret index
+        let mut pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
+        let pk_index = rng.gen_range(0..keyset_size); // prover's secret index
+        let sk = Fr::rand(rng); // prover's secret scalar
+        let pk = piop_params.g.mul(sk).into_affine();
+        pks[pk_index] = pk;
 
         let (prover_key, verifier_key) = index::<_, CS, _>(&pcs_params, &piop_params, &pks);
 
-        // PROOF generation
-        let secret = Fr::rand(rng); // prover's secret scalar
-        let vrf_input = EdwardsAffine::rand(rng);
-        let vrf_output = vrf_input.mul(secret).into_affine();
-        let ring_prover = RingProver::init(
+        let vrf_in = EdwardsAffine::rand(rng);
+        let vrf_out = vrf_in.mul(sk).into_affine();
+
+        let ring_prover = RingVrfProver::init(
             prover_key,
             piop_params.clone(),
-            k,
+            pk_index,
+            sk,
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_prove = start_timer!(|| "Prove");
-        let (proof, res) = ring_prover.prove(secret, vrf_input);
+        let (res, proof) = ring_prover.prove(vrf_in);
         end_timer!(t_prove);
-        assert_eq!(res, vrf_output);
+        assert_eq!(res, vrf_out);
 
-        let ring_verifier = RingVerifier::init(
+        let ring_verifier = RingVrfVerifier::init(
             verifier_key,
             piop_params,
             ArkTranscript::new(b"w3f-ring-vrf-snark-test"),
         );
         let t_verify = start_timer!(|| "Verify");
-        let res = ring_verifier.verify(proof, vrf_input, vrf_output);
+        let res = ring_verifier.verify(vrf_in, vrf_out, proof);
         end_timer!(t_verify);
         assert!(res);
     }
 
-    #[test]
-    fn test_lagrangian_commitment() {
-        let rng = &mut test_rng();
-
-        let domain_size = 2usize.pow(9);
-
-        let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>>(rng, domain_size);
-        let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
-
-        let max_keyset_size = piop_params.keyset_part_size;
-        let keyset_size: usize = rng.gen_range(0..max_keyset_size);
-        let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
-
-        let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
-
-        let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
-
-        let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
-        assert_eq!(
-            fixed_columns_committed,
-            verifier_key.fixed_columns_committed
-        );
-    }
+    // #[test]
+    // fn test_lagrangian_commitment() {
+    //     let rng = &mut test_rng();
+    //
+    //     let domain_size = 2usize.pow(9);
+    //
+    //     let (pcs_params, piop_params) = setup::<_, KZG<Bls12_381>>(rng, domain_size);
+    //     let ring_builder_key = RingBuilderKey::from_srs(&pcs_params, domain_size);
+    //
+    //     let max_keyset_size = piop_params.keyset_part_size;
+    //     let keyset_size: usize = rng.gen_range(0..max_keyset_size);
+    //     let pks = random_vec::<EdwardsAffine, _>(keyset_size, rng);
+    //
+    //     let (_, verifier_key) = index::<_, KZG<Bls12_381>, _>(&pcs_params, &piop_params, &pks);
+    //
+    //     let ring = Ring::<_, Bls12_381, _>::with_keys(&piop_params, &pks, &ring_builder_key);
+    //
+    //     let fixed_columns_committed = FixedColumnsCommitted::from_ring(&ring);
+    //     assert_eq!(
+    //         fixed_columns_committed,
+    //         verifier_key.fixed_columns_committed
+    //     );
+    // }
 
     fn setup<R: Rng, CS: PCS<Fq>>(
         rng: &mut R,
@@ -131,23 +129,22 @@ mod tests {
     ) -> (CS::Params, PiopParams<Fq, BandersnatchConfig>) {
         let setup_degree = 3 * domain_size;
         let pcs_params = CS::setup(setup_degree, rng);
-
         let domain = Domain::new(domain_size, true);
-        let h = EdwardsAffine::rand(rng);
         let seed = EdwardsAffine::rand(rng);
         let padding = EdwardsAffine::rand(rng);
-        let piop_params = PiopParams::setup(domain, h, seed, padding);
-
+        let piop_params = PiopParams::setup(domain, seed, padding);
         (pcs_params, piop_params)
     }
 
-    // #[test]
-    // fn test_ring_proof_kzg() {
-    //     _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(10));
-    // }
+    #[test]
+    fn test_ring_proof_kzg() {
+        _test_ring_proof::<KZG<Bls12_381>>(2usize.pow(9), 500);
+    }
 
     #[test]
     fn test_ring_proof_id() {
-        _test_ring_proof::<w3f_pcs::pcs::IdentityCommitment>(2usize.pow(10));
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(10), 2usize.pow(10) - 4); // no padding
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(9), 253);
+        _test_ring_proof::<pcs::IdentityCommitment>(2usize.pow(9), 1);
     }
 }

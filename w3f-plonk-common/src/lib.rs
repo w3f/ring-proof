@@ -31,10 +31,10 @@ pub trait Column<F: FftField> {
 #[derive(Clone)]
 pub struct FieldColumn<F: FftField> {
     // actual (constrained) len of the input in evaluation form
-    len: usize,
-    poly: DensePolynomial<F>,
-    evals: Evaluations<F>,
-    evals_4x: Evaluations<F>,
+    pub len: usize,
+    pub poly: DensePolynomial<F>,
+    pub evals: Evaluations<F>,
+    pub evals_4x: Evaluations<F>,
 }
 
 impl<F: FftField> FieldColumn<F> {

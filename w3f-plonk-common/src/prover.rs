@@ -68,8 +68,6 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T>
         let lin_at_zeta_omega = lin.evaluate(&zeta_omega);
         transcript.add_evaluations(&columns_at_zeta, &lin_at_zeta_omega);
 
-        println!("z= {}", zeta);
-
         let polys_at_zeta = [columns_to_open, vec![quotient_poly]].concat();
         let nus = transcript.get_kzg_aggregation_challenges(polys_at_zeta.len());
         let agg_at_zeta = aggregate_polys(&polys_at_zeta, &nus);

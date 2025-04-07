@@ -5,6 +5,7 @@ use ark_std::vec::Vec;
 
 pub mod booleanity;
 // pub mod inner_prod_pub;
+pub mod column_sum;
 pub mod ec;
 pub mod fixed_cells;
 pub mod inner_prod;
