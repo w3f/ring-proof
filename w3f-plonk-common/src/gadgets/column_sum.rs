@@ -12,7 +12,7 @@ use crate::{Column, FieldColumn};
 ///
 /// Let `c` be the domain "capacity" (`c = domain.size - ZK_ROWS`).
 /// The gadget populates and constrains a witness column `acc`,
-/// such that `acc[i] = acc[i-1] + col[i-1], i = 1,...,c-1`.
+/// such that `acc[i+1] = acc[i] + col[i], i = 0,...,c-2`.
 /// Then `acc[c-1] = acc[0] + (col[0] + ... + col[c-2]) = acc[0] + sum(col[0..c-1])`.
 /// `acc[0]` and `acc[c-1]` have to be additionally constrained.
 pub struct ColumnSumPolys<F: FftField> {
