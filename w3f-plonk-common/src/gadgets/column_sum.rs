@@ -8,13 +8,22 @@ use crate::domain::Domain;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::{Column, FieldColumn};
 
+/// Computes the sum of the elements of a `col`. All but last.
+///
+/// Let `c` be the domain "capacity" (`c = domain.size - ZK_ROWS`).
+/// The gadget populates and constrains a witness column `acc`,
+/// such that `acc[i] = acc[i-1] + col[i-1], i = 1,...,c-1`.
+/// Then `acc[c-1] = acc[0] + (col[0] + ... + col[c-2]) = acc[0] + sum(col[0..c-1])`.
+/// `acc[0]` and `acc[c-1]` have to be additionally constrained.
 pub struct ColumnSumPolys<F: FftField> {
     /// Input column.
-    /// Should have length `n-1`, where `n` is the domain "capacity" (domain.size - ZK_ROWS):
-    /// `col[0], ..., col[n-2]`
+    /// Should have length `c-1`,
+    /// `col[0], ..., col[c-2]`
     pub col: Rc<FieldColumn<F>>,
-    /// Partial sums of `col`: `acc[0] = 0, acc[i] = col[0] + ... + col[i-1], i = 1,...,n-1`
+    /// Partial sums of `col`:
+    /// `acc[0] = 0, acc[i+1] = col[0] + ... + col[i], i = 0,...,c-2`
     pub acc: Rc<FieldColumn<F>>,
+    /// `p(X) = X - w^(c-1)` -- disables the constraint for `i = c-1`, i.e. between `acc[c-1]` and `acc[c]`.
     pub not_last: FieldColumn<F>,
 }
 
@@ -40,7 +49,7 @@ impl<F: FftField> ColumnSumPolys<F> {
     }
 
     /// Returns `col[0], col[0] + col[1], ..., col[0] + col[1] + ... + col[n-1]`.
-    fn partial_sums(col: &[F]) -> Vec<F> {
+    pub fn partial_sums(col: &[F]) -> Vec<F> {
         col.iter()
             .scan(F::zero(), |state, &x| {
                 *state += x;
@@ -56,6 +65,9 @@ impl<F: FftField> ProverGadget<F> for ColumnSumPolys<F> {
     }
 
     fn constraints(&self) -> Vec<Evaluations<F>> {
+        // A degree `n` polynomial is computed using evaluations at `4n` points.
+        // Still it's convenient, as we aggregate the constraints in the evaluation form
+        // over the `4x` domain.
         let col = &self.col.evals_4x;
         let acc = &self.acc.evals_4x;
         let acc_shifted = &self.acc.shifted_4x();
@@ -93,7 +105,7 @@ mod tests {
 
     use super::*;
 
-    fn _test_column_sum_gadget(hiding: bool) {
+    fn _column_sum_gadget(hiding: bool) {
         let rng = &mut test_rng();
 
         let log_n = 10;
@@ -117,8 +129,8 @@ mod tests {
     }
 
     #[test]
-    fn test_column_sum_gadget() {
-        _test_column_sum_gadget(false);
-        _test_column_sum_gadget(true);
+    fn column_sum_gadget() {
+        _column_sum_gadget(false);
+        _column_sum_gadget(true);
     }
 }
