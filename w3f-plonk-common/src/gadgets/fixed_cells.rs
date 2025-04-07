@@ -1,7 +1,7 @@
 use ark_ff::{FftField, Field, Zero};
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
-use ark_std::rc::Rc;
+
 use ark_std::{vec, vec::Vec};
 
 use crate::domain::Domain;
@@ -9,7 +9,7 @@ use crate::gadgets::VerifierGadget;
 use crate::{const_evals, Column, FieldColumn};
 
 pub struct FixedCells<F: FftField> {
-    col: Rc<FieldColumn<F>>,
+    col: FieldColumn<F>,
     l_first: FieldColumn<F>,
     l_last: FieldColumn<F>,
 }
@@ -23,7 +23,7 @@ pub struct FixedCellsValues<F: Field> {
 }
 
 impl<F: FftField> FixedCells<F> {
-    pub fn init(col: Rc<FieldColumn<F>>, domain: &Domain<F>) -> Self {
+    pub fn init(col: FieldColumn<F>, domain: &Domain<F>) -> Self {
         assert_eq!(col.len, domain.capacity);
         let l_first = domain.l_first.clone();
         let l_last = domain.l_last.clone();

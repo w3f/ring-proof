@@ -3,7 +3,7 @@ use crate::gadgets::booleanity::BitColumn;
 use crate::{Column, FieldColumn};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_ff::{FftField, Field};
-use ark_std::rc::Rc;
+
 // use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::marker::PhantomData;
 use ark_std::vec::Vec;
@@ -19,8 +19,8 @@ pub mod te_doubling;
 #[derive(Clone)]
 pub struct AffineColumn<F: FftField, P: AffineRepr<BaseField = F>> {
     points: Vec<P>,
-    pub xs: Rc<FieldColumn<F>>,
-    pub ys: Rc<FieldColumn<F>>,
+    pub xs: FieldColumn<F>,
+    pub ys: FieldColumn<F>,
 }
 
 impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
@@ -29,8 +29,6 @@ impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
         let (xs, ys) = points.iter().map(|p| p.xy().unwrap()).unzip();
         let xs = domain.column(xs, hidden);
         let ys = domain.column(ys, hidden);
-        let xs = Rc::new(xs);
-        let ys = Rc::new(ys);
         Self { points, xs, ys }
     }
     pub fn private_column(points: Vec<P>, domain: &Domain<F>) -> Self {
@@ -50,12 +48,12 @@ impl<F: FftField, P: AffineRepr<BaseField = F>> AffineColumn<F, P> {
 // if the bit is set for a point, add the point to the acc and store,
 // otherwise copy the acc value
 pub struct CondAdd<F: FftField, P: AffineRepr<BaseField = F>> {
-    bitmask: Rc<BitColumn<F>>,
-    points: Rc<AffineColumn<F, P>>,
+    bitmask: BitColumn<F>,
+    points: AffineColumn<F, P>,
     // The polynomial `X - w^{n-1}` in the Lagrange basis
     not_last: FieldColumn<F>,
     // Accumulates the (conditional) rolling sum of the points
-    pub acc: Rc<AffineColumn<F, P>>,
+    pub acc: AffineColumn<F, P>,
     pub result: P,
 }
 
@@ -68,8 +66,8 @@ where
     // If we assume the proofs of possession have been verified for the ring points,
     // this can be achieved by setting the seed to a point of unknown dlog from the prime order subgroup.
     pub fn init(
-        bitmask: Rc<BitColumn<F>>,
-        points: Rc<AffineColumn<F, P>>,
+        bitmask: BitColumn<F>,
+        points: AffineColumn<F, P>,
         seed: P,
         domain: &Domain<F>,
     ) -> Self {
@@ -91,7 +89,6 @@ where
         let result = init_plus_result.into_group() - seed.into_group();
         let result = result.into_affine();
         let acc = AffineColumn::private_column(acc, domain);
-        let acc = Rc::new(acc);
 
         Self {
             bitmask,
