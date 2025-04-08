@@ -4,3 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy = { version = "0.13", default-features = false, features = ["contract", "provider-anvil-node"] }
+tokio = { version = "1.44", default-features = false }
