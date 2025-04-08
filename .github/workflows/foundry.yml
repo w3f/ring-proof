@@ -1,4 +1,4 @@
-name: CI
+name: Foundry
 
 on:
   push:
@@ -29,15 +29,15 @@ jobs:
 
       - name: Run Forge fmt
         run: |
-          forge fmt --check
+          forge fmt --root evm-vrfier/contracts --check
         id: fmt
 
       - name: Run Forge build
         run: |
-          forge build --sizes
+          forge build --root evm-vrfier/contracts --sizes
         id: build
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test --root evm-vrfier/contracts -vvv
         id: test
