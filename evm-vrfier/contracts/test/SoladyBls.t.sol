@@ -4,7 +4,6 @@ import {Test, console} from "forge-std/Test.sol";
 import "../src/SoladyBls.sol";
 
 contract SoladyBlsTest is Test {
-
     function G1() internal pure returns (BLS.G1Point memory) {
         return BLS.G1Point(
             bytes32(uint256(31827880280837800241567138048534752271)),
@@ -40,7 +39,7 @@ contract SoladyBlsTest is Test {
         );
     }
 
-    function test_pairing() public {
+    function test_pairing() public view {
         BLS.G1Point[] memory g1_points = new BLS.G1Point[](2);
         BLS.G2Point[] memory g2_points = new BLS.G2Point[](2);
         g1_points[0] = G1();
