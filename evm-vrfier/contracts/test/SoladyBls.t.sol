@@ -2,50 +2,16 @@ pragma solidity ^0.8.24;
 
 import {Test, console} from "forge-std/Test.sol";
 import "../src/SoladyBls.sol";
+import "../src/BlsGenerators.sol";
 
 contract SoladyBlsTest is Test {
-    function G1() internal pure returns (BLS.G1Point memory) {
-        return BLS.G1Point(
-            bytes32(uint256(31827880280837800241567138048534752271)),
-            bytes32(uint256(88385725958748408079899006800036250932223001591707578097800747617502997169851)),
-            bytes32(uint256(11568204302792691131076548377920244452)),
-            bytes32(uint256(114417265404584670498511149331300188430316142484413708742216858159411894806497))
-        );
-    }
-
-    function G2() internal pure returns (BLS.G2Point memory) {
-        return BLS.G2Point(
-            bytes32(uint256(3045985886519456750490515843806728273)),
-            bytes32(uint256(89961632905173714226157479458612185649920463576279427516307505038263245192632)),
-            bytes32(uint256(26419286191256893424348605754143887205)),
-            bytes32(uint256(40446337346877272185227670183527379362551741423616556919902061939448715946878)),
-            bytes32(uint256(17144095208600308495026432580569150746)),
-            bytes32(uint256(78698209480990513415779284580404715789311803115477290401294577488850054555649)),
-            bytes32(uint256(8010509799087472606393075511737879449)),
-            bytes32(uint256(91929332261301883145239454754739358796115486554644188311284324629555800144318))
-        );
-    }
-
-    function G2_NEG() internal pure returns (BLS.G2Point memory) {
-        return BLS.G2Point(
-            bytes32(uint256(3045985886519456750490515843806728273)),
-            bytes32(uint256(89961632905173714226157479458612185649920463576279427516307505038263245192632)),
-            bytes32(uint256(26419286191256893424348605754143887205)),
-            bytes32(uint256(40446337346877272185227670183527379362551741423616556919902061939448715946878)),
-            bytes32(uint256(17421388336814597573762763446246275004)),
-            bytes32(uint256(82535940630695547964844822885348920226556672312706312698172214783216175252138)),
-            bytes32(uint256(26554973746327433462396120515077546301)),
-            bytes32(uint256(69304817850384178235384652711014277219752988873539414788182467642510429663469))
-        );
-    }
-
     function test_pairing() public view {
         BLS.G1Point[] memory g1_points = new BLS.G1Point[](2);
         BLS.G2Point[] memory g2_points = new BLS.G2Point[](2);
-        g1_points[0] = G1();
-        g2_points[0] = G2_NEG();
-        g1_points[1] = G1();
-        g2_points[1] = G2();
+        g1_points[0] = BlsGenerators.G1();
+        g2_points[0] = BlsGenerators.G2_NEG();
+        g1_points[1] = BlsGenerators.G1();
+        g2_points[1] = BlsGenerators.G2();
         assertEq(BLS.pairing(g1_points, g2_points), true);
     }
 }

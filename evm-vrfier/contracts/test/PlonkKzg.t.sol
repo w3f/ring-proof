@@ -1,0 +1,92 @@
+pragma solidity ^0.8.24;
+
+import {Test, console} from "forge-std/Test.sol";
+import "../src/SoladyBls.sol";
+import "../src/BlsGenerators.sol";
+import "../src/PlonkKzg.sol";
+
+contract SoladyBlsTest is Test {
+    PlonkKzg kzg;
+    BLS.G1Point[] srs_g1;
+    BLS.G2Point tau_g2;
+
+    function setUp() public {
+        uint256 n = 3;
+        bytes32 tau = bytes32(uint256(123));
+        srs_g1.push(BlsGenerators.G1());
+        for (uint256 i = 1; i < n; i++) {
+            srs_g1.push(BlsGenerators.g1_mul(srs_g1[i - 1], tau));
+        }
+        tau_g2 = BlsGenerators.g2_mul(BlsGenerators.G2(), tau);
+        kzg = new PlonkKzg(tau_g2);
+    }
+
+    function commit(bytes32[] memory coeffs) internal view returns (BLS.G1Point memory c) {
+        assert(coeffs.length == srs_g1.length);
+        c = BLS.msm(srs_g1, coeffs);
+    }
+
+    function div_by_x_minus_z(bytes32[] memory coeffs, uint256 z) internal pure returns (bytes32[] memory res_coeffs) {
+        uint256 l = coeffs.length;
+        res_coeffs = new bytes32[](l);
+        res_coeffs[l - 1] = 0;
+        res_coeffs[l - 2] = bytes32(coeffs[l - 1]);
+        for (uint256 j = l - 2; j > 0; j--) {
+            res_coeffs[j - 1] =
+                bytes32(BlsGenerators.add_fr(BlsGenerators.mul_fr(uint256(res_coeffs[j]), z), uint256(coeffs[j])));
+        }
+    }
+
+    function prove(bytes32[] memory coeffs, uint256 z) internal view returns (BLS.G1Point memory proof) {
+        bytes32[] memory q = div_by_x_minus_z(coeffs, z);
+        proof = commit(q);
+    }
+
+    function eval(bytes32[] memory coeffs, uint256 z) internal view returns (uint256 v) {
+        uint256 l = coeffs.length;
+        v = uint256(coeffs[l - 1]);
+        for (uint256 j = l - 1; j > 0; j--) {
+            v = BlsGenerators.add_fr(BlsGenerators.mul_fr(v, z), uint256(coeffs[j - 1]));
+        }
+    }
+
+    function verify_single(BLS.G1Point memory c, uint256 z, uint256 v, BLS.G1Point memory proof)
+        internal
+        returns (bool)
+    {
+        BLS.G1Point[] memory msm_bases = new BLS.G1Point[](2);
+        bytes32[] memory msm_scalars = new bytes32[](2);
+        msm_bases[0] = proof;
+        msm_scalars[0] = bytes32(z);
+        msm_bases[1] = BlsGenerators.G1();
+        msm_scalars[1] = bytes32(BlsGenerators.q - v);
+        BLS.G1Point memory acc = BLS.add(c, BLS.msm(msm_bases, msm_scalars));
+        return kzg.verify(acc, proof);
+    }
+
+    function test_div() public pure {
+        // 3x^2 + 2x + 1 = [1, 2, 3]
+        bytes32[] memory poly = new bytes32[](3);
+        for (uint256 i = 0; i < poly.length; i++) {
+            poly[i] = bytes32(i + 1);
+        }
+        bytes32[] memory res = div_by_x_minus_z(poly, 1);
+        // 3x + 5 = (3x^2 + 2x + 1) // (x - 1) = [5, 3, 0]
+        assertEq(res.length, 3);
+        assertEq(res[0], bytes32(uint256(5)));
+        assertEq(res[1], bytes32(uint256(3)));
+        assertEq(res[2], bytes32(uint256(0)));
+    }
+
+    function test_kzg() public {
+        bytes32[] memory poly = new bytes32[](3);
+        for (uint256 i = 0; i < poly.length; i++) {
+            poly[i] = bytes32(i + 10);
+        }
+        BLS.G1Point memory c = commit(poly);
+        uint256 z = 777;
+        BLS.G1Point memory proof = prove(poly, z);
+        uint256 v = eval(poly, z);
+        assert(verify_single(c, z, v, proof));
+    }
+}
