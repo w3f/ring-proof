@@ -57,7 +57,7 @@ jobs:
           toolchain: stable
           target: wasm32-unknown-unknown
       - name: Build
-        run: cargo build --verbose --no-default-features --target wasm32-unknown-unknown
+        run: cargo build --workspace --exclude evm-vrfier --verbose --no-default-features --target wasm32-unknown-unknown
 
   test:
     runs-on: ubuntu-latest
