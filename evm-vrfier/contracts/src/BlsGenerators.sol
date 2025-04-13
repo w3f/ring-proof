@@ -13,7 +13,7 @@ library BlsGenerators {
         c = mulmod(a, b, q);
     }
 
-    function G1() public pure returns (BLS.G1Point memory) {
+    function G1() internal pure returns (BLS.G1Point memory) {
         return BLS.G1Point(
             bytes32(uint256(31827880280837800241567138048534752271)),
             bytes32(uint256(88385725958748408079899006800036250932223001591707578097800747617502997169851)),
@@ -22,7 +22,7 @@ library BlsGenerators {
         );
     }
 
-    function G2() public pure returns (BLS.G2Point memory) {
+    function G2() internal pure returns (BLS.G2Point memory) {
         return BLS.G2Point(
             bytes32(uint256(3045985886519456750490515843806728273)),
             bytes32(uint256(89961632905173714226157479458612185649920463576279427516307505038263245192632)),
@@ -35,7 +35,7 @@ library BlsGenerators {
         );
     }
 
-    function G2_NEG() public pure returns (BLS.G2Point memory) {
+    function G2_NEG() internal pure returns (BLS.G2Point memory) {
         return BLS.G2Point(
             bytes32(uint256(3045985886519456750490515843806728273)),
             bytes32(uint256(89961632905173714226157479458612185649920463576279427516307505038263245192632)),
