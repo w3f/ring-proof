@@ -55,14 +55,7 @@ contract PlonkKzgTest is Test {
         view
         returns (bool)
     {
-        BLS.G1Point[] memory msm_bases = new BLS.G1Point[](2);
-        bytes32[] memory msm_scalars = new bytes32[](2);
-        msm_bases[0] = proof;
-        msm_scalars[0] = bytes32(z);
-        msm_bases[1] = BlsGenerators.G1();
-        msm_scalars[1] = bytes32(BlsGenerators.q - v);
-        BLS.G1Point memory acc = BLS.add(c, BLS.msm(msm_bases, msm_scalars));
-        return kzg.verify(acc, proof);
+        return kzg.verify(c, z, v, proof);
     }
 
     function test_div() public pure {
@@ -88,7 +81,7 @@ contract PlonkKzgTest is Test {
         uint256 z = 777;
         BLS.G1Point memory proof = prove(poly, z);
         uint256 v = eval(poly, z);
-        assert(verify_single(c, z, v, proof));
+        assert(kzg.verify(c, z, v, proof));
     }
 
     function test_plonk_kzg() public view {
@@ -104,8 +97,8 @@ contract PlonkKzgTest is Test {
         uint256 eval_at_z1 = eval(poly, z1);
         uint256 eval_at_z2 = eval(poly, z2);
 
-        assert(verify_single(c, z1, eval_at_z1, proof_z1));
-        assert(verify_single(c, z2, eval_at_z2, proof_z2));
+        assert(kzg.verify(c, z1, eval_at_z1, proof_z1));
+        assert(kzg.verify(c, z2, eval_at_z2, proof_z2));
 
         BLS.G1Point[] memory polys_z1 = new BLS.G1Point[](1);
         uint256[] memory evals_at_z1 = new uint256[](1);
