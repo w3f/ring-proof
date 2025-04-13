@@ -1,3 +1,5 @@
+pub mod plonk_kzg;
+
 #[cfg(test)]
 mod tests {
     use alloy::primitives::Uint;
@@ -14,11 +16,11 @@ mod tests {
             .with_recommended_fillers()
             .on_anvil_with_wallet();
 
-        let counter = crate::tests::Counter::deploy(&provider).await?;
+        let counter = Counter::deploy(&provider).await?;
 
-        let number = counter.number().call().await?._0;
+        let number = counter.number().call().await?;
         let _ = counter.increment().send().await?;
-        assert_eq!(counter.number().call().await?._0, number + Uint::from(1));
+        assert_eq!(counter.number().call().await?, number + Uint::from(1));
 
         Ok(())
     }
