@@ -6,11 +6,6 @@ members = [
     "w3f-ring-proof",
     "w3f-ring-vrf-snark",
 ]
-default-members = [
-    "w3f-plonk-common",
-    "w3f-ring-proof",
-    "w3f-ring-vrf-snark",
-]
 
 [workspace.dependencies]
 ark-std = { version = "0.5", default-features = false }
