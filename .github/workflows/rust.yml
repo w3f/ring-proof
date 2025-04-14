@@ -70,5 +70,5 @@ jobs:
           profile: minimal
           toolchain: stable
       - name: Run tests
-        run: cargo test --release
+        run: cargo test --release --workspace --exclude evm-vrfier
     
