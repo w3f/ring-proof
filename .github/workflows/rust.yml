@@ -43,7 +43,7 @@ jobs:
           profile: minimal
           toolchain: stable
       - name: Build
-        run: cargo build --verbose
+        run: cargo build --verbose --workspace --exclude evm-vrfier
 
   build-wasm32:
     runs-on: ubuntu-latest

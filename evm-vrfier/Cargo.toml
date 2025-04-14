@@ -4,8 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.13", default-features = false, features = ["contract", "provider-anvil-node"] }
+alloy = { version = "0.14", default-features = false, features = ["contract", "provider-anvil-node"] }
+ark-ff = { workspace = true }
+ark-bls12-381 = { version = "0.5", default-features = false, features = ["curve"] }
+
+[dev-dependencies]
 tokio = { version = "1.44", default-features = false }
+ark-std = { workspace = true }
+ark-ec = { workspace = true }
+w3f-pcs = { workspace = true }
 
 [build-dependencies]
-foundry-config = { git="https://github.com/foundry-rs/foundry" }
+foundry-config = { git = "https://github.com/foundry-rs/foundry" }
+foundry-compilers = { version = "0.14.0" }
