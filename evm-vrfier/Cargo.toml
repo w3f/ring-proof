@@ -16,4 +16,3 @@ w3f-pcs = { workspace = true }
 
 [build-dependencies]
 foundry-config = { git = "https://github.com/foundry-rs/foundry" }
-foundry-compilers = { version = "0.14.0" }
