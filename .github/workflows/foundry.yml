@@ -1,0 +1,43 @@
+name: Foundry
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Show Forge version
+        run: |
+          forge --version
+
+      - name: Run Forge fmt
+        run: |
+          forge fmt --root evm-vrfier/contracts --check
+        id: fmt
+
+      - name: Run Forge build
+        run: |
+          forge build --root evm-vrfier/contracts --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          forge test --root evm-vrfier/contracts -vvv
+        id: test
