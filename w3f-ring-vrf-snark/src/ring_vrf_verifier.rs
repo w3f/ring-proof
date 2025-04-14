@@ -3,7 +3,6 @@ use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
 use w3f_pcs::pcs::{RawVerifierKey, PCS};
 
-use w3f_plonk_common::domain::EvaluatedDomain;
 use w3f_plonk_common::piop::VerifierPiop;
 use w3f_plonk_common::transcript::PlonkTranscript;
 use w3f_plonk_common::verifier::PlonkVerifier;
@@ -60,14 +59,9 @@ where
         );
         let seed = self.piop_params.seed;
         let seed_plus_out = (seed + vrf_out).into_affine();
-        let domain_evals = EvaluatedDomain::new(
-            self.piop_params.domain.domain(),
-            challenges.zeta,
-            self.piop_params.domain.hiding,
-        );
-
+        let domain_at_zeta = self.piop_params.domain.evaluate(challenges.zeta);
         let piop = PiopVerifier::<_, _, Affine<Jubjub>>::init(
-            domain_evals,
+            domain_at_zeta,
             self.fixed_columns_committed.clone(),
             proof.column_commitments.clone(),
             proof.columns_at_zeta.clone(),

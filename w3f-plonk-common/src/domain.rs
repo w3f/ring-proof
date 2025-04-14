@@ -136,6 +136,10 @@ impl<F: FftField> Domain<F> {
     pub fn domain(&self) -> GeneralEvaluationDomain<F> {
         self.domains.x1
     }
+
+    pub fn evaluate(&self, zeta: F) -> EvaluatedDomain<F> {
+        EvaluatedDomain::new(self.domain(), zeta, self.hiding)
+    }
 }
 
 fn l_i<F: FftField>(i: usize, n: usize) -> Vec<F> {
@@ -233,7 +237,7 @@ mod tests {
     use ark_poly::Polynomial;
     use ark_std::{test_rng, UniformRand};
 
-    use crate::domain::{Domain, EvaluatedDomain};
+    use crate::domain::Domain;
 
     fn _test_evaluated_domain(hiding: bool) {
         let rng = &mut test_rng();
@@ -242,7 +246,7 @@ mod tests {
         let n = 1024;
         let domain = Domain::new(n, hiding);
         let z = Fq::rand(rng);
-        let domain_eval = EvaluatedDomain::new(domain.domain(), z, hiding);
+        let domain_eval = domain.evaluate(z);
         assert_eq!(domain.l_first.poly.evaluate(&z), domain_eval.l_first);
         assert_eq!(domain.l_last.poly.evaluate(&z), domain_eval.l_last);
         assert_eq!(
