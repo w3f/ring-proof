@@ -133,6 +133,10 @@ impl<F: FftField> Domain<F> {
         self.domains.x1.group_gen()
     }
 
+    pub fn omega_inv(&self) -> F {
+        self.domains.x1.group_gen_inv()
+    }
+
     pub fn domain(&self) -> GeneralEvaluationDomain<F> {
         self.domains.x1
     }

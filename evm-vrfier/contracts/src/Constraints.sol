@@ -1,6 +1,14 @@
 pragma solidity ^0.8.24;
 
 library Constraints {
+    uint256 constant domain_size = 256;
+
+    uint256 constant w = 36007022166693598376559747923784822035233416720563672082740011604939309541707;
+    uint256 constant w_inv = 11184958699465346337974417366548385058372410568086779736245770566382283753344;
+    uint256 constant w_inv_2 = 43775291915288810309377910988321681322896939416379112495208008906206324170002;
+    uint256 constant w_inv_3 = 24824062393296269928157607240610716359041681219294130923310247842219009400878;
+    uint256 constant w_inv_4 = 45254319123522011116259460062854627366454101350769349111320208945036885998124;
+
     uint256 constant r = 0x73eda753299d7d483339d80809a1d80553bda402fffe5bfeffffffff00000001;
     uint256 constant te_coeff_a = r - 5;
 
@@ -36,7 +44,23 @@ library Constraints {
         return abi.decode(data, (uint256));
     }
 
-//    function not_last_row(unit256 domain_size) internal pure returns uint256 {
-//
-//    }
+    function inv(uint256 x) public view returns (uint256) {
+        return mod_exp(x, r - 2);
+    }
+
+    function v_at(uint256 z) public view returns (uint256) {
+        return mod_exp(z, domain_size) - 1;
+    }
+
+    function v_inv_at(uint256 z) public view returns (uint256) {
+        return inv(v_at(z));
+    }
+
+    function v_inv_hiding_at(uint256 z) public view returns (uint256) {
+        return mul(mul(mul(v_inv_at(z), add(z, r - w_inv)), add(z, r - w_inv_2)), add(z, r - w_inv_3));
+    }
+
+    function not_last_row(uint256 z) public pure returns (uint256) {
+        return add(z, r - w_inv_4);
+    }
 }
