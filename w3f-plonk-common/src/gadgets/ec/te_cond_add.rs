@@ -9,9 +9,16 @@ use crate::gadgets::ec::{CondAdd, CondAddEvals, CondAddValues};
 use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::{const_evals, Column};
 
-// cx = {[(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b + (x3 - x1).(1 - b)}.not_last
-// cy = {[(x1.y2 - x2.y1).y3 - x1.y1 + x2.y2].b + (y3 - y1).(1 - b)}.not_last
-fn cond_te_addition<F>(
+/// These constraints are deduced from
+/// "Affine addition formulae (independent of d) for twisted Edwards curves",
+/// see e.g. formula (3) in https://eprint.iacr.org/2008/522.pdf.
+/// Works for distinct prime-order points.
+/// `cx = {[(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b + (x3 - x1).(1 - b)}.not_last`
+/// `cy = {[(x1.y2 - x2.y1).y3 - x1.y1 + x2.y2].b + (y3 - y1).(1 - b)}.not_last`
+// Where:
+/// `(x3, y3) = (x1, y1) + (x2, y2)`, if `b = 1`, and
+/// `(x3, y3) = (x1, y1)` otherwise.
+pub fn cond_te_addition<F>(
     te_coeff_a: F,
     b: &F,
     x1: &F,
