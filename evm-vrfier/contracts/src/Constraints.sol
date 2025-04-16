@@ -29,6 +29,13 @@ library Constraints {
         cx = add(lx, mul(add(x3, r - x1), add(1, r - b)));
     }
 
+    function mod_exp(uint256 base, uint256 exp) public view returns (uint256) {
+        bytes memory precompileData = abi.encode(32, 32, 32, base, exp, r);
+        (bool ok, bytes memory data) = address(5).staticcall(precompileData);
+        require(ok, "expMod failed");
+        return abi.decode(data, (uint256));
+    }
+
 //    function not_last_row(unit256 domain_size) internal pure returns uint256 {
 //
 //    }
