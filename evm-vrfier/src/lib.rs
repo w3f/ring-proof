@@ -1,4 +1,5 @@
 pub mod plonk_kzg;
+mod constraints;
 
 #[cfg(test)]
 mod tests {
