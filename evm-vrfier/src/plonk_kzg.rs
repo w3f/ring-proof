@@ -5,7 +5,7 @@ use ark_ff::BigInteger;
 alloy::sol!(
     #[sol(rpc)]
     PlonkKzg,
-    "contracts/out/PlonkKzg.sol/PlonkKzg.json"
+    "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
 );
 
 /// Encodes a BLS12-381 base field element (381 bits) as specified in

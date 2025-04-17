@@ -2,14 +2,7 @@ pragma solidity ^0.8.24;
 
 import "./BlsGenerators.sol";
 
-contract PlonkKzg {
-    // The trapdoor `tau` in G2, part of the standard KZG verification key.
-    BLS.G2Point tau_g2;
-
-    constructor(BLS.G2Point memory tau_g2_) {
-        tau_g2 = tau_g2_;
-    }
-
+library PlonkKzg {
     function verify_plonk_kzg(
         BLS.G1Point[] memory polys_z1,
         BLS.G1Point memory poly_z2,
@@ -20,8 +13,9 @@ contract PlonkKzg {
         BLS.G1Point memory proof_z1,
         BLS.G1Point memory proof_z2,
         bytes32[] memory nus,
-        uint256 r
-    ) public view returns (bool) {
+        uint256 r,
+        BLS.G2Point memory tau_g2
+    ) internal view returns (bool) {
         assert(evals_at_z1.length == polys_z1.length);
         assert(nus.length == polys_z1.length);
 
@@ -57,10 +51,14 @@ contract PlonkKzg {
 
         BLS.G1Point memory agg_acc = BLS.msm(msm_bases, msm_scalars);
         BLS.G1Point memory acc_proof = BLS.add(proof_z1, BlsGenerators.g1_mul(proof_z2, bytes32(r)));
-        return verify_acc(agg_acc, acc_proof);
+        return verify_acc(agg_acc, acc_proof, tau_g2);
     }
 
-    function verify(BLS.G1Point memory c, uint256 z, uint256 v, BLS.G1Point memory proof) public view returns (bool) {
+    function verify(BLS.G1Point memory c, uint256 z, uint256 v, BLS.G1Point memory proof, BLS.G2Point memory tau_g2)
+        internal
+        view
+        returns (bool)
+    {
         bytes32[] memory msm_scalars = new bytes32[](2);
         BLS.G1Point[] memory msm_bases = new BLS.G1Point[](2);
         msm_scalars[0] = bytes32(z);
@@ -69,10 +67,14 @@ contract PlonkKzg {
         msm_bases[1] = BlsGenerators.G1();
         BLS.G1Point memory acc = BLS.msm(msm_bases, msm_scalars);
         acc = BLS.add(acc, c);
-        return verify_acc(acc, proof);
+        return verify_acc(acc, proof, tau_g2);
     }
 
-    function verify_acc(BLS.G1Point memory acc, BLS.G1Point memory acc_proof) public view returns (bool) {
+    function verify_acc(BLS.G1Point memory acc, BLS.G1Point memory acc_proof, BLS.G2Point memory tau_g2)
+        internal
+        view
+        returns (bool)
+    {
         return pairing2(acc, BlsGenerators.G2_NEG(), acc_proof, tau_g2);
     }
 
@@ -81,7 +83,7 @@ contract PlonkKzg {
         BLS.G2Point memory g2_1,
         BLS.G1Point memory g1_2,
         BLS.G2Point memory g2_2
-    ) public view returns (bool result) {
+    ) internal view returns (bool result) {
         BLS.G1Point[] memory g1_points = new BLS.G1Point[](2);
         BLS.G2Point[] memory g2_points = new BLS.G2Point[](2);
         g1_points[0] = g1_1;
