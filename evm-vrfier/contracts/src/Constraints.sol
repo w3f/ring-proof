@@ -33,7 +33,17 @@ library Constraints {
         /// `cx = {[(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b + (x3 - x1).(1 - b)}.not_last`
         uint256 x1y1 = mul(x1, y1);
         uint256 x2y2 = mul(x2, y2);
-        uint256 lx = mul(add(mul(add(mul(te_coeff_a, mul(x1, x2)), mul(y1, y2)), x3), r - add(x1y1, x2y2)), b);
+        // forgefmt: disable-next-item
+        uint256 lx = mul(
+            add(
+                mul(
+                    add(mul(te_coeff_a, mul(x1, x2)), mul(y1, y2)),
+                    x3
+                ),
+                r - add(x1y1, x2y2)
+            ),
+            b
+        );
         cx = add(lx, mul(add(x3, r - x1), add(1, r - b)));
     }
 
