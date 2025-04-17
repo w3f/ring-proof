@@ -3,12 +3,12 @@ mod tests {
     use alloy::primitives::U256;
     use ark_bls12_381::Fr;
     use ark_ec::twisted_edwards::TECurveConfig;
-    use ark_ed_on_bls12_381_bandersnatch::{BandersnatchConfig, Fq};
+    use ark_ed_on_bls12_381_bandersnatch::BandersnatchConfig;
     use ark_ff::{Field, One};
     use ark_std::{test_rng, UniformRand};
     use w3f_plonk_common::domain::Domain;
     use w3f_plonk_common::gadgets::ec::te_cond_add::cond_te_addition;
-    use crate::plonk_kzg::bls_scalar_field_to_uint256;
+    use crate::plonk_kzg::{bls_scalar_field_to_uint256, from_uint};
 
     alloy::sol!(
         #[sol(rpc)]
@@ -24,14 +24,6 @@ mod tests {
         let constraints = Constraints::deploy(&provider).await?;
 
         let rng = &mut test_rng();
-
-        let z = Fr::rand(rng);
-        let z_n_rust = z.pow([256]);
-        let z_n_sol = constraints.mod_exp(
-            bls_scalar_field_to_uint256(z),
-            U256::from(256),
-        ).call().await?;
-        assert_eq!(bls_scalar_field_to_uint256(z_n_rust), z_n_sol);
 
         let te_coeff_a = BandersnatchConfig::COEFF_A;
         let b = Fr::rand(rng);
@@ -63,7 +55,7 @@ mod tests {
             bls_scalar_field_to_uint256(y3),
             bls_scalar_field_to_uint256(Fr::one()),
         ).call().await?;
-        assert_eq!(bls_scalar_field_to_uint256(cx_rust), cx_sol);
+        assert_eq!(from_uint(cx_sol), cx_rust);
 
         Ok(())
     }
@@ -79,8 +71,6 @@ mod tests {
         let rng = &mut test_rng();
 
         let domain = Domain::new(256, true);
-        let z = Fq::rand(rng);
-        let domain_at_z = domain.evaluate(z);
 
         let w = domain.omega();
         let w_inv = domain.omega_inv();
@@ -93,20 +83,29 @@ mod tests {
         println!("\tuint256 constant w_inv_3 = {};", bls_scalar_field_to_uint256(w_inv_3));
         println!("\tuint256 constant w_inv_4 = {};", bls_scalar_field_to_uint256(w_inv_4));
 
+        let z = Fr::rand(rng);
+        let domain_at_z = domain.evaluate(z);
+
+        let z_n = constraints.mod_exp(
+            bls_scalar_field_to_uint256(z),
+            U256::from(123),
+        ).call().await?;
+        assert_eq!(from_uint(z_n), z.pow([123]));
+
         let z_inv = constraints.inv(
             bls_scalar_field_to_uint256(z),
         ).call().await?;
-        assert_eq!(z_inv, bls_scalar_field_to_uint256(z.inverse().unwrap()));
+        assert_eq!(from_uint(z_inv), z.inverse().unwrap());
 
         let v_inv_hiding_at = constraints.v_inv_hiding_at(
             bls_scalar_field_to_uint256(z),
         ).call().await?;
-        assert_eq!(v_inv_hiding_at, bls_scalar_field_to_uint256(domain_at_z.vanishing_polynomial_inv));
+        assert_eq!(from_uint(v_inv_hiding_at), domain_at_z.vanishing_polynomial_inv);
 
         let not_last_row = constraints.not_last_row(
             bls_scalar_field_to_uint256(z),
         ).call().await?;
-        assert_eq!(not_last_row, bls_scalar_field_to_uint256(domain_at_z.not_last_row));
+        assert_eq!(from_uint(not_last_row), domain_at_z.not_last_row);
 
         Ok(())
     }

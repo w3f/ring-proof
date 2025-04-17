@@ -25,6 +25,10 @@ pub fn bls_scalar_field_to_uint256(fr: ark_bls12_381::Fr) -> U256 {
     U256::from_be_slice(&be_bytes)
 }
 
+pub fn from_uint(f: U256) -> ark_bls12_381::Fr {
+    ark_bls12_381::Fr::from_le_bytes_mod_order(&f.as_le_bytes())
+}
+
 pub fn bls_scalar_field_to_bytes32(fr: ark_bls12_381::Fr) -> FixedBytes<32> {
     let be_bytes = fr.into_bigint().to_bytes_be();
     FixedBytes::left_padding_from(&be_bytes)
