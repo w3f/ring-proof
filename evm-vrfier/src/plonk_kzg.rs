@@ -29,9 +29,10 @@ pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
 
 #[cfg(test)]
 mod tests {
-    use alloy::primitives::U256;
     use super::*;
     use crate::plonk_kzg::PlonkKzg;
+    use crate::{fr_to_bytes, fr_to_uint};
+    use alloy::primitives::U256;
     use ark_bls12_381::{Bls12_381, Fr, G2Affine};
     use ark_ec::pairing::Pairing;
     use ark_ec::{AffineRepr, PrimeGroup};
@@ -45,7 +46,6 @@ mod tests {
     use w3f_pcs::DenseUVPolynomial;
     use w3f_pcs::Poly;
     use w3f_pcs::Polynomial;
-    use crate::{fr_to_bytes, fr_to_uint};
 
     struct ArksBatchKzgOpenning<E: Pairing> {
         polys_z1: Vec<E::G1Affine>,
@@ -76,11 +76,7 @@ mod tests {
                 poly_z2: encode_bls_g1(self.poly_z2),
                 z1: fr_to_uint(self.z1),
                 z2: fr_to_uint(self.z2),
-                evals_at_z1: self
-                    .evals_at_z1
-                    .into_iter()
-                    .map(fr_to_uint)
-                    .collect(),
+                evals_at_z1: self.evals_at_z1.into_iter().map(fr_to_uint).collect(),
                 eval_at_z2: fr_to_uint(self.eval_at_z2),
                 kzg_proof_at_z1: encode_bls_g1(self.kzg_proof_at_z1),
                 kzg_proof_at_z2: encode_bls_g1(self.kzg_proof_at_z2),

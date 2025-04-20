@@ -1,8 +1,8 @@
 use alloy::primitives::{FixedBytes, U256};
 use ark_ff::{BigInteger, PrimeField};
 
-pub mod plonk_kzg;
 mod constraints;
+pub mod plonk_kzg;
 
 /// Encodes a BLS12-381 base field element (381 bits) into 2 bytes32 as specified in
 /// [eip-2537](https://eips.ethereum.org/EIPS/eip-2537#fine-points-and-encoding-of-base-elements):
@@ -55,4 +55,3 @@ mod tests {
         Ok(())
     }
 }
-
