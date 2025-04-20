@@ -2,7 +2,7 @@ use alloy::primitives::{FixedBytes, U256};
 use ark_ff::{BigInteger, PrimeField};
 
 mod constraints;
-mod plonk_kzg;
+mod test_kzg;
 mod plonk_test;
 
 alloy::sol! {

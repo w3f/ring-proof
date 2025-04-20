@@ -1,9 +1,9 @@
 pragma solidity ^0.8.24;
 
 import {Test} from "forge-std/Test.sol";
-import {BLS, BlsGenerators, PlonkKzg} from "src/PlonkKzg.sol";
+import {BLS, BlsGenerators, Kzg} from "src/Kzg.sol";
 
-contract KzgVerifier {
+contract KzgExt {
     // The trapdoor `tau` in G2, part of the standard KZG verification key.
     BLS.G2Point tau_g2;
 
@@ -12,7 +12,7 @@ contract KzgVerifier {
     }
 
     function verify(BLS.G1Point memory c, uint256 z, uint256 v, BLS.G1Point memory proof) public view returns (bool) {
-        return PlonkKzg.verify(c, z, v, proof, tau_g2);
+        return Kzg.verify(c, z, v, proof, tau_g2);
     }
 
     function verify_plonk_kzg(
@@ -27,9 +27,8 @@ contract KzgVerifier {
         bytes32[] memory nus,
         uint256 r
     ) public view returns (bool) {
-        return PlonkKzg.verify_plonk_kzg(
-            polys_z1, poly_z2, z1, z2, evals_at_z1, eval_at_z2, proof_z1, proof_z2, nus, r, tau_g2
-        );
+        return
+            Kzg.verify_plonk_kzg(polys_z1, poly_z2, z1, z2, evals_at_z1, eval_at_z2, proof_z1, proof_z2, nus, r, tau_g2);
     }
 
     function pairing2(
@@ -38,12 +37,12 @@ contract KzgVerifier {
         BLS.G1Point memory g1_2,
         BLS.G2Point memory g2_2
     ) public view returns (bool) {
-        return PlonkKzg.pairing2(g1_1, g2_1, g1_2, g2_2);
+        return Kzg.pairing2(g1_1, g2_1, g1_2, g2_2);
     }
 }
 
 contract PlonkKzgTest is Test {
-    KzgVerifier kzg;
+    KzgExt kzg;
     BLS.G1Point[] srs_g1;
 
     function setUp() public {
@@ -54,7 +53,7 @@ contract PlonkKzgTest is Test {
             srs_g1.push(BlsGenerators.g1_mul(srs_g1[i - 1], tau));
         }
         BLS.G2Point memory tau_g2 = BlsGenerators.g2_mul(BlsGenerators.G2(), tau);
-        kzg = new KzgVerifier(tau_g2);
+        kzg = new KzgExt(tau_g2);
     }
 
     function commit(bytes32[] memory coeffs) internal view returns (BLS.G1Point memory c) {

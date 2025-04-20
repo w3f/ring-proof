@@ -2,7 +2,7 @@ pragma solidity ^0.8.24;
 
 import "./BlsGenerators.sol";
 
-library PlonkKzg {
+library Kzg {
     function verify_plonk_kzg(
         BLS.G1Point[] memory polys_z1,
         BLS.G1Point memory poly_z2,

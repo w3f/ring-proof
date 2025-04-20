@@ -18,8 +18,8 @@ mod tests {
 
     alloy::sol!(
         #[sol(rpc)]
-        PlonkKzg,
-        "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
+        Kzg,
+        "contracts/out/Kzg.t.sol/KzgExt.json"
     );
 
     impl From<G1Point> for BLS::G1Point {
@@ -162,7 +162,7 @@ mod tests {
         let (test_openning, nus, kzg_vk) = random_opening::<Bls12_381, _>(123, 1, &mut test_rng());
         let test_openning = test_openning.encode();
 
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
+        let plonk_kzg = Kzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
 
         let res = plonk_kzg
             .verify_plonk_kzg(
@@ -193,7 +193,7 @@ mod tests {
         let (test_openning, _, kzg_vk) = random_opening::<Bls12_381, _>(123, 0, &mut test_rng());
         let test_openning = test_openning.encode();
 
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
+        let plonk_kzg = Kzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
 
         let res = plonk_kzg
             .verify(
@@ -216,7 +216,7 @@ mod tests {
             .on_anvil_with_wallet_and_config(|anvil| anvil.prague())?;
 
         let _tau_g2 = G2Affine::generator();
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(_tau_g2).into()).await?;
+        let plonk_kzg = Kzg::deploy(&provider, encode_g2(_tau_g2).into()).await?;
 
         let res = plonk_kzg
             .pairing2(

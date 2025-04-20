@@ -1,6 +1,6 @@
 pragma solidity ^0.8.24;
 
-import {BLS, PlonkKzg} from "src/PlonkKzg.sol";
+import {BLS, Kzg} from "src/Kzg.sol";
 import {Constraints} from "src/Constraints.sol";
 
 contract Plonk {
@@ -37,7 +37,7 @@ contract Plonk {
         }
         evals_at_z1[k] = compute_quotient(columns_at_z1, column_at_z2, z1);
 
-        return PlonkKzg.verify_plonk_kzg(
+        return Kzg.verify_plonk_kzg(
             polys_z1, polys_z1[0], z1, z2, evals_at_z1, column_at_z2, kzg_proof_at_z1, kzg_proof_at_z2, nus, 123, tau_g2
         );
     }
