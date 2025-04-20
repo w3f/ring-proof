@@ -170,7 +170,7 @@ mod tests {
         let res = plonk_kzg
             .verify_plonk_kzg(
                 test_openning.polys,
-                test_openning.z1,
+                vec![test_openning.z1, test_openning.z2],
                 test_openning.evals_at_z1,
                 test_openning.evals_at_z2,
                 vec![test_openning.kzg_proof_at_z1, test_openning.kzg_proof_at_z2],
