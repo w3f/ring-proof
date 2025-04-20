@@ -186,8 +186,7 @@ mod tests {
             .with_recommended_fillers()
             .on_anvil_with_wallet_and_config(|anvil| anvil.prague())?;
 
-        let  (test_openning, _, kzg_vk) =
-            random_opening::<Bls12_381, _>(123, 1, 0, &mut test_rng());
+        let (test_openning, _, kzg_vk) = random_opening::<Bls12_381, _>(123, 1, 0, &mut test_rng());
         let test_openning = test_openning.encode();
 
         let plonk_kzg = Kzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;

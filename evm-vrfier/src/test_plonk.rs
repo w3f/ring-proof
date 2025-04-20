@@ -171,7 +171,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn verify_plonk_proof() -> Result<(), Box<dyn std::error::Error>> {
+    async fn verify_proof() -> Result<(), Box<dyn std::error::Error>> {
         let provider = alloy::providers::builder()
             .with_recommended_fillers()
             .on_anvil_with_wallet_and_config(|anvil| anvil.prague())?;
