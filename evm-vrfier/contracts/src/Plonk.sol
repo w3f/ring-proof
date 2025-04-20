@@ -62,6 +62,6 @@ contract Plonk {
             columns_at_z2[1],
             not_last
         );
-        return Constraints.quotient_at(cx, z);
+        return Constraints.quotient_at(Constraints.add(cx, cy), z); //TODO: alphas
     }
 }

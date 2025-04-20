@@ -14,7 +14,7 @@ mod tests {
     use ark_ec::twisted_edwards::{Affine, TECurveConfig};
     use ark_ec::PrimeGroup;
     use ark_ed_on_bls12_381_bandersnatch::EdwardsConfig;
-    use ark_ff::{BigInteger, PrimeField};
+    use ark_ff::{BigInteger, One, PrimeField};
     use ark_std::rand::Rng;
     use ark_std::{test_rng, UniformRand};
     use w3f_pcs::aggregation::single::aggregate_polys;
@@ -29,6 +29,7 @@ mod tests {
     use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
     use w3f_plonk_common::gadgets::ec::{AffineColumn, CondAdd};
     use w3f_plonk_common::gadgets::ProverGadget;
+    use w3f_plonk_common::prover::aggregate_evaluations;
     use w3f_plonk_common::Column;
 
     impl From<G1Point> for BLS::G1Point {
@@ -135,8 +136,12 @@ mod tests {
             .collect();
 
         // TODO: sample alphas (coeffs to agg constraints)
-        let constraint = cond_add.constraints()[0].interpolate_by_ref();
-        let quotient_poly = domain.divide_by_vanishing_poly(&constraint);
+        let constraints = cond_add.constraints();
+        let agg_constraint = aggregate_evaluations(
+            &constraints,
+            &[E::ScalarField::one(), E::ScalarField::one()],
+        );
+        let quotient_poly = domain.divide_by_vanishing_poly(&agg_constraint.interpolate());
         let quotient_commitment = KZG::<E>::commit(&ck, &quotient_poly).unwrap().0;
 
         // sample zeta
