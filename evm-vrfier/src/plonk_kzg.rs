@@ -1,50 +1,20 @@
-use alloy::primitives::{FixedBytes, U256};
-use ark_ff::fields::PrimeField;
-use ark_ff::BigInteger;
-
 alloy::sol!(
     #[sol(rpc)]
     PlonkKzg,
     "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
 );
 
-/// Encodes a BLS12-381 base field element (381 bits) as specified in
-/// [eip-2537](https://eips.ethereum.org/EIPS/eip-2537#fine-points-and-encoding-of-base-elements):
-/// > A base field element (Fp) is encoded as 64 bytes
-/// > by performing the BigEndian encoding of the corresponding (unsigned) integer.
-/// > Due to the size of p, the top 16 bytes are always zeroes.
-pub fn bls_base_field_to_bytes(fq: ark_bls12_381::Fq) -> [FixedBytes<32>; 2] {
-    let be_bytes = fq.into_bigint().to_bytes_be(); // 48 bytes
-    let high_bytes = FixedBytes::left_padding_from(&be_bytes[..16]); // 16 bytes
-    let low_bytes = FixedBytes::from_slice(&be_bytes[16..]); // 32 bytes
-    [high_bytes, low_bytes]
-}
-
-pub fn bls_scalar_field_to_uint256(fr: ark_bls12_381::Fr) -> U256 {
-    let be_bytes = fr.into_bigint().to_bytes_be();
-    U256::from_be_slice(&be_bytes)
-}
-
-pub fn from_uint(f: U256) -> ark_bls12_381::Fr {
-    ark_bls12_381::Fr::from_le_bytes_mod_order(&f.as_le_bytes())
-}
-
-pub fn bls_scalar_field_to_bytes32(fr: ark_bls12_381::Fr) -> FixedBytes<32> {
-    let be_bytes = fr.into_bigint().to_bytes_be();
-    FixedBytes::left_padding_from(&be_bytes)
-}
-
 pub fn encode_bls_g1(p: ark_bls12_381::G1Affine) -> BLS::G1Point {
-    let [x_a, x_b] = bls_base_field_to_bytes(p.x);
-    let [y_a, y_b] = bls_base_field_to_bytes(p.y);
+    let [x_a, x_b] = crate::fq_to_bytes(p.x);
+    let [y_a, y_b] = crate::fq_to_bytes(p.y);
     BLS::G1Point { x_a, x_b, y_a, y_b }
 }
 
 pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
-    let [x_c0_a, x_c0_b] = bls_base_field_to_bytes(p.x.c0);
-    let [x_c1_a, x_c1_b] = bls_base_field_to_bytes(p.x.c1);
-    let [y_c0_a, y_c0_b] = bls_base_field_to_bytes(p.y.c0);
-    let [y_c1_a, y_c1_b] = bls_base_field_to_bytes(p.y.c1);
+    let [x_c0_a, x_c0_b] = crate::fq_to_bytes(p.x.c0);
+    let [x_c1_a, x_c1_b] = crate::fq_to_bytes(p.x.c1);
+    let [y_c0_a, y_c0_b] = crate::fq_to_bytes(p.y.c0);
+    let [y_c1_a, y_c1_b] = crate::fq_to_bytes(p.y.c1);
     BLS::G2Point {
         x_c0_a,
         x_c0_b,
@@ -59,6 +29,7 @@ pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
 
 #[cfg(test)]
 mod tests {
+    use alloy::primitives::U256;
     use super::*;
     use crate::plonk_kzg::PlonkKzg;
     use ark_bls12_381::{Bls12_381, Fr, G2Affine};
@@ -74,6 +45,7 @@ mod tests {
     use w3f_pcs::DenseUVPolynomial;
     use w3f_pcs::Poly;
     use w3f_pcs::Polynomial;
+    use crate::{fr_to_bytes, fr_to_uint};
 
     struct ArksBatchKzgOpenning<E: Pairing> {
         polys_z1: Vec<E::G1Affine>,
@@ -102,14 +74,14 @@ mod tests {
             EthBatchKzgOpenning {
                 polys_z1: self.polys_z1.into_iter().map(encode_bls_g1).collect(),
                 poly_z2: encode_bls_g1(self.poly_z2),
-                z1: bls_scalar_field_to_uint256(self.z1),
-                z2: bls_scalar_field_to_uint256(self.z2),
+                z1: fr_to_uint(self.z1),
+                z2: fr_to_uint(self.z2),
                 evals_at_z1: self
                     .evals_at_z1
                     .into_iter()
-                    .map(bls_scalar_field_to_uint256)
+                    .map(fr_to_uint)
                     .collect(),
-                eval_at_z2: bls_scalar_field_to_uint256(self.eval_at_z2),
+                eval_at_z2: fr_to_uint(self.eval_at_z2),
                 kzg_proof_at_z1: encode_bls_g1(self.kzg_proof_at_z1),
                 kzg_proof_at_z2: encode_bls_g1(self.kzg_proof_at_z2),
             }
@@ -201,8 +173,8 @@ mod tests {
                 test_openning.eval_at_z2,
                 test_openning.kzg_proof_at_z1,
                 test_openning.kzg_proof_at_z2,
-                nus.into_iter().map(bls_scalar_field_to_bytes32).collect(),
-                bls_scalar_field_to_uint256(Fr::from(1)),
+                nus.into_iter().map(fr_to_bytes).collect(),
+                fr_to_uint(Fr::from(1)),
             )
             .call()
             .await?;

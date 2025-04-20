@@ -8,8 +8,7 @@ mod tests {
     use ark_std::{test_rng, UniformRand};
     use w3f_plonk_common::domain::Domain;
     use w3f_plonk_common::gadgets::ec::te_cond_add::cond_te_addition;
-    use crate::plonk_kzg::{bls_scalar_field_to_uint256, from_uint};
-
+    use crate::{fr_to_uint, unit_to_fr};
     alloy::sol!(
         #[sol(rpc)]
         Constraints,
@@ -46,16 +45,16 @@ mod tests {
             Fr::one(),
         )[0];
         let cx_sol = constraints.cond_te_addition(
-            bls_scalar_field_to_uint256(b),
-            bls_scalar_field_to_uint256(x1),
-            bls_scalar_field_to_uint256(y1),
-            bls_scalar_field_to_uint256(x2),
-            bls_scalar_field_to_uint256(y2),
-            bls_scalar_field_to_uint256(x3),
-            bls_scalar_field_to_uint256(y3),
-            bls_scalar_field_to_uint256(Fr::one()),
+            fr_to_uint(b),
+            fr_to_uint(x1),
+            fr_to_uint(y1),
+            fr_to_uint(x2),
+            fr_to_uint(y2),
+            fr_to_uint(x3),
+            fr_to_uint(y3),
+            fr_to_uint(Fr::one()),
         ).call().await?;
-        assert_eq!(from_uint(cx_sol), cx_rust);
+        assert_eq!(unit_to_fr(cx_sol), cx_rust);
 
         Ok(())
     }
@@ -77,35 +76,35 @@ mod tests {
         let w_inv_2 = w_inv * w_inv;
         let w_inv_3 = w_inv_2 * w_inv;
         let w_inv_4 = w_inv_3 * w_inv;
-        println!("\tuint256 constant w = {};", bls_scalar_field_to_uint256(w));
-        println!("\tuint256 constant w_inv = {};", bls_scalar_field_to_uint256(w_inv));
-        println!("\tuint256 constant w_inv_2 = {};", bls_scalar_field_to_uint256(w_inv_2));
-        println!("\tuint256 constant w_inv_3 = {};", bls_scalar_field_to_uint256(w_inv_3));
-        println!("\tuint256 constant w_inv_4 = {};", bls_scalar_field_to_uint256(w_inv_4));
+        println!("\tuint256 constant w = {};", fr_to_uint(w));
+        println!("\tuint256 constant w_inv = {};", fr_to_uint(w_inv));
+        println!("\tuint256 constant w_inv_2 = {};", fr_to_uint(w_inv_2));
+        println!("\tuint256 constant w_inv_3 = {};", fr_to_uint(w_inv_3));
+        println!("\tuint256 constant w_inv_4 = {};", fr_to_uint(w_inv_4));
 
         let z = Fr::rand(rng);
         let domain_at_z = domain.evaluate(z);
 
         let z_n = constraints.mod_exp(
-            bls_scalar_field_to_uint256(z),
+            fr_to_uint(z),
             U256::from(123),
         ).call().await?;
-        assert_eq!(from_uint(z_n), z.pow([123]));
+        assert_eq!(unit_to_fr(z_n), z.pow([123]));
 
         let z_inv = constraints.inv(
-            bls_scalar_field_to_uint256(z),
+            fr_to_uint(z),
         ).call().await?;
-        assert_eq!(from_uint(z_inv), z.inverse().unwrap());
+        assert_eq!(unit_to_fr(z_inv), z.inverse().unwrap());
 
         let v_inv_hiding_at = constraints.v_inv_hiding_at(
-            bls_scalar_field_to_uint256(z),
+            fr_to_uint(z),
         ).call().await?;
-        assert_eq!(from_uint(v_inv_hiding_at), domain_at_z.vanishing_polynomial_inv);
+        assert_eq!(unit_to_fr(v_inv_hiding_at), domain_at_z.vanishing_polynomial_inv);
 
         let not_last_row = constraints.not_last_row(
-            bls_scalar_field_to_uint256(z),
+            fr_to_uint(z),
         ).call().await?;
-        assert_eq!(from_uint(not_last_row), domain_at_z.not_last_row);
+        assert_eq!(unit_to_fr(not_last_row), domain_at_z.not_last_row);
 
         Ok(())
     }
