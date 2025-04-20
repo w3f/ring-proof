@@ -29,7 +29,7 @@ library Constraints {
         uint256 x3,
         uint256 y3,
         uint256 not_last
-    ) public pure returns (uint256 cx) {
+    ) internal pure returns (uint256 cx) {
         /// `cx = {[(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b + (x3 - x1).(1 - b)}.not_last`
         uint256 x1y1 = mul(x1, y1);
         uint256 x2y2 = mul(x2, y2);
@@ -44,33 +44,37 @@ library Constraints {
             ),
             b
         );
-        cx = add(lx, mul(add(x3, r - x1), add(1, r - b)));
+        cx = mul(add(lx, mul(add(x3, r - x1), add(1, r - b))), not_last);
     }
 
-    function mod_exp(uint256 base, uint256 exp) public view returns (uint256) {
+    function mod_exp(uint256 base, uint256 exp) internal view returns (uint256) {
         bytes memory precompileData = abi.encode(32, 32, 32, base, exp, r);
         (bool ok, bytes memory data) = address(5).staticcall(precompileData);
         require(ok, "expMod failed");
         return abi.decode(data, (uint256));
     }
 
-    function inv(uint256 x) public view returns (uint256) {
+    function inv(uint256 x) internal view returns (uint256) {
         return mod_exp(x, r - 2);
     }
 
-    function v_at(uint256 z) public view returns (uint256) {
+    function v_at(uint256 z) internal view returns (uint256) {
         return mod_exp(z, domain_size) - 1;
     }
 
-    function v_inv_at(uint256 z) public view returns (uint256) {
+    function v_inv_at(uint256 z) internal view returns (uint256) {
         return inv(v_at(z));
     }
 
-    function v_inv_hiding_at(uint256 z) public view returns (uint256) {
+    function v_inv_hiding_at(uint256 z) internal view returns (uint256) {
         return mul(mul(mul(v_inv_at(z), add(z, r - w_inv)), add(z, r - w_inv_2)), add(z, r - w_inv_3));
     }
 
-    function not_last_row(uint256 z) public pure returns (uint256) {
+    function quotient_at(uint256 c, uint256 z) internal view returns (uint256) {
+        return mul(c, v_inv_hiding_at(z));
+    }
+
+    function not_last_row(uint256 z) internal pure returns (uint256) {
         return add(z, r - w_inv_4);
     }
 }

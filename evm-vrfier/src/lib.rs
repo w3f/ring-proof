@@ -1,8 +1,9 @@
 use alloy::primitives::{FixedBytes, U256};
 use ark_ff::{BigInteger, PrimeField};
 
-mod constraints;
-pub mod plonk_kzg;
+// mod constraints;
+mod plonk_kzg;
+mod plonk_test;
 
 alloy::sol! {
     struct G1Point {
