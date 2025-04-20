@@ -5,6 +5,7 @@ mod tests {
     use ark_bls12_381::{Bls12_381, G1Affine, G2Affine};
     use ark_ec::pairing::Pairing;
     use ark_ec::{AffineRepr, PrimeGroup};
+    use ark_ff::One;
     use ark_std::rand::Rng;
     use ark_std::{test_rng, UniformRand};
     use w3f_pcs::aggregation::single::aggregate_polys;
@@ -115,7 +116,9 @@ mod tests {
             .collect();
 
         // Aggregate polynomial
-        let nus: Vec<E::ScalarField> = (0..k).map(|_| E::ScalarField::rand(rng)).collect();
+        let nus: Vec<E::ScalarField> = ark_std::iter::once(E::ScalarField::one())
+            .chain((0..k - 1).map(|_| E::ScalarField::rand(rng)))
+            .collect();
         let agg_poly_z1 = aggregate_polys(&polys, &nus);
         let agg_poly_z2 = aggregate_polys(&polys[..l], &nus[..l]);
 
@@ -180,7 +183,7 @@ mod tests {
         Ok(())
     }
 
-    // #[tokio::test] //TODO
+    #[tokio::test]
     async fn test_single_openning() -> Result<(), Box<dyn std::error::Error>> {
         let provider = alloy::providers::builder()
             .with_recommended_fillers()
