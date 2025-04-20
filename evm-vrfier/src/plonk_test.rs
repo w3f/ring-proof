@@ -97,7 +97,7 @@ mod tests {
         }
     }
 
-    fn produce_proof<E: Pairing, Jubjub: TECurveConfig<BaseField=E::ScalarField>, R: Rng>(
+    fn produce_proof<E: Pairing, Jubjub: TECurveConfig<BaseField = E::ScalarField>, R: Rng>(
         rng: &mut R,
     ) -> (ArkProof<E>, RawKzgVerifierKey<E>, Vec<E::ScalarField>) {
         let n = 256;
