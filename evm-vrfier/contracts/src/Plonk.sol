@@ -15,34 +15,35 @@ contract Plonk {
         BLS.G1Point[] memory columns,
         BLS.G1Point memory quotient,
         uint256 z1,
-        uint256 z2,
         uint256[] memory columns_at_z1,
-        uint256 column_at_z2,
+        uint256[] memory columns_at_z2,
         BLS.G1Point memory kzg_proof_at_z1,
         BLS.G1Point memory kzg_proof_at_z2,
-        bytes32[] memory nus
+        uint256[] memory nus
     ) public view returns (bool) {
         uint256 k = columns.length;
         require(columns_at_z1.length == k);
+        require(columns_at_z2.length <= k);
 
-        BLS.G1Point[] memory polys_z1 = new BLS.G1Point[](k + 1);
+        BLS.G1Point[] memory polys = new BLS.G1Point[](k + 1);
         for (uint256 i = 0; i < k; i++) {
-            polys_z1[i] = columns[i];
+            polys[i] = columns[i];
         }
-        polys_z1[k] = quotient;
+        polys[k] = quotient;
 
         uint256[] memory evals_at_z1 = new uint256[](k + 1);
         for (uint256 i = 0; i < k; i++) {
             evals_at_z1[i] = columns_at_z1[i];
         }
-        evals_at_z1[k] = compute_quotient(columns_at_z1, column_at_z2, z1);
+        evals_at_z1[k] = compute_quotient(columns_at_z1, columns_at_z2, z1);
 
-        return Kzg.verify_plonk_kzg(
-            polys_z1, polys_z1[0], z1, z2, evals_at_z1, column_at_z2, kzg_proof_at_z1, kzg_proof_at_z2, nus, 123, tau_g2
-        );
+        BLS.G1Point[] memory kzg_proofs = new BLS.G1Point[](2);
+        kzg_proofs[0] = kzg_proof_at_z1;
+        kzg_proofs[1] = kzg_proof_at_z2;
+        return Kzg.verify_plonk_kzg(polys, z1, evals_at_z1, columns_at_z2, kzg_proofs, nus, tau_g2);
     }
 
-    function compute_quotient(uint256[] memory columns_at_z1, uint256 column_at_z2, uint256 z)
+    function compute_quotient(uint256[] memory columns_at_z1, uint256[] memory columns_at_z2, uint256 z)
         internal
         view
         returns (uint256)
@@ -54,8 +55,8 @@ contract Plonk {
             columns_at_z1[1],
             columns_at_z1[2],
             columns_at_z1[3],
-            column_at_z2,
-            column_at_z2,
+            columns_at_z2[0],
+            columns_at_z2[1],
             not_last
         );
         return Constraints.quotient_at(c, z);

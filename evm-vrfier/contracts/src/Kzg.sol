@@ -3,54 +3,67 @@ pragma solidity ^0.8.24;
 import "./BlsGenerators.sol";
 
 library Kzg {
+    // Verifies a batch of `2` kzg proofs:
+    // 1. `proofs[0]` certifying that `polys[i](z1) = evals_at_z1[i], i = 0,...,k, k = evals_at_z1.length`,
+    // 2. `proofs[1]` certifying that `polys[j](z2) = evals_at_z2[j], j = 0,...,l, l = evals_at_z2.length`.
     function verify_plonk_kzg(
-        BLS.G1Point[] memory polys_z1,
-        BLS.G1Point memory poly_z2,
+        BLS.G1Point[] memory polys,
         uint256 z1,
-        uint256 z2,
+        //        uint256 z2,
         uint256[] memory evals_at_z1,
-        uint256 eval_at_z2,
-        BLS.G1Point memory proof_z1,
-        BLS.G1Point memory proof_z2,
-        bytes32[] memory nus,
-        uint256 r,
+        uint256[] memory evals_at_z2,
+        BLS.G1Point[] memory proofs,
+        uint256[] memory nus,
+        //        uint256 r,
         BLS.G2Point memory tau_g2
     ) internal view returns (bool) {
-        assert(evals_at_z1.length == polys_z1.length);
-        assert(nus.length == polys_z1.length);
+        uint256 r = 123; //TODO
+        uint256 z2 = z1 + 1; //TODO
 
-        uint256 n_bases = polys_z1.length + 4;
+        uint256 k = polys.length;
+        assert(evals_at_z1.length == k);
+        assert(nus.length == k);
+        uint256 l = evals_at_z2.length;
+        assert(l <= k);
+
+        // all the g1 points the verifier knows should go to a single msm
+        uint256 n_bases = k + 3; // `n` commitments to the polynomials, proofs in `z1` and `z2`, and `g1` to commit to the evaluations
 
         BLS.G1Point[] memory msm_bases = new BLS.G1Point[](n_bases);
         bytes32[] memory msm_scalars = new bytes32[](n_bases);
 
         uint256 i;
-        for (i = 0; i < polys_z1.length; i++) {
-            msm_bases[i] = polys_z1[i];
+        for (i = 0; i < k; i++) {
+            msm_bases[i] = polys[i];
         }
 
-        for (i = 0; i < polys_z1.length; i++) {
-            msm_scalars[i] = nus[i];
+        uint256 r_plus_1 = BlsGenerators.add_fr(r, 1);
+        for (i = 0; i < l; i++) {
+            msm_scalars[i] = bytes32(BlsGenerators.mul_fr(r_plus_1, nus[i]));
+        }
+        for (i = l; i < k; i++) {
+            msm_scalars[i] = bytes32(nus[i]);
         }
 
         uint256 agg_at_z = 0;
-        for (i = 0; i < polys_z1.length; i++) {
+        for (i = 0; i < l; i++) {
+            agg_at_z = BlsGenerators.add_fr(agg_at_z, BlsGenerators.mul_fr(uint256(nus[i]), evals_at_z2[i]));
+        }
+        agg_at_z = BlsGenerators.mul_fr(agg_at_z, r);
+        for (i = 0; i < polys.length; i++) {
             agg_at_z = BlsGenerators.add_fr(agg_at_z, BlsGenerators.mul_fr(uint256(nus[i]), evals_at_z1[i]));
         }
         msm_bases[i] = BlsGenerators.G1();
-        msm_scalars[i] = bytes32(BlsGenerators.q - BlsGenerators.add_fr(agg_at_z, BlsGenerators.mul_fr(r, eval_at_z2)));
+        msm_scalars[i] = bytes32(BlsGenerators.q - agg_at_z);
 
-        msm_bases[++i] = proof_z1;
+        msm_bases[++i] = proofs[0];
         msm_scalars[i] = bytes32(z1);
 
-        msm_bases[++i] = poly_z2;
-        msm_scalars[i] = bytes32(r);
-
-        msm_bases[++i] = proof_z2;
+        msm_bases[++i] = proofs[1];
         msm_scalars[i] = bytes32(BlsGenerators.mul_fr(r, z2));
 
         BLS.G1Point memory agg_acc = BLS.msm(msm_bases, msm_scalars);
-        BLS.G1Point memory acc_proof = BLS.add(proof_z1, BlsGenerators.g1_mul(proof_z2, bytes32(r)));
+        BLS.G1Point memory acc_proof = BLS.add(proofs[0], BlsGenerators.g1_mul(proofs[1], bytes32(r)));
         return verify_acc(agg_acc, acc_proof, tau_g2);
     }
 
