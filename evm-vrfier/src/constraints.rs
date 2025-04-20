@@ -9,10 +9,11 @@ mod tests {
     use ark_std::{test_rng, UniformRand};
     use w3f_plonk_common::domain::Domain;
     use w3f_plonk_common::gadgets::ec::te_cond_add::cond_te_addition;
+
     alloy::sol!(
         #[sol(rpc)]
         Constraints,
-        "contracts/out/Constraints.sol/Constraints.json"
+        "contracts/out/Constraints.t.sol/ConstraintsExt.json"
     );
 
     #[tokio::test]

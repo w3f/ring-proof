@@ -1,7 +1,7 @@
 use alloy::primitives::{FixedBytes, U256};
 use ark_ff::{BigInteger, PrimeField};
 
-// mod constraints;
+mod constraints;
 mod plonk_kzg;
 mod plonk_test;
 
