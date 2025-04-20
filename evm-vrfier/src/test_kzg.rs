@@ -5,10 +5,8 @@ mod tests {
     use ark_bls12_381::{Bls12_381, G1Affine, G2Affine};
     use ark_ec::pairing::Pairing;
     use ark_ec::{AffineRepr, PrimeGroup};
-    use ark_ff::One;
     use ark_std::rand::Rng;
     use ark_std::{test_rng, UniformRand};
-    use std::ops::Mul;
     use w3f_pcs::aggregation::single::aggregate_polys;
     use w3f_pcs::pcs::kzg::params::RawKzgVerifierKey;
     use w3f_pcs::pcs::kzg::urs::URS;
@@ -123,8 +121,7 @@ mod tests {
 
         // Evaluation points
         let z1 = E::ScalarField::rand(rng);
-        // let z2 = E::ScalarField::rand(rng);
-        let z2 = z1 + E::ScalarField::one(); //TODO
+        let z2 = E::ScalarField::rand(rng);
 
         // Proofs
         let kzg_proof_at_z1 = KZG::<E>::open(&ck, &agg_poly_z1, z1).unwrap();
@@ -189,7 +186,7 @@ mod tests {
             .with_recommended_fillers()
             .on_anvil_with_wallet_and_config(|anvil| anvil.prague())?;
 
-        let (mut test_openning, _, kzg_vk) =
+        let  (test_openning, _, kzg_vk) =
             random_opening::<Bls12_381, _>(123, 1, 0, &mut test_rng());
         let test_openning = test_openning.encode();
 

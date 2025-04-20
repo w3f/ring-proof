@@ -7,14 +7,13 @@ alloy::sol!(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{encode_g1, encode_g2, fr_to_bytes, fr_to_uint, G1Point, G2Point};
+    use crate::{encode_g1, encode_g2, fr_to_uint, G1Point, G2Point};
     use alloy::primitives::U256;
     use ark_bls12_381::Bls12_381;
     use ark_ec::pairing::Pairing;
     use ark_ec::twisted_edwards::{Affine, TECurveConfig};
     use ark_ec::PrimeGroup;
     use ark_ed_on_bls12_381_bandersnatch::EdwardsConfig;
-    use ark_ff::One;
     use ark_ff::{BigInteger, PrimeField};
     use ark_std::rand::Rng;
     use ark_std::{test_rng, UniformRand};
@@ -61,23 +60,21 @@ mod tests {
     struct ArkProof<E: Pairing> {
         columns: Vec<E::G1Affine>,
         quotient: E::G1Affine,
-        z1: E::ScalarField,
-        z2: E::ScalarField,
-        columns_at_z1: Vec<E::ScalarField>,
-        columns_at_z2: Vec<E::ScalarField>,
-        kzg_proof_at_z1: E::G1Affine,
-        kzg_proof_at_z2: E::G1Affine,
+        z: E::ScalarField,
+        columns_at_z: Vec<E::ScalarField>,
+        columns_at_zw: Vec<E::ScalarField>,
+        kzg_proof_at_z: E::G1Affine,
+        kzg_proof_at_zw: E::G1Affine,
     }
 
     struct EthProof {
         columns: Vec<BLS::G1Point>,
         quotient: BLS::G1Point,
-        z1: U256,
-        z2: U256,
-        columns_at_z1: Vec<U256>,
-        columns_at_z2: Vec<U256>,
-        kzg_proof_at_z1: BLS::G1Point,
-        kzg_proof_at_z2: BLS::G1Point,
+        z: U256,
+        columns_at_z: Vec<U256>,
+        columns_at_zw: Vec<U256>,
+        kzg_proof_at_z: BLS::G1Point,
+        kzg_proof_at_zw: BLS::G1Point,
     }
 
     impl ArkProof<Bls12_381> {
@@ -89,12 +86,11 @@ mod tests {
                     .map(|p| encode_g1(p).into())
                     .collect(),
                 quotient: encode_g1(self.quotient).into(),
-                z1: fr_to_uint(self.z1),
-                z2: fr_to_uint(self.z2),
-                columns_at_z1: self.columns_at_z1.into_iter().map(fr_to_uint).collect(),
-                columns_at_z2: self.columns_at_z2.into_iter().map(fr_to_uint).collect(),
-                kzg_proof_at_z1: encode_g1(self.kzg_proof_at_z1).into(),
-                kzg_proof_at_z2: encode_g1(self.kzg_proof_at_z2).into(),
+                z: fr_to_uint(self.z),
+                columns_at_z: self.columns_at_z.into_iter().map(fr_to_uint).collect(),
+                columns_at_zw: self.columns_at_zw.into_iter().map(fr_to_uint).collect(),
+                kzg_proof_at_z: encode_g1(self.kzg_proof_at_z).into(),
+                kzg_proof_at_zw: encode_g1(self.kzg_proof_at_zw).into(),
             }
         }
     }
@@ -145,37 +141,36 @@ mod tests {
 
         // sample zeta
         let z = E::ScalarField::rand(rng);
-        // let zw = z * domain.omega();
-        let zw = z + E::ScalarField::one(); //TODO
-        let columns_at_z1 = column_polys.iter().map(|p| p.evaluate(&z)).collect();
-        let columns_at_z2 = column_polys[..2].iter().map(|p| p.evaluate(&z)).collect();
+        let zw = z * domain.omega();
+        let columns_at_z = column_polys.iter().map(|p| p.evaluate(&z)).collect();
+        let columns_at_zw = column_polys[..2].iter().map(|p| p.evaluate(&zw)).collect();
 
         // sample nus
-        let mut polys = column_polys.clone();
-        polys.push(quotient_poly);
-        let nus: Vec<E::ScalarField> = (0..polys.len())
+        let mut polys_at_z = column_polys.clone();
+        polys_at_z.push(quotient_poly);
+        let nus: Vec<E::ScalarField> = (0..polys_at_z.len())
             .map(|_| E::ScalarField::rand(rng))
             .collect();
-        let agg_poly = aggregate_polys(&polys, &nus);
+        let agg_poly_z = aggregate_polys(&polys_at_z, &nus);
+        let agg_columns_zw = aggregate_polys(&column_polys[..2], &nus[..2]);
 
-        let kzg_proof_at_z1 = KZG::<E>::open(&ck, &agg_poly, z).unwrap();
-        let kzg_proof_at_z2 = KZG::<E>::open(&ck, &column_polys[0], zw).unwrap();
+        let kzg_proof_at_z = KZG::<E>::open(&ck, &agg_poly_z, z).unwrap();
+        let kzg_proof_at_zw = KZG::<E>::open(&ck, &agg_columns_zw, zw).unwrap();
 
         let proof = ArkProof {
             columns: column_commitments,
             quotient: quotient_commitment,
-            z1: z,
-            z2: zw,
-            columns_at_z1,
-            columns_at_z2,
-            kzg_proof_at_z1,
-            kzg_proof_at_z2,
+            z,
+            columns_at_z,
+            columns_at_zw,
+            kzg_proof_at_z,
+            kzg_proof_at_zw,
         };
 
         (proof, rvk, nus)
     }
 
-    // #[tokio::test] //TODO
+    #[tokio::test]
     async fn verify_plonk_proof() -> Result<(), Box<dyn std::error::Error>> {
         let provider = alloy::providers::builder()
             .with_recommended_fillers()
@@ -191,12 +186,11 @@ mod tests {
             .verify_proof(
                 test_proof.columns,
                 test_proof.quotient,
-                test_proof.z1,
-                // test_proof.z2,
-                test_proof.columns_at_z1,
-                test_proof.columns_at_z2,
-                test_proof.kzg_proof_at_z1,
-                test_proof.kzg_proof_at_z2,
+                test_proof.z,
+                test_proof.columns_at_z,
+                test_proof.columns_at_zw,
+                test_proof.kzg_proof_at_z,
+                test_proof.kzg_proof_at_zw,
                 nus.into_iter().map(fr_to_uint).collect(),
             )
             .call()
