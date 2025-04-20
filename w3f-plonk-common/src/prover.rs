@@ -84,7 +84,10 @@ impl<F: PrimeField, CS: PCS<F>, T: PlonkTranscript<F, CS>> PlonkProver<F, CS, T>
     }
 }
 
-pub fn aggregate_evaluations<F: FftField>(polys: &[Evaluations<F>], coeffs: &[F]) -> Evaluations<F> {
+pub fn aggregate_evaluations<F: FftField>(
+    polys: &[Evaluations<F>],
+    coeffs: &[F],
+) -> Evaluations<F> {
     assert_eq!(coeffs.len(), polys.len());
     polys
         .iter()
