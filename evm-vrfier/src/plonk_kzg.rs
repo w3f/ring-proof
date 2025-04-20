@@ -1,36 +1,5 @@
-alloy::sol!(
-    #[sol(rpc)]
-    PlonkKzg,
-    "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
-);
-
-pub fn encode_bls_g1(p: ark_bls12_381::G1Affine) -> BLS::G1Point {
-    let [x_a, x_b] = crate::fq_to_bytes(p.x);
-    let [y_a, y_b] = crate::fq_to_bytes(p.y);
-    BLS::G1Point { x_a, x_b, y_a, y_b }
-}
-
-pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
-    let [x_c0_a, x_c0_b] = crate::fq_to_bytes(p.x.c0);
-    let [x_c1_a, x_c1_b] = crate::fq_to_bytes(p.x.c1);
-    let [y_c0_a, y_c0_b] = crate::fq_to_bytes(p.y.c0);
-    let [y_c1_a, y_c1_b] = crate::fq_to_bytes(p.y.c1);
-    BLS::G2Point {
-        x_c0_a,
-        x_c0_b,
-        x_c1_a,
-        x_c1_b,
-        y_c0_a,
-        y_c0_b,
-        y_c1_a,
-        y_c1_b,
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::plonk_kzg::PlonkKzg;
     use crate::{fr_to_bytes, fr_to_uint};
     use alloy::primitives::U256;
     use ark_bls12_381::{Bls12_381, Fr, G2Affine};
@@ -46,6 +15,35 @@ mod tests {
     use w3f_pcs::DenseUVPolynomial;
     use w3f_pcs::Poly;
     use w3f_pcs::Polynomial;
+
+    alloy::sol!(
+        #[sol(rpc)]
+        PlonkKzg,
+        "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
+    );
+
+    pub fn encode_bls_g1(p: ark_bls12_381::G1Affine) -> BLS::G1Point {
+        let [x_a, x_b] = crate::fq_to_bytes(p.x);
+        let [y_a, y_b] = crate::fq_to_bytes(p.y);
+        BLS::G1Point { x_a, x_b, y_a, y_b }
+    }
+
+    pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
+        let [x_c0_a, x_c0_b] = crate::fq_to_bytes(p.x.c0);
+        let [x_c1_a, x_c1_b] = crate::fq_to_bytes(p.x.c1);
+        let [y_c0_a, y_c0_b] = crate::fq_to_bytes(p.y.c0);
+        let [y_c1_a, y_c1_b] = crate::fq_to_bytes(p.y.c1);
+        BLS::G2Point {
+            x_c0_a,
+            x_c0_b,
+            x_c1_a,
+            x_c1_b,
+            y_c0_a,
+            y_c0_b,
+            y_c1_a,
+            y_c1_b,
+        }
+    }
 
     struct ArksBatchKzgOpenning<E: Pairing> {
         polys_z1: Vec<E::G1Affine>,
