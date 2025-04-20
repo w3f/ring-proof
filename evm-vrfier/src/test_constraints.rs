@@ -33,7 +33,8 @@ mod tests {
         let y2 = Fr::rand(rng);
         let x3 = Fr::rand(rng);
         let y3 = Fr::rand(rng);
-        let cx_rust = cond_te_addition(
+        let not_last = Fr::rand(rng);
+        let cs_rust = cond_te_addition(
             te_coeff_a,
             &b,
             &x1,
@@ -42,10 +43,10 @@ mod tests {
             &y2,
             x3,
             y3,
-            &Fr::one(),
+            &not_last,
             Fr::one(),
-        )[0];
-        let cx_sol = constraints
+        );
+        let cs_sol = constraints
             .cond_te_addition(
                 fr_to_uint(b),
                 fr_to_uint(x1),
@@ -54,11 +55,12 @@ mod tests {
                 fr_to_uint(y2),
                 fr_to_uint(x3),
                 fr_to_uint(y3),
-                fr_to_uint(Fr::one()),
+                fr_to_uint(not_last),
             )
             .call()
             .await?;
-        assert_eq!(unit_to_fr(cx_sol), cx_rust);
+        assert_eq!(unit_to_fr(cs_sol._0), cs_rust[0]);
+        assert_eq!(unit_to_fr(cs_sol._1), cs_rust[1]);
 
         Ok(())
     }

@@ -13,7 +13,7 @@ library ConstraintsExt {
         uint256 x3,
         uint256 y3,
         uint256 not_last
-    ) public pure returns (uint256) {
+    ) public pure returns (uint256, uint256) {
         return Constraints.cond_te_addition(b, x1, y1, x2, y2, x3, y3, not_last);
     }
 

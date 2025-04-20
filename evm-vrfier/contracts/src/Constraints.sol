@@ -29,22 +29,39 @@ library Constraints {
         uint256 x3,
         uint256 y3,
         uint256 not_last
-    ) internal pure returns (uint256 cx) {
+    ) internal pure returns (uint256 cx, uint256 cy) {
         /// `cx = {[(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b + (x3 - x1).(1 - b)}.not_last`
+        /// `cy = {[(x1.y2 - x2.y1).y3 - x1.y1 + x2.y2].b + (y3 - y1).(1 - b)}.not_last`
         uint256 x1y1 = mul(x1, y1);
         uint256 x2y2 = mul(x2, y2);
+        uint256 one_minus_b = add(1, r - b);
         // forgefmt: disable-next-item
-        uint256 lx = mul(
+        cx = mul( // [(a.x1.x2 + y1.y2).x3 - x1.y1 - x2.y2].b
             add(
                 mul(
-                    add(mul(te_coeff_a, mul(x1, x2)), mul(y1, y2)),
+                    add(mul(te_coeff_a, mul(x1, x2)), mul(y1, y2)), //a.x1.x2 + y1.y2
                     x3
                 ),
                 r - add(x1y1, x2y2)
             ),
             b
         );
-        cx = mul(add(lx, mul(add(x3, r - x1), add(1, r - b))), not_last);
+        cx = mul(add(cx, mul(add(x3, r - x1), one_minus_b)), not_last);
+        // forgefmt: disable-next-item
+        cy = mul( // [(x1.y2 - x2.y1).y3 - x1.y1 + x2.y2].b
+            add(
+                add(
+                    mul(
+
+                        add(mul(x1, y2), r - mul(x2,y1)), //x1.y2 - x2.y1
+                        y3
+                    ),
+                    r - x1y1),
+                x2y2
+            ),
+            b
+        );
+        cy = mul(add(cy, mul(add(y3, r - y1), one_minus_b)), not_last);
     }
 
     function mod_exp(uint256 base, uint256 exp) internal view returns (uint256) {

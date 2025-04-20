@@ -52,7 +52,7 @@ contract Plonk {
         returns (uint256)
     {
         uint256 not_last = Constraints.not_last_row(z);
-        uint256 c = Constraints.cond_te_addition(
+        (uint256 cx, uint256 cy) = Constraints.cond_te_addition(
             columns_at_z1[4],
             columns_at_z1[0],
             columns_at_z1[1],
@@ -62,6 +62,6 @@ contract Plonk {
             columns_at_z2[1],
             not_last
         );
-        return Constraints.quotient_at(c, z);
+        return Constraints.quotient_at(cx, z);
     }
 }
