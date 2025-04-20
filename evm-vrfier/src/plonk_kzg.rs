@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::{fr_to_bytes, fr_to_uint};
+    use crate::{encode_g1, encode_g2, fr_to_bytes, fr_to_uint, G1Point, G2Point};
     use alloy::primitives::U256;
-    use ark_bls12_381::{Bls12_381, Fr, G2Affine};
+    use ark_bls12_381::{Bls12_381, Fr, G1Affine, G2Affine};
     use ark_ec::pairing::Pairing;
     use ark_ec::{AffineRepr, PrimeGroup};
     use ark_std::rand::Rng;
@@ -22,26 +22,29 @@ mod tests {
         "contracts/out/PlonkKzg.t.sol/KzgVerifier.json"
     );
 
-    pub fn encode_bls_g1(p: ark_bls12_381::G1Affine) -> BLS::G1Point {
-        let [x_a, x_b] = crate::fq_to_bytes(p.x);
-        let [y_a, y_b] = crate::fq_to_bytes(p.y);
-        BLS::G1Point { x_a, x_b, y_a, y_b }
+    impl From<G1Point> for BLS::G1Point {
+        fn from(p: G1Point) -> Self {
+            Self {
+                x_a: p.x_a,
+                x_b: p.x_b,
+                y_a: p.y_a,
+                y_b: p.y_b,
+            }
+        }
     }
 
-    pub fn encode_bls_g2(p: ark_bls12_381::G2Affine) -> BLS::G2Point {
-        let [x_c0_a, x_c0_b] = crate::fq_to_bytes(p.x.c0);
-        let [x_c1_a, x_c1_b] = crate::fq_to_bytes(p.x.c1);
-        let [y_c0_a, y_c0_b] = crate::fq_to_bytes(p.y.c0);
-        let [y_c1_a, y_c1_b] = crate::fq_to_bytes(p.y.c1);
-        BLS::G2Point {
-            x_c0_a,
-            x_c0_b,
-            x_c1_a,
-            x_c1_b,
-            y_c0_a,
-            y_c0_b,
-            y_c1_a,
-            y_c1_b,
+    impl From<G2Point> for BLS::G2Point {
+        fn from(p: G2Point) -> Self {
+            Self {
+                x_c0_a: p.x_c0_a,
+                x_c0_b: p.x_c0_b,
+                x_c1_a: p.x_c1_a,
+                x_c1_b: p.x_c1_b,
+                y_c0_a: p.y_c0_a,
+                y_c0_b: p.y_c0_b,
+                y_c1_a: p.y_c1_a,
+                y_c1_b: p.y_c1_b,
+            }
         }
     }
 
@@ -70,14 +73,18 @@ mod tests {
     impl ArksBatchKzgOpenning<Bls12_381> {
         fn encode(self) -> EthBatchKzgOpenning {
             EthBatchKzgOpenning {
-                polys_z1: self.polys_z1.into_iter().map(encode_bls_g1).collect(),
-                poly_z2: encode_bls_g1(self.poly_z2),
+                polys_z1: self
+                    .polys_z1
+                    .into_iter()
+                    .map(|p| encode_g1(p).into())
+                    .collect(),
+                poly_z2: encode_g1(self.poly_z2).into(),
                 z1: fr_to_uint(self.z1),
                 z2: fr_to_uint(self.z2),
                 evals_at_z1: self.evals_at_z1.into_iter().map(fr_to_uint).collect(),
                 eval_at_z2: fr_to_uint(self.eval_at_z2),
-                kzg_proof_at_z1: encode_bls_g1(self.kzg_proof_at_z1),
-                kzg_proof_at_z2: encode_bls_g1(self.kzg_proof_at_z2),
+                kzg_proof_at_z1: encode_g1(self.kzg_proof_at_z1).into(),
+                kzg_proof_at_z2: encode_g1(self.kzg_proof_at_z2).into(),
             }
         }
     }
@@ -155,7 +162,7 @@ mod tests {
         let (test_openning, nus, kzg_vk) = random_opening::<Bls12_381, _>(123, 1, &mut test_rng());
         let test_openning = test_openning.encode();
 
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_bls_g2(kzg_vk.tau_in_g2)).await?;
+        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
 
         let res = plonk_kzg
             .verify_plonk_kzg(
@@ -186,7 +193,7 @@ mod tests {
         let (test_openning, _, kzg_vk) = random_opening::<Bls12_381, _>(123, 0, &mut test_rng());
         let test_openning = test_openning.encode();
 
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_bls_g2(kzg_vk.tau_in_g2)).await?;
+        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(kzg_vk.tau_in_g2).into()).await?;
 
         let res = plonk_kzg
             .verify(
@@ -209,14 +216,14 @@ mod tests {
             .on_anvil_with_wallet_and_config(|anvil| anvil.prague())?;
 
         let _tau_g2 = G2Affine::generator();
-        let plonk_kzg = PlonkKzg::deploy(&provider, encode_bls_g2(_tau_g2)).await?;
+        let plonk_kzg = PlonkKzg::deploy(&provider, encode_g2(_tau_g2).into()).await?;
 
         let res = plonk_kzg
             .pairing2(
-                encode_bls_g1(-ark_bls12_381::G1Affine::generator()),
-                encode_bls_g2(ark_bls12_381::G2Affine::generator()),
-                encode_bls_g1(ark_bls12_381::G1Affine::generator()),
-                encode_bls_g2(ark_bls12_381::G2Affine::generator()),
+                encode_g1(-G1Affine::generator()).into(),
+                encode_g2(G2Affine::generator()).into(),
+                encode_g1(G1Affine::generator()).into(),
+                encode_g2(G2Affine::generator()).into(),
             )
             .call()
             .await?;
