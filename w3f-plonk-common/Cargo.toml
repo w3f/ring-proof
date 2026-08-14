@@ -1,12 +1,12 @@
 [package]
 name = "w3f-plonk-common"
 version = "0.0.10"
-edition = "2021"
-authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
-license = "MIT/Apache-2.0"
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
 description = "Infrastructure for creating plonk-like proofs"
 keywords = ["cryptography", "plonk"]
-repository = "https://github.com/w3f/ring-proof"
+repository.workspace = true
 
 [dependencies]
 ark-std.workspace = true

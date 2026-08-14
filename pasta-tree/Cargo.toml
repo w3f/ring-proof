@@ -2,11 +2,11 @@
 name = "pasta-tree"
 version = "0.0.1"
 edition = "2024"
-authors = ["Sergey Vasilyev <swasilyev@gmail.com>"]
-license = "MIT/Apache-2.0"
+authors.workspace = true
+license.workspace = true
 description = "Hiding Verkle Tree over Pasta Curves"
 keywords = ["cryptography", "accumulator", "verkle", "ring-vrf"]
-repository = "https://github.com/w3f/ring-proof"
+repository.workspace = true
 
 [dependencies]
 w3f-pcs.workspace = true
