@@ -5,6 +5,7 @@ use ark_std::rand::RngCore;
 use w3f_pcs::pcs::PCS;
 
 pub use piop::index;
+pub use w3f_plonk_common::cond_select::CondSelect;
 pub use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::Proof;
 

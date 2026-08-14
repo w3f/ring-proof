@@ -1,6 +1,7 @@
 use ark_ec::twisted_edwards::{Affine, TECurveConfig};
 use ark_ff::PrimeField;
 use w3f_pcs::pcs::PCS;
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::piop::ProverPiop;
 use w3f_plonk_common::prover::PlonkProver;
 use w3f_plonk_common::transcript::PlonkTranscript;
@@ -27,7 +28,7 @@ where
 
 impl<F, CS, Curve, T> RingProver<F, CS, Curve, T>
 where
-    F: PrimeField,
+    F: PrimeField + CondSelect,
     CS: PCS<F>,
     Curve: TECurveConfig<BaseField = F>,
     T: PlonkTranscript<F, CS>,
