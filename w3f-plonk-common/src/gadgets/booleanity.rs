@@ -4,7 +4,7 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain, Polynomial};
 
 use ark_std::{vec, vec::Vec};
 
-use crate::cond_select::bit_to_field;
+use crate::cond_select::{bit_to_field, CondSelect};
 use crate::domain::Domain;
 use crate::gadgets::VerifierGadget;
 use crate::{const_evals, Column, FieldColumn};
@@ -16,7 +16,10 @@ pub struct BitColumn<F: FftField> {
 }
 
 impl<F: FftField> BitColumn<F> {
-    pub fn init(bits: Vec<bool>, domain: &Domain<F>) -> Self {
+    pub fn init(bits: Vec<bool>, domain: &Domain<F>) -> Self
+    where
+        F: CondSelect,
+    {
         let bits_as_field_elements = bits.iter().map(|&bit| bit_to_field(bit)).collect();
         let col = domain.column(bits_as_field_elements);
         Self { bits, col }

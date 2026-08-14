@@ -4,6 +4,7 @@ use ark_ff::{BigInteger, PrimeField};
 use ark_std::vec::Vec;
 
 use crate::piop::FixedColumns;
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::BitColumn;
 use w3f_plonk_common::gadgets::ec::te_doubling::Doubling;
@@ -69,7 +70,10 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopParams<F, Curve> {
     }
 
     /// Represents `index` as a binary column.
-    pub fn pk_index_col(&self, index: usize) -> BitColumn<F> {
+    pub fn pk_index_col(&self, index: usize) -> BitColumn<F>
+    where
+        F: CondSelect,
+    {
         assert!(index < self.max_keys());
         // The index is the prover's ring position: an equality scan avoids a
         // secret-index memory write.

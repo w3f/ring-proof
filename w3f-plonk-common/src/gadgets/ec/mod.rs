@@ -1,4 +1,4 @@
-use crate::cond_select::{bit_to_field, PointSelect};
+use crate::cond_select::CondSelect;
 use crate::domain::Domain;
 use crate::gadgets::booleanity::BitColumn;
 use crate::{Column, FieldColumn};
@@ -90,7 +90,7 @@ where
         domain: &Domain<F>,
     ) -> Self
     where
-        P::Group: PointSelect<F>,
+        P::Group: CondSelect,
     {
         debug_assert_eq!(bitmask.payload_len(), domain.capacity - 1);
         debug_assert_eq!(points.payload_len(), domain.capacity - 1);
@@ -103,7 +103,7 @@ where
             .map(|(&bit, point)| {
                 let mut sum = projective_acc;
                 sum += point;
-                projective_acc = P::Group::select(bit_to_field(bit), &sum, &projective_acc);
+                projective_acc = P::Group::select(bit, &sum, &projective_acc);
                 projective_acc
             })
             .collect();
@@ -166,9 +166,9 @@ mod tests {
     // before the hardening were built from.
     fn acc_matches_naive_accumulation<F, P>()
     where
-        F: FftField,
+        F: FftField + CondSelect,
         P: AffineRepr<BaseField = F>,
-        P::Group: PointSelect<F>,
+        P::Group: CondSelect,
     {
         let rng = &mut test_rng();
         let domain = Domain::test_domain(256, true);
