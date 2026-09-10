@@ -9,6 +9,7 @@ use w3f_pcs::pcs::Commitment;
 use crate::piop::params::PiopParams;
 use crate::piop::FixedColumns;
 use crate::piop::{RingCommitments, RingEvaluations};
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
 use w3f_plonk_common::gadgets::ec::AffineColumn;
@@ -91,7 +92,10 @@ impl<F: PrimeField, Curve: TECurveConfig<BaseField = F>> PiopProver<F, Curve> {
         pk_index: usize,
         sk: Curve::ScalarField,
         vrf_in: Affine<Curve>,
-    ) -> Self {
+    ) -> Self
+    where
+        F: CondSelect,
+    {
         let domain = params.domain.clone();
 
         let FixedColumns {
