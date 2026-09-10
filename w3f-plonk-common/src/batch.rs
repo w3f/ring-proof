@@ -4,7 +4,8 @@ use crate::{ColumnsCommited, ColumnsEvaluated};
 use ark_ff::PrimeField;
 use ark_poly::univariate::DensePolynomial;
 use ark_poly::Evaluations;
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
+use ark_std::vec::Vec;
 use w3f_pcs::pcs::Commitment;
 
 impl<F: PrimeField, C: Commitment<F>, CC: ColumnsCommited<F, C>, const K: usize>
