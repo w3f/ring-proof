@@ -128,6 +128,7 @@ impl<F: PrimeField, C: Commitment<F>, V: VerifierPiop<F, C>, const K: usize> Ver
 {
     const N_COLUMNS: usize = V::N_COLUMNS * K;
     const N_CONSTRAINTS: usize = V::N_CONSTRAINTS * K;
+    type Instance = [V::Instance; K];
 
     fn precommitted_columns(&self) -> Vec<C> {
         self.0
