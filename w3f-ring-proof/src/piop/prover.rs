@@ -12,6 +12,7 @@ use w3f_pcs::pcs::Commitment;
 use crate::piop::params::PiopParams;
 use crate::piop::FixedColumns;
 use crate::piop::{RingCommitments, RingEvaluations};
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
 use w3f_plonk_common::gadgets::ec::AffineColumn;
@@ -46,7 +47,11 @@ impl<F: PrimeField, G: AffineRepr<BaseField = F>> PiopProver<F, G> {
         fixed_columns: FixedColumns<F, G>,
         prover_index_in_keys: usize,
         secret: G::ScalarField,
-    ) -> Self {
+    ) -> Self
+    where
+        F: CondSelect,
+        G::Group: CondSelect,
+    {
         let domain = params.domain.clone();
         let FixedColumns {
             points,
@@ -54,7 +59,7 @@ impl<F: PrimeField, G: AffineRepr<BaseField = F>> PiopProver<F, G> {
         } = fixed_columns;
         let bits = Self::bits_column(&params, prover_index_in_keys, secret);
         let booleanity = Booleanity::init(bits.clone());
-        let inner_prod = InnerProd::init(ring_selector.clone(), bits.col.clone(), &domain);
+        let inner_prod = InnerProd::init_bits(ring_selector.clone(), &bits, &domain);
         let inner_prod_acc = FixedCells::init(inner_prod.acc.clone(), &domain, F::zero(), F::one());
         let cond_add = CondAdd::init(bits.clone(), points.clone(), params.seed, &domain);
         let (seed_x, seed_y) = params.seed.xy().unwrap();
@@ -80,9 +85,15 @@ impl<F: PrimeField, G: AffineRepr<BaseField = F>> PiopProver<F, G> {
         params: &PiopParams<G>,
         index_in_keys: usize,
         secret: G::ScalarField,
-    ) -> BitColumn<F> {
-        let mut keyset_part = vec![false; params.keyset_part_size];
-        keyset_part[index_in_keys] = true;
+    ) -> BitColumn<F>
+    where
+        F: CondSelect,
+    {
+        // The index is the prover's ring position: an equality scan avoids the
+        // secret-index memory write of `keyset_part[index_in_keys] = true`.
+        let keyset_part: Vec<bool> = (0..params.keyset_part_size)
+            .map(|position| position == index_in_keys)
+            .collect();
         let scalar_part = params.scalar_part(secret);
         let bits = [keyset_part, scalar_part].concat();
         assert_eq!(bits.len(), params.domain.capacity - 1);
@@ -211,7 +222,6 @@ where
 {
     const N_COLUMNS: usize = 7;
     const N_CONSTRAINTS: usize = 7;
-
     type Commitments = RingCommitments<F, C>;
     type Evaluations = RingEvaluations<F>;
     type Instance = SwAffine<Curve>;

@@ -4,7 +4,9 @@ use ark_poly::{Evaluations, GeneralEvaluationDomain};
 
 use ark_std::{vec, vec::Vec};
 
+use crate::cond_select::CondSelect;
 use crate::domain::Domain;
+use crate::gadgets::booleanity::BitColumn;
 use crate::gadgets::{ProverGadget, VerifierGadget};
 use crate::{Column, FieldColumn};
 
@@ -39,6 +41,27 @@ impl<F: FftField> InnerProd<F> {
         }
     }
 
+    /// Same as `init` with `b` the field representation of `bits`, but the
+    /// products are computed with a constant-time select, so the
+    /// accumulation does not branch on the bits.
+    pub fn init_bits(a: FieldColumn<F>, bits: &BitColumn<F>, domain: &Domain<F>) -> Self
+    where
+        F: CondSelect,
+    {
+        assert_eq!(a.payload_len(), domain.capacity - 1);
+        assert_eq!(bits.payload_len(), domain.capacity - 1);
+        let inner_prods = Self::partial_bit_prods(a.payload(), &bits.bits);
+        let mut acc = vec![F::zero()];
+        acc.extend(inner_prods);
+        let acc = domain.column(acc);
+        Self {
+            a,
+            b: bits.col.clone(),
+            not_last: domain.not_last_row.clone(),
+            acc,
+        }
+    }
+
     /// Returns a[0]b[0], a[0]b[0] + a[1]b[1], ..., a[0]b[0] + a[1]b[1] + ... + a[n-1]b[n-1]
     fn partial_inner_prods(a: &[F], b: &[F]) -> Vec<F> {
         assert_eq!(a.len(), b.len());
@@ -46,6 +69,21 @@ impl<F: FftField> InnerProd<F> {
             .zip(b)
             .scan(F::zero(), |state, (&a, b)| {
                 *state += a * b;
+                Some(*state)
+            })
+            .collect()
+    }
+
+    fn partial_bit_prods(a: &[F], bits: &[bool]) -> Vec<F>
+    where
+        F: CondSelect,
+    {
+        assert_eq!(a.len(), bits.len());
+        a.iter()
+            .zip(bits)
+            .scan(F::zero(), |state, (&a, &bit)| {
+                let sum = *state + a;
+                *state = F::select(bit, &sum, state);
                 Some(*state)
             })
             .collect()
@@ -92,7 +130,7 @@ mod tests {
     use ark_std::test_rng;
 
     use crate::domain::Domain;
-    use crate::test_helpers::random_vec;
+    use crate::test_helpers::{random_bitvec, random_vec};
 
     use super::*;
 
@@ -130,5 +168,30 @@ mod tests {
     fn test_inner_prod_gadget() {
         _test_inner_prod_gadget(false);
         _test_inner_prod_gadget(true);
+    }
+
+    // The acc column is committed, so its values are consensus-critical:
+    // the branch-free bit accumulation must produce exactly the column the
+    // naive product accumulation produces. Only the payload rows are
+    // compared: the trailing zk rows are random per column instance.
+    #[test]
+    fn bit_acc_matches_naive_accumulation() {
+        let rng = &mut test_rng();
+        let domain = Domain::test_domain(256, true);
+        let a: Vec<Fq> = random_vec(domain.capacity - 1, rng);
+        let bits = random_bitvec(domain.capacity - 1, 0.5, rng);
+
+        let naive = InnerProd::init(
+            domain.column(a.clone()),
+            domain.column(bits.iter().map(|&bit| Fq::from(bit)).collect()),
+            &domain,
+        );
+        let bit_col = BitColumn::init(bits, &domain);
+        let gadget = InnerProd::init_bits(domain.column(a), &bit_col, &domain);
+
+        assert_eq!(
+            gadget.acc.evals.evals[..domain.capacity],
+            naive.acc.evals.evals[..domain.capacity]
+        );
     }
 }
