@@ -8,6 +8,7 @@ use ark_ec::CurveGroup;
 use ark_ff::PrimeField;
 use std::marker::PhantomData;
 use w3f_pcs::pcs::PcsParams;
+use w3f_pcs::pcs::commitment::WrappedAffine;
 use w3f_pcs::pcs::ipa::hiding::HidingIpa;
 use w3f_pcs::shplonk::Shplonk;
 use w3f_plonk_common::batch::BatchVerifier;
@@ -99,12 +100,8 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>, P: CircuitParams<
             .zip(parents.into_iter())
             .zip(side_proof.piop_proofs.into_iter())
         {
-            let (challenges, _rng) = plonk_verifier.restore_challenges(
-                &child,
-                &level_proof,
-                0,
-                P::VerifierCircuit::N_CONSTRAINTS,
-            );
+            let challenges = plonk_verifier
+                .restore_fs_challenges::<P::VerifierCircuit, _, _>(&child, &level_proof);
             let piop = self.piop_params.verifier_circuit(
                 (child, parent),
                 &fixed_cols,
@@ -167,12 +164,12 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>, P: CircuitParams<
             ArkTranscript::new(b"pasta-tree-level-proof"),
         );
 
-        let (challenges, _rng) = plonk_verifier.restore_challenges(
-            &instance,
-            &piop_proof,
-            0,
-            L * P::VerifierCircuit::N_CONSTRAINTS,
-        );
+        let challenges = plonk_verifier.restore_fs_challenges::<BatchVerifier<
+            C::ScalarField,
+            WrappedAffine<C>,
+            P::VerifierCircuit,
+            L,
+        >, _, _>(&instance, &piop_proof);
         let zeta_ = challenges.zeta;
         // println!("zeta = {zeta_}");
 

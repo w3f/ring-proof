@@ -38,7 +38,11 @@ pub trait CircuitParams<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>
             Commitments = Self::Commitments,
             Evaluations = Self::Evaluations,
         >;
-    type VerifierCircuit: VerifierPiop<C::ScalarField, WrappedAffine<C>>;
+    type VerifierCircuit: VerifierPiop<
+        C::ScalarField,
+        WrappedAffine<C>,
+        Instance = AffinePoint<G>
+    >;
 
     fn prover_circuit(
         &self,
@@ -392,7 +396,8 @@ mod tests {
         end_timer!(t_verify);
         assert!(valid);
 
-        if height == 4 {
+        // number of columns for the FAT scheme is hardcoded in batch.rs
+        if height == 4 && log_n == 8 {
             println!("\n\n");
             let t_prove = start_timer!(|| format!(
                 "Batch-proving membership, height={height}, domain={domain_size}"

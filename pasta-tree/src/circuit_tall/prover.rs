@@ -10,6 +10,7 @@ use ark_poly::univariate::DensePolynomial;
 use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::commitment::WrappedAffine;
 use w3f_plonk_common::FieldColumn;
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::ProverGadget;
 use w3f_plonk_common::gadgets::booleanity::{BitColumn, Booleanity};
@@ -35,7 +36,10 @@ pub struct PiopProver<G: AffineRepr<BaseField: FftField>> {
     result: G,
 }
 
-impl<G: CurveModel<BaseField: FftField>> PiopProver<AffinePoint<G>> {
+impl<G: CurveModel<BaseField: FftField>> PiopProver<AffinePoint<G>>
+where
+    G::BaseField: CondSelect,
+{
     pub fn build(
         params: &PiopParams<AffinePoint<G>>,
         level: LevelWitnessWithBlinding<AffinePoint<G>>,
