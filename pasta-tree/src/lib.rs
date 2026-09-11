@@ -38,11 +38,7 @@ pub trait CircuitParams<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>
             Commitments = Self::Commitments,
             Evaluations = Self::Evaluations,
         >;
-    type VerifierCircuit: VerifierPiop<
-        C::ScalarField,
-        WrappedAffine<C>,
-        Instance = AffinePoint<G>
-    >;
+    type VerifierCircuit: VerifierPiop<C::ScalarField, WrappedAffine<C>, Instance = AffinePoint<G>>;
 
     fn prover_circuit(
         &self,
