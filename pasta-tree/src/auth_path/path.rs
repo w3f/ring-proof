@@ -13,6 +13,7 @@ use ark_std::rand::Rng;
 /// `path_0[0]` contains the leaf (with its siblings).
 /// `commit(path_0[k].siblings) = path_1[k].siblings[path_1[k].i]`, if `path_1[k]` exists,
 /// otherwise it's the root.
+#[derive(Clone, Debug)]
 pub struct AuthenticationPath<C0: CurveGroup, C1: CurveGroup> {
     /// Nodes on the `C0` curve.
     pub c0_path: Vec<LevelWitness<C0::Affine>>,

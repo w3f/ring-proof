@@ -99,6 +99,7 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>>
 {
     const N_COLUMNS: usize = 9;
     const N_CONSTRAINTS: usize = 13;
+    type Instance = AffinePoint<G>;
 
     fn precommitted_columns(&self) -> Vec<WrappedAffine<C>> {
         vec![

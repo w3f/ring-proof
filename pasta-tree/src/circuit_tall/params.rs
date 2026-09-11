@@ -9,6 +9,7 @@ use ark_ff::{FftField, One};
 use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::commitment::WrappedAffine;
 use w3f_plonk_common::FieldColumn;
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::BitColumn;
 use w3f_plonk_common::gadgets::ec::AffineColumn;
@@ -35,6 +36,8 @@ pub struct PiopParams<G: AffineRepr<BaseField: FftField>> {
 
 impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>> CircuitParams<C, G>
     for PiopParams<AffinePoint<G>>
+where
+    G::BaseField: CondSelect,
 {
     type Commitments = crate::circuit_tall::ProofComms<C>;
     type Evaluations = crate::circuit_tall::ProofEvals<C::ScalarField>;
@@ -106,7 +109,10 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>> CircuitParams<C, 
     }
 }
 
-impl<G: AffineRepr<BaseField: FftField>> PiopParams<G> {
+impl<G: AffineRepr<BaseField: FftField>> PiopParams<G>
+where
+    G::BaseField: CondSelect,
+{
     pub fn setup(domain: Domain<G::BaseField>, h: G, seed: G) -> Self {
         assert!(domain.domain_size() > 256);
         let actual_capacity = domain.capacity - 1;

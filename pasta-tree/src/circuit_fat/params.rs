@@ -9,6 +9,7 @@ use ark_ff::{AdditiveGroup, BigInteger, PrimeField, Zero};
 use ark_std::{vec, vec::Vec};
 use w3f_pcs::pcs::commitment::WrappedAffine;
 use w3f_plonk_common::FieldColumn;
+use w3f_plonk_common::cond_select::CondSelect;
 use w3f_plonk_common::domain::Domain;
 use w3f_plonk_common::gadgets::booleanity::BitColumn;
 use w3f_plonk_common::gadgets::ec::AffineColumn;
@@ -29,6 +30,8 @@ pub struct PiopParams<G: AffineRepr<BaseField: PrimeField>> {
 
 impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>> CircuitParams<C, G>
     for PiopParams<AffinePoint<G>>
+where
+    G::BaseField: CondSelect,
 {
     type Commitments = crate::circuit_fat::ProofComms<C>;
     type Evaluations = crate::circuit_fat::ProofEvals<C::ScalarField>;
@@ -86,7 +89,10 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>> CircuitParams<C, 
     }
 }
 
-impl<G: AffineRepr<BaseField: PrimeField>> PiopParams<G> {
+impl<G: AffineRepr<BaseField: PrimeField>> PiopParams<G>
+where
+    G::BaseField: CondSelect,
+{
     pub fn setup(domain: Domain<G::BaseField>, h: G) -> Self {
         let scalar_bitlen = G::ScalarField::MODULUS_BIT_SIZE as usize;
         Self {

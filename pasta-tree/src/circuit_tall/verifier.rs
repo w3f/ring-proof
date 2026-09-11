@@ -1,8 +1,8 @@
 use crate::circuit_tall::{ProofComms, ProofEvals};
+use crate::{AffinePoint, CurveModel};
 use ark_ec::AffineRepr;
 use ark_ec::CurveGroup;
 // use ark_ec::short_weierstrass::{Affine as SwAffine, SWCurveConfig};
-use crate::{AffinePoint, CurveModel};
 use ark_ff::{One, Zero};
 use ark_std::marker::PhantomData;
 use ark_std::{vec, vec::Vec};
@@ -99,6 +99,8 @@ impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>>
 {
     const N_COLUMNS: usize = 7;
     const N_CONSTRAINTS: usize = 7;
+    type Instance = AffinePoint<G>;
+    // type Instance = <PiopProver<AffinePoint<G>> as ProverPiop<C::ScalarField, WrappedAffine<C>>>::Instance;
 
     fn precommitted_columns(&self) -> Vec<WrappedAffine<C>> {
         vec![self.points_x.clone(), self.select_part.clone()]

@@ -38,7 +38,7 @@ pub trait CircuitParams<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>
             Commitments = Self::Commitments,
             Evaluations = Self::Evaluations,
         >;
-    type VerifierCircuit: VerifierPiop<C::ScalarField, WrappedAffine<C>>;
+    type VerifierCircuit: VerifierPiop<C::ScalarField, WrappedAffine<C>, Instance = AffinePoint<G>>;
 
     fn prover_circuit(
         &self,
@@ -95,6 +95,25 @@ type LevelProof<C, G, P> = w3f_plonk_common::PiopProof<
     <P as CircuitParams<C, G>>::Evaluations,
 >;
 
+type BatchLevelProof<C, G, P, const L: usize> = w3f_plonk_common::PiopProof<
+    <C as PrimeGroup>::ScalarField,
+    WrappedAffine<C>,
+    [<P as CircuitParams<C, G>>::Commitments; L],
+    [<P as CircuitParams<C, G>>::Evaluations; L],
+>;
+
+#[derive(Clone, Debug)]
+pub struct BatchSideProof<
+    C: CurveGroup,
+    G: CurveModel<BaseField = C::ScalarField>,
+    P: CircuitParams<C, G>,
+    const L: usize,
+> {
+    piop_proof: BatchLevelProof<C, G, P, L>,
+    pcs_proof: AggregateProof<C::ScalarField, HidingIpa<C>>,
+    todo: Coeffs<C::ScalarField>,
+}
+
 #[derive(Clone)]
 pub struct CycleSideProof<
     C: CurveGroup,
@@ -115,6 +134,18 @@ pub struct CurveTreeProof<
 > {
     c0_proof: CycleSideProof<ProjectivePoint<C0>, C1, P0>,
     c1_proof: CycleSideProof<ProjectivePoint<C1>, C0, P1>,
+}
+
+#[derive(Clone, Debug)]
+pub struct CurveTreeProof2<
+    C0: CurveModel,
+    C1: CurveModel<BaseField = C0::ScalarField, ScalarField = C0::BaseField>,
+    P0: CircuitParams<ProjectivePoint<C0>, C1>,
+    P1: CircuitParams<ProjectivePoint<C1>, C0>,
+    const L: usize,
+> {
+    c0_proof: BatchSideProof<ProjectivePoint<C0>, C1, P0, L>,
+    c1_proof: BatchSideProof<ProjectivePoint<C1>, C0, P1, L>,
 }
 
 impl<C: CurveGroup, G: CurveModel<BaseField = C::ScalarField>, P: CircuitParams<C, G>>
@@ -176,7 +207,7 @@ impl ArkTranscript {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Coeffs<F: PrimeField>(F, F);
 impl<F: PrimeField, CS: PCS<F>> ShplonkTranscript<F, CS> for Coeffs<F> {
     fn get_gamma(&mut self) -> F {
@@ -261,6 +292,8 @@ mod tests {
         >(9, 2);
     }
 
+    // cargo test test_circuit_fat --release --features="print-trace" -- --show-output
+    // cargo test test_circuit_fat --release --features="print-trace parallel" -- --show-output
     #[test]
     fn test_circuit_fat() {
         _test_proof::<
@@ -268,7 +301,7 @@ mod tests {
             VestaConfig,
             CircuitParamsFat<ark_vesta::Affine>,
             CircuitParamsFat<ark_pallas::Affine>,
-        >(8, 2);
+        >(8, 4);
     }
 
     // cargo test test_bench_curve_tree --release --features="print-trace" -- --show-output --ignored
@@ -349,17 +382,30 @@ mod tests {
                 .pow(height as u32)
                 .to_formatted_string(&Locale::en)
         );
-        let t_prove = start_timer!(|| format!(
-            "Proving CurveTree membership, height={height}, domain={domain_size}, arity={max_nodes}, capacity={}",
-            max_nodes.pow(height as u32)
-        ));
-        let (auth_path, proof) = params.prove(path, rng);
+        let t_prove =
+            start_timer!(|| format!("Proving membership, height={height}, domain={domain_size}"));
+        let (auth_path, proof) = params.prove(path.clone(), rng);
         end_timer!(t_prove);
 
-        let t_verify = start_timer!(|| "Verifying CurveTree membership");
+        let t_verify = start_timer!(|| "Verifying membership");
         let valid = params.verify(auth_path, proof, root);
         end_timer!(t_verify);
         assert!(valid);
+
+        // number of columns for the FAT scheme is hardcoded in batch.rs
+        if height == 4 && log_n == 8 {
+            println!("\n\n");
+            let t_prove = start_timer!(|| format!(
+                "Batch-proving membership, height={height}, domain={domain_size}"
+            ));
+            let (auth_path, proof) = params.batch_prove::<_, 2>(path, rng);
+            end_timer!(t_prove);
+
+            let t_verify = start_timer!(|| "Verifying membership batch-proof");
+            let valid = params.batch_verify::<2>(auth_path, proof, root);
+            end_timer!(t_verify);
+            assert!(valid);
+        }
     }
 
     pub fn random_witness<G: AffineRepr<BaseField: PrimeField>, R: Rng>(
